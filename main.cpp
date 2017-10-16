@@ -72,8 +72,13 @@ int main() {
     ::capnp::MallocMessageBuilder message;
 
     auto root = message.initRoot<Source>();
+
     root.setPackage(cursor->Package());
+    val.erase("Package");
+    val.erase("Source");
+
     root.setVersion(cursor->Version());
+    val.erase("Version");
 
     root.setDirectory(take_mandatory(val, "Directory"));
     root.setHomepage(take_mandatory(val, "Homepage"));
@@ -81,6 +86,8 @@ int main() {
 
     // Maintainer will be deleted, and replaced with Original-Maintainer, even in the file.
     root.setMaintainer(cursor->Maintainer());
+    val.erase("Maintainer");
+
     {
         Priority::Builder priority = root.initPriority();
         set_priority(priority, take_mandatory(val, "Priority"));
@@ -107,6 +114,8 @@ int main() {
             } while (*++b);
         }
 #endif
+
+        val.erase("Binary");
 
         // TODO: sorting?
 
@@ -150,6 +159,11 @@ int main() {
     {
         std::vector<pkgSrcRecords::File2> raw;
         const_cast<pkgSrcRecords::Parser *>(cursor)->Files2(raw);
+
+        val.erase("Files");
+        val.erase("Checksums-Sha1");
+        val.erase("Checksums-Sha256");
+        val.erase("Checksums-Sha512");
 
         if (raw.size() > std::numeric_limits<uint>::max()) {
             throw std::runtime_error("can't have more than 'int' files");
@@ -243,6 +257,13 @@ int main() {
             root.initFormat().setGit3dot0();
         } else {
             throw std::runtime_error("unrecognised format: " + format);
+        }
+    }
+
+    if (!val.empty()) {
+        std::cerr << "Some values not consumed:" << std::endl;
+        for (auto &kv : val) {
+            std::cerr << " * " << kv.first << std::endl;
         }
     }
 
