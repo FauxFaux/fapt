@@ -149,7 +149,7 @@ static void render(const pkgSrcRecords::Parser *cursor) {
         auto binaries = root.initBinaries(static_cast<unsigned int>(packages.size()));
         for (uint i = 0; i < binaries.size(); ++i) {
             std::vector<std::string> parts = split(packages[i], ' ');
-            if (5 != parts.size()) {
+            if (5 != parts.size() && 4 != parts.size()) {
                 throw std::runtime_error("failed to parse Package-List");
             }
 
@@ -158,7 +158,9 @@ static void render(const pkgSrcRecords::Parser *cursor) {
             binaries[i].setSection(parts[2]);
             Priority::Builder priority = binaries[i].initPriority();
             set_priority(priority, parts[3]);
-            binaries[i].setArchSpec(parts[4]);
+            if (parts.size() > 4) {
+                binaries[i].setArchSpec(parts[4]);
+            }
         }
     }
 
