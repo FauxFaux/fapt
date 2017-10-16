@@ -133,6 +133,20 @@ int main() {
     }
 
     // TODO: build deps
+    {
+#if 0
+        // parser is useless; discards arch information
+        std::vector<pkgSrcRecords::Parser::BuildDepRec> v;
+        // even scarier const_cast
+        if (!const_cast<pkgSrcRecords::Parser *>(cursor)->BuildDepends(v, false, false)) {
+            throw std::runtime_error("build depends parser didn't work");
+        }
+
+        for (auto &k : v) {
+            std::cerr << k.Package << ", " << k.Version << ", " << (int)k.Type << ", " << k.Op << std::endl;
+        }
+#endif
+    }
 
     {
         files_t md5 = parse_files(take_mandatory(val, "Files"));
