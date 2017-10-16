@@ -77,7 +77,7 @@ struct SourceBinary {
     section   @2 :Text;
 
     priority  @3 :Priority;
-    archSpec  @4 :Text;
+    extras    @4 :List(Text);
 }
 
 # https://www.debian.org/doc/debian-policy/#priorities
