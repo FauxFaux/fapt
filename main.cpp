@@ -27,6 +27,7 @@ static map_t load_single(const std::string &body);
 static std::string take_mandatory(map_t &map, const std::string &key);
 static std::string take_optional(map_t &map, const std::string &key);
 static std::vector<std::string> split(const std::string &s, char delim);
+static void render(const pkgSrcRecords::Parser *cursor);
 
 template<typename T> void set_priority(T& thing, const std::string &from) {
     if ("required" == from) {
@@ -53,8 +54,18 @@ int main() {
     auto *cache_file = new pkgCacheFile();
     pkgSourceList *sources = cache_file->GetSourceList();
     auto *records = new pkgSrcRecords(*sources);
-    const pkgSrcRecords::Parser *cursor = records->Step();
+    while (const pkgSrcRecords::Parser *cursor = records->Step()) {
+        render(cursor);
+    }
 
+    delete records;
+    delete cache_file;
+
+    return 0;
+
+}
+
+static void render(const pkgSrcRecords::Parser *cursor) {
     // This is so dumb. Can't even get access to the parsed data,
     // so we have to re-serialise and re-parse it.
 
@@ -273,11 +284,6 @@ int main() {
     }
 
     ::capnp::writeMessageToFd(1, message);
-
-    delete records;
-    delete cache_file;
-
-    return 0;
 }
 
 static map_t load_single(const std::string &body) {
