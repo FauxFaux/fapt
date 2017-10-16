@@ -26,11 +26,11 @@ struct SingleDep {
 using map_t = std::map<std::string, std::string>;
 
 static std::string temp_name();
-static map_t load_single(const std::string &body);
+static map_t load_single(const std::string &temp, const std::string &body);
 static std::string take_mandatory(map_t &map, const std::string &key);
 static std::string take_optional(map_t &map, const std::string &key);
 static std::vector<std::string> split(const std::string &s, char delim);
-static void render(const pkgSrcRecords::Parser *cursor);
+static void render(const std::string &temp, const pkgSrcRecords::Parser *cursor);
 
 static std::vector<std::vector<SingleDep>> parse_deps(std::string deps);
 
@@ -56,21 +56,27 @@ int main() {
     pkgInitConfig(*_config);
     pkgInitSystem(*_config, _system);
 
+    const std::string temp = temp_name();
+
     auto *cache_file = new pkgCacheFile();
     pkgSourceList *sources = cache_file->GetSourceList();
     auto *records = new pkgSrcRecords(*sources);
     while (const pkgSrcRecords::Parser *cursor = records->Step()) {
-        render(cursor);
+        render(temp, cursor);
     }
 
     delete records;
     delete cache_file;
 
+    if (0 != std::remove(temp.c_str())) {
+        throw std::runtime_error("couldn't remove temporary file");
+    }
+
     return 0;
 
 }
 
-static void render(const pkgSrcRecords::Parser *cursor) {
+static void render(const std::string &temp, const pkgSrcRecords::Parser *cursor) {
     // This is so dumb. Can't even get access to the parsed data,
     // so we have to re-serialise and re-parse it.
 
@@ -79,7 +85,7 @@ static void render(const pkgSrcRecords::Parser *cursor) {
     // No idea why this is a const method; pretty angry.
     auto body = const_cast<pkgSrcRecords::Parser *>(cursor)->AsStr();
 
-    std::map<std::string, std::string> val = load_single(body);
+    std::map<std::string, std::string> val = load_single(temp, body);
 
 #if 0
     for (auto& kv : val) {
@@ -357,11 +363,10 @@ static void render(const pkgSrcRecords::Parser *cursor) {
     ::capnp::writeMessageToFd(1, message);
 }
 
-static map_t load_single(const std::string &body) {
-    const string filename = temp_name();
+static map_t load_single(const std::string &temp, const std::string &body) {
 
     {
-        std::ofstream o(filename);
+        std::ofstream o(temp);
         o << body;
     }
 
@@ -369,7 +374,7 @@ static map_t load_single(const std::string &body) {
 
     {
         FileFd fd;
-        fd.Open(filename, FileFd::OpenMode::ReadOnly);
+        fd.Open(temp, FileFd::OpenMode::ReadOnly);
         pkgTagFile a(&fd);
         pkgTagSection sect;
         a.Step(sect);
@@ -389,10 +394,6 @@ static map_t load_single(const std::string &body) {
 
             ret[name] = value;
         }
-    }
-
-    if (0 != std::remove(filename.c_str())) {
-        throw std::runtime_error("couldn't remove temporary file");
     }
 
     return ret;
