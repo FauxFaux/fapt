@@ -33,6 +33,10 @@ struct Source {
         native3dot0 @22 :Void;
         git3dot0    @23 :Void;
     }
+
+    uploaders         @24 :Text;
+    testsuite         @25 :Text;
+    testsuiteTriggers @26 :Text;
 }
 
 struct Dependency {

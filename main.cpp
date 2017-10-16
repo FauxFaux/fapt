@@ -326,8 +326,27 @@ static void render(const pkgSrcRecords::Parser *cursor) {
         }
     }
 
+    {
+        std::string s = take_optional(val, "Uploaders");
+        if (!s.empty()) {
+            root.setUploaders(s);
+        }
+    }
+    {
+        std::string s = take_optional(val, "Testsuite");
+        if (!s.empty()) {
+            root.setTestsuite(s);
+        }
+    }
+    {
+        std::string s = take_optional(val, "Testsuite-Triggers");
+        if (!s.empty()) {
+            root.setTestsuiteTriggers(s);
+        }
+    }
+
     if (!val.empty()) {
-        std::cerr << "Some values not consumed:" << std::endl;
+        std::cerr << "Some values not consumed for " << cursor->Package() << ":" << std::endl;
         for (auto &kv : val) {
             std::cerr << " * " << kv.first << std::endl;
         }
