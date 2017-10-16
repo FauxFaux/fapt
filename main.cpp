@@ -212,6 +212,8 @@ static void render(const pkgSrcRecords::Parser *cursor) {
                         version_builder[k].initOperator().setLt();
                     } else if (">>" == op) {
                         version_builder[k].initOperator().setGt();
+                    } else if ("=" == op) {
+                        version_builder[k].initOperator().setEq();
                     } else {
                         throw std::runtime_error("unknown operator '" + op + "'");
                     }
