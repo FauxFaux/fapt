@@ -27,7 +27,6 @@ static map_t load_single(const std::string &body);
 static std::string take_mandatory(map_t &map, const std::string &key);
 static std::string take_optional(map_t &map, const std::string &key);
 static std::vector<std::string> split(const std::string &s, char delim);
-static files_t parse_files(const std::string &data);
 
 template<typename T> void set_priority(T& thing, const std::string &from) {
     if ("required" == from) {
@@ -149,48 +148,39 @@ int main() {
     }
 
     {
-        files_t md5 = parse_files(take_mandatory(val, "Files"));
+        std::vector<pkgSrcRecords::File2> raw;
+        const_cast<pkgSrcRecords::Parser *>(cursor)->Files2(raw);
 
-        if (md5.size() > std::numeric_limits<uint>::max()) {
+        if (raw.size() > std::numeric_limits<uint>::max()) {
             throw std::runtime_error("can't have more than 'int' files");
         }
 
-        files_t sha1 = parse_files(take_optional(val, "Checksums-Sha1"));
-        files_t sha256 = parse_files(take_optional(val, "Checksums-Sha256"));
-        files_t sha512 = parse_files(take_optional(val, "Checksums-Sha512"));
-
-        auto files = root.initFiles(static_cast<uint>(md5.size()));
+        auto files = root.initFiles(static_cast<uint>(raw.size()));
 
         uint pos = 0;
-        for (auto &kv : md5) {
-            std::string name = kv.first;
+        for (auto &file2 : raw) {
+            std::string name = file2.Path;
 
             files[pos].setName(name);
-            files[pos].setSize(kv.second.size);
-            files[pos].setMd5(kv.second.checksum);
-
-            if (!sha1.empty()) {
-                auto it = sha1.find(name);
-                if (sha1.end() == it) {
-                    throw std::runtime_error("there are sha1s but not for " + name);
-                }
-                files[pos].setSha1(it->second.checksum);
+            files[pos].setSize(file2.FileSize);
+            const HashString *const md5 = file2.Hashes.find("MD5Sum");
+            if (md5) {
+                files[pos].setMd5(md5->HashValue());
             }
 
-            if (!sha256.empty()) {
-                auto it = sha256.find(name);
-                if (sha256.end() == it) {
-                    throw std::runtime_error("there are sha256s but not for " + name);
-                }
-                files[pos].setSha256(it->second.checksum);
+            const HashString *const sha1 = file2.Hashes.find("SHA1");
+            if (sha1) {
+                files[pos].setSha1(sha1->HashValue());
             }
 
-            if (!sha512.empty()) {
-                auto it = sha512.find(name);
-                if (sha512.end() == it) {
-                    throw std::runtime_error("there are sha512s but not for " + name);
-                }
-                files[pos].setSha512(it->second.checksum);
+            const HashString *const sha256 = file2.Hashes.find("SHA256");
+            if (sha256) {
+                files[pos].setSha256(sha256->HashValue());
+            }
+
+            const HashString *const sha512 = file2.Hashes.find("Sha512");
+            if (sha512) {
+                files[pos].setSha512(sha512->HashValue());
             }
 
             ++pos;
@@ -344,28 +334,6 @@ static std::string take_optional(map_t &map, const std::string &key) {
 
     std::string ret = it->second;
     map.erase(it);
-
-    return ret;
-}
-
-static files_t parse_files(const std::string &data) {
-    files_t ret;
-    for (auto &line : split(data, '\n')) {
-        auto parts = split(line, ' ');
-        if (3 != parts.size()) {
-            throw std::runtime_error("invalid Files/checksum section");
-        }
-
-        if (ret.find(parts[2]) != ret.end()) {
-            throw std::runtime_error("invalid Files/checksum section: duplicate name");
-        }
-
-        FileHash fh;
-        fh.checksum = parts[0];
-        fh.size = std::stoull(parts[1]);
-
-        ret[parts[2]] = fh;
-    }
 
     return ret;
 }
