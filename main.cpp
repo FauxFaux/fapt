@@ -29,6 +29,24 @@ static std::string take_optional(map_t &map, const std::string &key);
 static std::vector<std::string> split(const std::string &s, char delim);
 static files_t parse_files(const std::string &data);
 
+template<typename T> void set_priority(T& thing, const std::string &from) {
+    if ("required" == from) {
+        thing.setRequired();
+    } else if ("important" == from) {
+        thing.setImportant();
+    } else if ("standard" == from) {
+        thing.setStandard();
+    } else if ("optional" == from) {
+        thing.setOptional();
+    } else if ("extra" == from) {
+        thing.setExtra();
+    } else if ("source" == from) {
+        thing.setSource();
+    } else {
+        throw std::runtime_error("unrecognised priority: " + from);
+    }
+}
+
 int main() {
     pkgInitConfig(*_config);
     pkgInitSystem(*_config, _system);
@@ -64,6 +82,10 @@ int main() {
 
     // Maintainer will be deleted, and replaced with Original-Maintainer, even in the file.
     root.setMaintainer(cursor->Maintainer());
+    {
+        Priority::Builder priority = root.initPriority();
+        set_priority(priority, take_mandatory(val, "Priority"));
+    }
 
     root.setStandards(take_mandatory(val, "Standards-Version"));
 
@@ -104,7 +126,8 @@ int main() {
             binaries[i].setName(parts[0]);
             binaries[i].setStyle(parts[1]);
             binaries[i].setSection(parts[2]);
-            binaries[i].setPriority(parts[3]);
+            Priority::Builder priority = binaries[i].initPriority();
+            set_priority(priority, parts[3]);
             binaries[i].setArchSpec(parts[4]);
         }
     }

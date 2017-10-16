@@ -10,7 +10,7 @@ struct Source {
     homepage    @3 :Text;
     section     @4 :Text;
     maintainer  @5 :Text;
-    todoOrigMaintNotAvailable   @6 :Void;
+    priority    @6 :Priority;
     standards   @7 :Text;
 
     arch        @8 :List(Text);
@@ -28,18 +28,6 @@ struct Source {
         native3dot0 @17 :Void;
         git3dot0    @18 :Void;
     }
-
-    # https://www.debian.org/doc/debian-policy/#priorities
-    priority :union {
-        unknown   @19 :Void;
-        required  @20 :Void;
-        important @21 :Void;
-        standard  @22 :Void;
-        optional  @23 :Void;
-        extra     @24 :Void;
-        source    @25 :Void;
-    }
-
 }
 
 struct Dependency {
@@ -89,7 +77,19 @@ struct SourceBinary {
     style     @1 :Text;
     section   @2 :Text;
 
-    # TODO: struct Priority
-    priority  @3 :Text;
+    priority  @3 :Priority;
     archSpec  @4 :Text;
+}
+
+# https://www.debian.org/doc/debian-policy/#priorities
+struct Priority {
+    union {
+        unknown   @0 :Void;
+        required  @1 :Void;
+        important @2 :Void;
+        standard  @3 :Void;
+        optional  @4 :Void;
+        extra     @5 :Void;
+        source    @6 :Void;
+    }
 }
