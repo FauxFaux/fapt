@@ -76,9 +76,11 @@ static void render(const pkgSrcRecords::Parser *cursor) {
 
     std::map<std::string, std::string> val = load_single(body);
 
+#if 0
     for (auto& kv : val) {
         std::cerr << kv.first << " -> " << kv.second << std::endl;
     }
+#endif
 
     ::capnp::MallocMessageBuilder message;
 
@@ -132,7 +134,6 @@ static void render(const pkgSrcRecords::Parser *cursor) {
     }
 
     {
-#if 0
         // TODO: check raw_binaries against our parse of Package-List
         std::vector<std::string> raw_binaries;
 
@@ -143,32 +144,38 @@ static void render(const pkgSrcRecords::Parser *cursor) {
                 raw_binaries.emplace_back(std::string(*b));
             } while (*++b);
         }
-#endif
-
         val.erase("Binary");
 
         // TODO: sorting?
 
-        std::vector<std::string> packages = split(take_mandatory(val, "Package-List"), '\n');
-        if (packages.size() > std::numeric_limits<uint>::max()) {
-            throw std::runtime_error("can't have more than 'int' binaries");
-        }
-
-        auto binaries = root.initBinaries(static_cast<unsigned int>(packages.size()));
-        for (uint i = 0; i < binaries.size(); ++i) {
-            std::vector<std::string> parts = split(packages[i], ' ');
-            if (parts.size() < 4) {
-                throw std::runtime_error("failed to parse Package-List");
+        std::string list = take_optional(val, "Package-List");
+        if (!list.empty()) {
+            std::vector<std::string> packages = split(list, '\n');
+            if (packages.size() > std::numeric_limits<uint>::max()) {
+                throw std::runtime_error("can't have more than 'int' binaries");
             }
 
-            binaries[i].setName(parts[0]);
-            binaries[i].setStyle(parts[1]);
-            binaries[i].setSection(parts[2]);
-            Priority::Builder priority = binaries[i].initPriority();
-            set_priority(priority, parts[3]);
-            auto extras = binaries[i].initExtras(parts.size() - 4);
-            for (uint j = 0; j < extras.size(); ++j) {
-                extras.set(j, parts[j + 4]);
+            auto binaries = root.initBinaries(static_cast<unsigned int>(packages.size()));
+            for (uint i = 0; i < binaries.size(); ++i) {
+                std::vector<std::string> parts = split(packages[i], ' ');
+                if (parts.size() < 4) {
+                    throw std::runtime_error("failed to parse Package-List");
+                }
+
+                binaries[i].setName(parts[0]);
+                binaries[i].setStyle(parts[1]);
+                binaries[i].setSection(parts[2]);
+                Priority::Builder priority = binaries[i].initPriority();
+                set_priority(priority, parts[3]);
+                auto extras = binaries[i].initExtras(parts.size() - 4);
+                for (uint j = 0; j < extras.size(); ++j) {
+                    extras.set(j, parts[j + 4]);
+                }
+            }
+        } else {
+            auto binaries = root.initBinaries(raw_binaries.size());
+            for (uint i = 0; i < binaries.size(); ++i) {
+                binaries[i].setName(raw_binaries[i]);
             }
         }
     }
