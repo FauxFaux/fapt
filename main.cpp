@@ -15,19 +15,15 @@
 
 #include "apt.capnp.h"
 
-struct FileHash {
-    uint64_t size;
-    std::string checksum;
-};
-
 struct SingleDep {
     std::string package;
+    std::string arch;
     std::vector<std::pair<std::string, std::string>> version_constraints;
     std::vector<std::string> arch_constraints;
+    std::vector<std::string> stage_constraints;
 };
 
 using map_t = std::map<std::string, std::string>;
-using files_t = std::map<std::string, FileHash>;
 
 static std::string temp_name();
 static map_t load_single(const std::string &body);
@@ -189,22 +185,42 @@ static void render(const pkgSrcRecords::Parser *cursor) {
         }
     }
 
-    // TODO: build deps
     {
-        parse_deps(take_optional(val, "Build-Depends"));
-#if 0
-        // parser is useless; discards arch information
-        std::vector<pkgSrcRecords::Parser::BuildDepRec> v;
-        // even scarier const_cast
-        if (!const_cast<pkgSrcRecords::Parser *>(cursor)->BuildDepends(v, false, false)) {
-            throw std::runtime_error("build depends parser didn't work");
+        auto deps = parse_deps(take_optional(val, "Build-Depends"));
+        auto deps_builder = root.initBuildDep(deps.size());
+        for (uint i = 0; i < deps_builder.size(); ++i) {
+            auto alt = deps[i];
+            auto alt_builder = deps_builder[i].initAlternate(alt.size());
+            for (uint j = 0; j < alt_builder.size(); ++j) {
+                auto dep = alt[j];
+                alt_builder[j].setPackage(dep.package);
+                if (!dep.arch.empty()) {
+                    alt_builder[j].setArch(dep.arch);
+                }
+                if (dep.version_constraints.empty()) {
+                    continue;
+                }
+                auto version_builder = alt_builder[j].initVersionConstraints(dep.version_constraints.size());
+                for (uint k = 0; k < version_builder.size(); ++k) {
+                    version_builder[k].setVersion(dep.version_constraints[k].first);
+                    std::string op = dep.version_constraints[k].second;
+                    if ("<=" == op) {
+                        version_builder[k].initOperator().setLe();
+                    } else if (">=" == op) {
+                        version_builder[k].initOperator().setGe();
+                    } else if ("<<" == op) {
+                        version_builder[k].initOperator().setLt();
+                    } else if (">>" == op) {
+                        version_builder[k].initOperator().setGt();
+                    } else {
+                        throw std::runtime_error("unknown operator '" + op + "'");
+                    }
+                }
+            }
         }
-
-        for (auto &k : v) {
-            std::cerr << k.Package << ", " << k.Version << ", " << (int)k.Type << ", " << k.Op << std::endl;
-        }
-#endif
     }
+
+    // TODO: other types of build dep
 
     {
         std::vector<pkgSrcRecords::File2> raw;
@@ -447,24 +463,44 @@ static std::vector<std::vector<SingleDep>> parse_deps(std::string deps) {
                                   + "\\s*";
     const std::string r_alternate = "^\\s*,?\\s*" + r_package + R"((?:\s*\|\s*)" + r_package + ")*";
 
-    std::regex alt(r_alternate, std::regex_constants::ECMAScript);
-    std::regex pkg(r_package, std::regex_constants::ECMAScript);
-    std::smatch range;
-    while (std::regex_search(deps, range, alt)) {
-        std::cerr << "Alternate:" << std::endl;
-        const std::string dumb = range.str();
-        for (auto it = std::sregex_iterator(dumb.cbegin(), dumb.cend(), pkg); it != std::sregex_iterator(); ++it) {
-            auto y = it->cbegin();
-            std::string pkg = (++y)->str();
-            std::string pkg_arch = (++y)->str();
+    std::regex alt_regex(r_alternate, std::regex_constants::ECMAScript);
+    std::regex pkg_regex(r_package, std::regex_constants::ECMAScript);
+    std::regex version_regex(r_version, std::regex_constants::ECMAScript);
+
+    std::smatch alternate_expression;
+    while (std::regex_search(deps, alternate_expression, alt_regex)) {
+        std::vector<SingleDep> this_alt;
+        const std::string whole_expr = alternate_expression.str();
+        for (auto package_expression = std::sregex_iterator(whole_expr.cbegin(), whole_expr.cend(), pkg_regex);
+             package_expression != std::sregex_iterator();
+             ++package_expression) {
+
+            SingleDep dep;
+
+            auto y = package_expression->cbegin();
+            dep.package = (++y)->str();
+            dep.arch = (++y)->str();
             std::string versions = (++y)->str();
             ++y; // last matched op
             ++y; // last matched version
             std::string arch = (++y)->str();
             std::string cond = (++y)->str();
-            std::cerr << " * " << pkg << " : " << pkg_arch << " / " << versions << " / " << arch << " / " << cond << std::endl;
+
+            // TODO: arch, cond
+
+            for (auto version = std::sregex_iterator(versions.cbegin(), versions.cend(), version_regex);
+                 version != std::sregex_iterator();
+                 ++version) {
+                auto z = version->cbegin();
+                std::string op = (++z)->str();
+                std::string ver = (++z)->str();
+                dep.version_constraints.push_back({ver, op});
+            }
+
+            this_alt.push_back(dep);
         }
-        deps = deps.substr(range.length());
+        ret.push_back(this_alt);
+        deps = deps.substr(alternate_expression.length());
     }
 
     if (!deps.empty()) {

@@ -41,8 +41,10 @@ struct Dependency {
 
 struct SingleDependency {
     package            @0 :Text;
-    versionConstraints @1 :List(Constraint);
-    archFilter         @2 :List(Text);
+    arch               @1 :Text;
+    versionConstraints @2 :List(Constraint);
+    archFilter         @3 :List(Text);
+    stageFilter        @4 :List(Text);
 }
 
 struct Constraint {
