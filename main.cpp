@@ -470,23 +470,23 @@ static std::vector<std::string> split(const std::string &s, char delim) {
     return elems;
 }
 
+const std::string r_version = R"(\(([<=>]+)\s*([a-zA-Z0-9.~+:-]+)\))";
+const std::string r_package = R"(([a-z0-9.+-]+)(:[a-z0-9]+)?((?:\s*)"
+                              + r_version
+                              + ")*)"
+                              // [linux-any]
+                              + R"((?:\s*\[([!a-z0-9 -]+)\])?)"
+                              // <!nocheck> and <!foo> <!bar>
+                              + R"((?:\s*<([!a-z0-9. ]+)>)*)"
+                              + "\\s*";
+const std::string r_alternate = "^\\s*,?\\s*" + r_package + R"((?:\s*\|\s*)" + r_package + ")*";
+
+std::regex alt_regex(r_alternate, std::regex_constants::ECMAScript);
+std::regex pkg_regex(r_package, std::regex_constants::ECMAScript);
+std::regex version_regex(r_version, std::regex_constants::ECMAScript);
+
 static std::vector<std::vector<SingleDep>> parse_deps(std::string deps) {
     std::vector<std::vector<SingleDep>> ret;
-//    const std::string r_version = R"gex()gex";
-    const std::string r_version = R"(\(([<=>]+)\s*([a-zA-Z0-9.~+:-]+)\))";
-    const std::string r_package = R"(([a-z0-9.+-]+)(:[a-z0-9]+)?((?:\s*)"
-                                  + r_version
-                                  + ")*)"
-                                  // [linux-any]
-                                  + R"((?:\s*\[([!a-z0-9 -]+)\])?)"
-                                    // <!nocheck> and <!foo> <!bar>
-                                  + R"((?:\s*<([!a-z0-9. ]+)>)*)"
-                                  + "\\s*";
-    const std::string r_alternate = "^\\s*,?\\s*" + r_package + R"((?:\s*\|\s*)" + r_package + ")*";
-
-    std::regex alt_regex(r_alternate, std::regex_constants::ECMAScript);
-    std::regex pkg_regex(r_package, std::regex_constants::ECMAScript);
-    std::regex version_regex(r_version, std::regex_constants::ECMAScript);
 
     std::smatch alternate_expression;
     while (std::regex_search(deps, alternate_expression, alt_regex)) {
