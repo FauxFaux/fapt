@@ -92,12 +92,18 @@ static void render(const pkgSrcRecords::Parser *cursor) {
     val.erase("Version");
 
     root.setDirectory(take_mandatory(val, "Directory"));
-    root.setHomepage(take_mandatory(val, "Homepage"));
+    {
+        const std::string homepage = take_optional(val, "Homepage");
+        if (!homepage.empty()) {
+            root.setHomepage(homepage);
+        }
+    }
+
     root.setSection(take_mandatory(val, "Section"));
 
     root.setMaintainer(take_mandatory(val, "Maintainer"));
     {
-        std::string orig = take_optional(val, "Original-Maintainer");
+        const std::string orig = take_optional(val, "Original-Maintainer");
         if (!orig.empty()) {
             root.setOrigMaint(orig);
         }
