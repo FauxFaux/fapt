@@ -10,16 +10,15 @@ struct Source {
     homepage    @3 :Text;
     section     @4 :Text;
     maintainer  @5 :Text;
-    priority    @6 :Priority;
-    standards   @7 :Text;
+    origMaint   @6 :Text;
+    priority    @7 :Priority;
+    standards   @8 :Text;
 
-    arch        @8 :List(Text);
-    binaries    @9 :List(SourceBinary);
-    buildDeps  @10 :List(Dependency);
-    files      @11 :List(File);
-    vcs        @12 :List(Vcs);
-
-    todoRemove @13 :Void;
+    arch        @9 :List(Text);
+    binaries   @10 :List(SourceBinary);
+    buildDeps  @11 :List(Dependency);
+    files      @12 :List(File);
+    vcs        @13 :List(Vcs);
 
     format :union {
         unknown     @14 :Void;

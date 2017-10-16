@@ -84,9 +84,14 @@ int main() {
     root.setHomepage(take_mandatory(val, "Homepage"));
     root.setSection(take_mandatory(val, "Section"));
 
-    // Maintainer will be deleted, and replaced with Original-Maintainer, even in the file.
-    root.setMaintainer(cursor->Maintainer());
-    val.erase("Maintainer");
+    root.setMaintainer(take_mandatory(val, "Maintainer"));
+    {
+        std::string orig = take_optional(val, "Original-Maintainer");
+        if (!orig.empty()) {
+            root.setOrigMaint(orig);
+        }
+    }
+
 
     {
         Priority::Builder priority = root.initPriority();
