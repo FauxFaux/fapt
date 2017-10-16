@@ -16,27 +16,37 @@ struct Source {
 
     arch        @9 :List(Text);
     binaries   @10 :List(SourceBinary);
-    buildDeps  @11 :List(Dependency);
-    files      @12 :List(File);
-    vcs        @13 :List(Vcs);
+    files      @11 :List(File);
+    vcs        @12 :List(Vcs);
+
+    buildDep           @13 :List(Dependency);
+    buildDepArch       @14 :List(Dependency);
+    buildDepIndep      @15 :List(Dependency);
+    buildConflict      @16 :List(Dependency);
+    buildConflictArch  @17 :List(Dependency);
+    buildConflictIndep @18 :List(Dependency);
 
     format :union {
-        unknown     @14 :Void;
-        original    @15 :Void;
-        quilt3dot0  @16 :Void;
-        native3dot0 @17 :Void;
-        git3dot0    @18 :Void;
+        unknown     @19 :Void;
+        original    @20 :Void;
+        quilt3dot0  @21 :Void;
+        native3dot0 @22 :Void;
+        git3dot0    @23 :Void;
     }
 }
 
 struct Dependency {
-    package             @0 :Text;
-    versionConstraints  @1 :List(Constraint);
-    restrictions        @2 :List(Text);
+    alternate @0 :List(SingleDependency);
+}
+
+struct SingleDependency {
+    package            @0 :Text;
+    versionConstraints @1 :List(Constraint);
+    archFilter         @2 :List(Text);
 }
 
 struct Constraint {
-    name @0 :Text;
+    version @0 :Text;
     operator :union {
         ge @1 :Void;
         eq @2 :Void;

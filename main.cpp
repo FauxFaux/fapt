@@ -2,6 +2,7 @@
 #include <fstream>
 #include <map>
 #include <string>
+#include <regex>
 
 #include <apt-pkg/cachefile.h>
 #include <apt-pkg/pkgcache.h>
@@ -19,6 +20,12 @@ struct FileHash {
     std::string checksum;
 };
 
+struct SingleDep {
+    std::string package;
+    std::vector<std::pair<std::string, std::string>> version_constraints;
+    std::vector<std::string> arch_constraints;
+};
+
 using map_t = std::map<std::string, std::string>;
 using files_t = std::map<std::string, FileHash>;
 
@@ -28,6 +35,8 @@ static std::string take_mandatory(map_t &map, const std::string &key);
 static std::string take_optional(map_t &map, const std::string &key);
 static std::vector<std::string> split(const std::string &s, char delim);
 static void render(const pkgSrcRecords::Parser *cursor);
+
+static std::vector<std::vector<SingleDep>> parse_deps(std::string deps);
 
 template<typename T> void set_priority(T& thing, const std::string &from) {
     if ("required" == from) {
@@ -182,6 +191,7 @@ static void render(const pkgSrcRecords::Parser *cursor) {
 
     // TODO: build deps
     {
+        parse_deps(take_optional(val, "Build-Depends"));
 #if 0
         // parser is useless; discards arch information
         std::vector<pkgSrcRecords::Parser::BuildDepRec> v;
@@ -423,3 +433,43 @@ static std::vector<std::string> split(const std::string &s, char delim) {
     return elems;
 }
 
+static std::vector<std::vector<SingleDep>> parse_deps(std::string deps) {
+    std::vector<std::vector<SingleDep>> ret;
+//    const std::string r_version = R"gex()gex";
+    const std::string r_version = R"(\(([<=>]+)\s*([a-zA-Z0-9.~+:-]+)\))";
+    const std::string r_package = R"(([a-z0-9.+-]+)(:[a-z0-9]+)?((?:\s*)"
+                                  + r_version
+                                  + ")*)"
+                                  // [linux-any]
+                                  + R"((?:\s*\[([!a-z0-9 -]+)\])?)"
+                                    // <!nocheck> and <!foo> <!bar>
+                                  + R"((?:\s*<([!a-z0-9. ]+)>)*)"
+                                  + "\\s*";
+    const std::string r_alternate = "^\\s*,?\\s*" + r_package + R"((?:\s*\|\s*)" + r_package + ")*";
+
+    std::regex alt(r_alternate, std::regex_constants::ECMAScript);
+    std::regex pkg(r_package, std::regex_constants::ECMAScript);
+    std::smatch range;
+    while (std::regex_search(deps, range, alt)) {
+        std::cerr << "Alternate:" << std::endl;
+        const std::string dumb = range.str();
+        for (auto it = std::sregex_iterator(dumb.cbegin(), dumb.cend(), pkg); it != std::sregex_iterator(); ++it) {
+            auto y = it->cbegin();
+            std::string pkg = (++y)->str();
+            std::string pkg_arch = (++y)->str();
+            std::string versions = (++y)->str();
+            ++y; // last matched op
+            ++y; // last matched version
+            std::string arch = (++y)->str();
+            std::string cond = (++y)->str();
+            std::cerr << " * " << pkg << " : " << pkg_arch << " / " << versions << " / " << arch << " / " << cond << std::endl;
+        }
+        deps = deps.substr(range.length());
+    }
+
+    if (!deps.empty()) {
+        throw std::runtime_error("didn't fully consume deps string: " + deps);
+    }
+
+    return ret;
+}
