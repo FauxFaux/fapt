@@ -111,11 +111,19 @@ static void render(const pkgSrcRecords::Parser *cursor) {
 
 
     {
-        Priority::Builder priority = root.initPriority();
-        set_priority(priority, take_mandatory(val, "Priority"));
+        const std::string str = take_optional(val, "Priority");
+        if (!str.empty()) {
+            Priority::Builder priority = root.initPriority();
+            set_priority(priority, str);
+        }
     }
 
-    root.setStandards(take_mandatory(val, "Standards-Version"));
+    {
+        const std::string str = take_optional(val, "Standards-Version");
+        if (!str.empty()) {
+            root.setStandards(str);
+        }
+    }
 
     {
         auto arch = root.initArch(1);
