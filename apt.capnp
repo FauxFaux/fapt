@@ -5,11 +5,12 @@
 struct RawSource {
     package  @0 :Text;
     version  @1 :Text;
+    index    @2 :Text;
 
-    binaries @2 :List(Text);
-    files    @3 :List(File);
+    binaries @3 :List(Text);
+    files    @4 :List(File);
 
-    entries  @4 :List(Entry);
+    entries  @5 :List(Entry);
 }
 
 struct File {

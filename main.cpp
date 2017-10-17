@@ -58,6 +58,8 @@ static void render(const int temp, const pkgSrcRecords::Parser *cursor) {
 
     root.setVersion(cursor->Version());
 
+    root.setIndex(cursor->Index().Describe(true));
+
     {
         std::vector<std::string> raw_binaries;
 
