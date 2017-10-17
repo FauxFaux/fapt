@@ -69,4 +69,4 @@ The code here is available under the MIT license. However, `libapt-pkg`
 is GPLv2, so you must distribute the code under the GPLv2.
 
 Consuming the produced data file does not count as "linking", so you are
-free to use whatever license you want for the consumed data.
+free to use whatever license you want for the tool consuming the data.
