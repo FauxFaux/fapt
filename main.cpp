@@ -12,16 +12,14 @@
 
 using map_t = std::vector<std::pair<std::string, std::string>>;
 
-static std::string temp_name();
-static map_t load_single(const std::string &temp, const std::string &body);
-static void render(const std::string &temp, const pkgSrcRecords::Parser *cursor);
-static void erase_first(map_t &from, const char *val);
+static int temp_file();
+static void render(int temp, const pkgSrcRecords::Parser *cursor);
 
 int main() {
     pkgInitConfig(*_config);
     pkgInitSystem(*_config, _system);
 
-    const std::string temp = temp_name();
+    const int temp = temp_file();
 
     auto *cache_file = new pkgCacheFile();
     pkgSourceList *sources = cache_file->GetSourceList();
@@ -33,24 +31,21 @@ int main() {
     delete records;
     delete cache_file;
 
-    if (0 != std::remove(temp.c_str())) {
-        throw std::runtime_error("couldn't remove temporary file");
+    if (0 != ftruncate(temp, 0)) {
+        throw std::runtime_error("couldn't empty temporary file");
     }
 
     return 0;
 
 }
 
-static void render(const std::string &temp, const pkgSrcRecords::Parser *cursor) {
-    // This is so dumb. Can't even get access to the parsed data,
-    // so we have to re-serialise and re-parse it.
+static void rewind(const int fd) {
+    if (0 != lseek(fd, 0, SEEK_SET)) {
+        throw std::runtime_error("couldn't rewind file");
+    }
+}
 
-    // It's like being stabbed repeatedly in the face.
-
-    // No idea why this is a const method; pretty angry.
-    auto body = const_cast<pkgSrcRecords::Parser *>(cursor)->AsStr();
-
-    map_t val = load_single(temp, body);
+static void render(const int temp, const pkgSrcRecords::Parser *cursor) {
 
     ::capnp::MallocMessageBuilder message;
 
@@ -120,88 +115,106 @@ static void render(const std::string &temp, const pkgSrcRecords::Parser *cursor)
         }
     }
 
-    erase_first(val, "Package");
-    erase_first(val, "Version");
-    erase_first(val, "Binaries");
-    erase_first(val, "Files");
-    erase_first(val, "Checksums-Sha1");
-    erase_first(val, "Checksums-Sha256");
-    erase_first(val, "Checksums-Sha512");
-
-    if (val.size() > std::numeric_limits<uint>::max()) {
-        throw std::runtime_error("can't have more than 'int' entries");
-    }
-
-    auto entries_builder = root.initEntries(static_cast<uint>(val.size()));
-    for (uint i = 0; i < entries_builder.size(); ++i) {
-        entries_builder[i].setKey(val[i].first);
-        entries_builder[i].setValue(val[i].second);
-    }
-
-    ::capnp::writeMessageToFd(1, message);
-}
-
-static map_t load_single(const std::string &temp, const std::string &body) {
-
     {
-        std::ofstream o(temp);
-        o << body;
+        // This is so dumb. Can't even get access to the parsed data,
+        // so we have to re-serialise and re-parse it.
+
+        // It's like being stabbed repeatedly in the face.
+
+        // No idea why this is a const method; pretty angry.
+        const std::string body = const_cast<pkgSrcRecords::Parser *>(cursor)->AsStr();
+
+        if (0 != ftruncate(temp, 0)) {
+            throw std::runtime_error("couldn't truncate temp file");
+        }
+        rewind(temp);
+
+        size_t written = 0;
+        const char *data = body.c_str();
+
+        while (true) {
+            const ssize_t to_write = body.size() - written;
+            ssize_t wrote = write(temp, data + written, to_write);
+            if (wrote == to_write) {
+                break;
+            }
+            if (wrote <= 0) {
+                if (EAGAIN == errno) {
+                    continue;
+                }
+
+                throw std::runtime_error("couldn't write file");
+            }
+            written += wrote;
+        }
+
+        rewind(temp);
     }
 
     map_t ret;
 
     {
         FileFd fd;
-        fd.Open(temp, FileFd::OpenMode::ReadOnly);
+        fd.OpenDescriptor(temp, FileFd::OpenMode::ReadOnly, FileFd::CompressMode::None);
         pkgTagFile a(&fd);
         pkgTagSection sect;
         if (!a.Step(sect)) {
             throw std::runtime_error("didn't manage to load a record");
         }
 
-        for (unsigned int i = 0; i < sect.Count(); ++i) {
-            const char *start;
-            const char *end;
-            sect.Get(start, end, i);
-            const std::string whole_field(start, end);
-            const size_t colon = whole_field.find(':');
-            if (std::string::npos == colon) {
-                throw std::runtime_error("no colon in tag: " + whole_field);
+        std::vector<std::string> keys;
+        keys.reserve(sect.Count() - 4);
+
+        {
+            for (unsigned int i = 0; i < sect.Count(); ++i) {
+                const char *start;
+                const char *end;
+                sect.Get(start, end, i);
+
+                const char *colon = strchr(start, ':');
+                if (!colon || colon >= end) {
+                    std::cerr << i << std::endl;
+                    throw std::runtime_error("couldn't find colon in field: " + std::string(start, end));
+                }
+
+                auto key = std::string(start, colon);
+                if (key != "Package" &&
+                    key != "Version" &&
+                    key != "Binaries" &&
+                    key != "Files" &&
+                    key != "Checksums-Sha1" &&
+                    key != "Checksums-Sha256" &&
+                    key != "Checksums-Sha512") {
+                    keys.emplace_back(key);
+                }
             }
+        }
+        if (keys.size() > std::numeric_limits<uint>::max()) {
+            throw std::runtime_error("can't have more than 'int' entries");
+        }
 
-            std::string name = whole_field.substr(0, colon);
-            std::string value = sect.FindS(name.c_str());
-
-            ret.emplace_back(name, value);
+        auto builder = root.initEntries(static_cast<uint>(keys.size()));
+        uint pos = 0;
+        for (const std::string &key : keys) {
+            auto entry = builder[pos++];
+            entry.setKey(key);
+            entry.setValue(sect.FindS(key.c_str()));
         }
     }
 
-    return ret;
+    ::capnp::writeMessageToFd(1, message);
 }
 
-static std::string temp_name() {
+static int temp_file() {
     constexpr size_t len = 30;
     char buf[len] = {};
-    snprintf(buf, len - 1, "/tmp/apt_dump.XXXXXX");
-
+    snprintf(buf, len - 1, "/tmp/apt-dump.XXXXXX");
     int fd = mkstemp(buf);
+    fprintf(stderr, "%s\n", buf);
 
     if (-1 == fd) {
         throw std::runtime_error("couldn't create temporary file");
     }
 
-    if (-1 == close(fd)) {
-        throw std::runtime_error("couldn't close temporary file");
-    }
-
-    return std::string(buf);
-}
-
-static void erase_first(map_t &from, const char *val) {
-    auto it = std::find_if(from.cbegin(), from.cend(), [&](auto x) { return x.first == val; });
-    if (it == from.cend()) {
-        return;
-    }
-
-    from.erase(it);
+    return fd;
 }
