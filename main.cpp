@@ -178,7 +178,7 @@ static void render(const int temp, const pkgSrcRecords::Parser *cursor) {
                 auto key = std::string(start, colon);
                 if (key != "Package" &&
                     key != "Version" &&
-                    key != "Binaries" &&
+                    key != "Binary" &&
                     key != "Files" &&
                     key != "Checksums-Sha1" &&
                     key != "Checksums-Sha256" &&
