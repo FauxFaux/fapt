@@ -13,7 +13,12 @@
 static int temp_file();
 static void render(int temp, const pkgSrcRecords::Parser *cursor);
 
-int main() {
+int main(int argc, char *argv[]) {
+    if (2 != argc || 0 != strcmp(argv[1], "raw-sources")) {
+        fprintf(stderr, "usage: %s raw-sources\n", argv[0]);
+        return 2;
+    }
+
     pkgInitConfig(*_config);
     pkgInitSystem(*_config, _system);
 
