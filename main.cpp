@@ -10,8 +10,6 @@
 
 #include "apt.capnp.h"
 
-using map_t = std::vector<std::pair<std::string, std::string>>;
-
 static int temp_file();
 static void render(int temp, const pkgSrcRecords::Parser *cursor);
 
@@ -148,8 +146,6 @@ static void render(const int temp, const pkgSrcRecords::Parser *cursor) {
 
         rewind(temp);
     }
-
-    map_t ret;
 
     {
         FileFd fd;
