@@ -174,7 +174,6 @@ static void render(const int temp, const pkgSrcRecords::Parser *cursor) {
 
                 const char *colon = strchr(start, ':');
                 if (!colon || colon >= end) {
-                    std::cerr << i << std::endl;
                     throw std::runtime_error("couldn't find colon in field: " + std::string(start, end));
                 }
 
