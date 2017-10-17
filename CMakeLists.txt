@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(apt_dump)
+project(apt-dump)
 
 set(CMAKE_CXX_STANDARD 14)
 
@@ -19,6 +19,6 @@ include_directories(${CAPNPC_OUTPUT_DIR})
 capnp_generate_cpp(CAPNP_SRCS CAPNP_HDRS apt.capnp)
 
 set(SOURCE_FILES main.cpp)
-add_executable(apt_dump ${SOURCE_FILES} ${CAPNP_SRCS} ${CAPNP_HDRS})
-target_link_libraries(apt_dump ${APT_PKG} ${CAPNP_LIBRARIES})
+add_executable(apt-dump ${SOURCE_FILES} ${CAPNP_SRCS} ${CAPNP_HDRS})
+target_link_libraries(apt-dump ${APT_PKG} ${CAPNP_LIBRARIES})
 
