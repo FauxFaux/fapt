@@ -210,7 +210,6 @@ static int temp_file() {
     char buf[len] = {};
     snprintf(buf, len - 1, "/tmp/apt-dump.XXXXXX");
     int fd = mkstemp(buf);
-    fprintf(stderr, "%s\n", buf);
 
     if (-1 == fd) {
         throw std::runtime_error("couldn't create temporary file");
