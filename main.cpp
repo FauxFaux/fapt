@@ -122,11 +122,9 @@ static void render(const int temp, const pkgSrcRecords::Parser *cursor) {
         // It's like being stabbed repeatedly in the face.
 
         // No idea why this is a const method; pretty angry.
-        const std::string body = const_cast<pkgSrcRecords::Parser *>(cursor)->AsStr();
+        std::string body = const_cast<pkgSrcRecords::Parser *>(cursor)->AsStr();
+        body.push_back('\n');
 
-        if (0 != ftruncate(temp, 0)) {
-            throw std::runtime_error("couldn't truncate temp file");
-        }
         rewind(temp);
 
         size_t written = 0;
