@@ -1,0 +1,11 @@
+[package]
+authors = ["Chris West (Faux) <git@goeswhere.com>"]
+name = "apt-dump-parse"
+version = "0.1.0"
+
+[build-dependencies]
+capnpc = "0.8.7"
+
+[dependencies]
+capnp = "0.8.11"
+error-chain = "0.11.0"
