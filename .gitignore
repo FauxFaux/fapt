@@ -2,3 +2,5 @@
 *.iml
 cmake-build-*
 build/
+apt.capnp.c++
+apt.capnp.h

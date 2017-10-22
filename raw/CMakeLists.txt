@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.9.1)
 project(apt-dump)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -14,9 +14,10 @@ find_library(APT_PKG REQUIRED NAMES apt-pkg)
 find_package(CapnProto REQUIRED)
 include_directories(${CAPNP_INCLUDE_DIRS})
 add_definitions(${CAPNP_DEFINITIONS})
+set(CAPNPC_SRC_PREFIX "..")
 set(CAPNPC_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${CAPNPC_OUTPUT_DIR})
-capnp_generate_cpp(CAPNP_SRCS CAPNP_HDRS apt.capnp)
+capnp_generate_cpp(CAPNP_SRCS CAPNP_HDRS ../apt.capnp)
 
 find_library(CAPNP_A_CAPNP NAMES libcapnp.a HINTS "/usr/lib/x86_64-linux-gnu")
 find_library(CAPNP_A_KJ NAMES libkj.a HINTS "/usr/lib/x86_64-linux-gnu")
