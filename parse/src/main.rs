@@ -9,6 +9,7 @@ use capnp::serialize;
 mod apt_capnp;
 mod errors;
 mod fields;
+mod vcs;
 
 use apt_capnp::raw_source;
 use apt_capnp::source;
@@ -96,6 +97,8 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
             blank_to_null(reader.get_sha512()?, |x| builder.set_sha512(x));
         }
     }
+
+    vcs::extract(&handled_entries, &mut output.borrow())?;
 
     {
         let reader = input.get_entries()?;

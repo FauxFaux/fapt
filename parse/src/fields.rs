@@ -84,7 +84,6 @@ pub const HANDLED_FIELDS: [&'static str; 79] = [
     "Vcs-Upstream-Mtn",
     "Vcs-Upstream-Svn",
     "Version",
-
 ];
 
 pub fn set_field(key: &str, val: &str, builder: &mut source::Builder) -> Result<()> {
@@ -92,7 +91,9 @@ pub fn set_field(key: &str, val: &str, builder: &mut source::Builder) -> Result<
         "Autobuild" => blank_to_null(val, |x| builder.set_autobuild(x)),
         "Breaks" => blank_to_null(val, |x| builder.set_breaks(x)),
         "Bugs" => blank_to_null(val, |x| builder.set_bugs(x)),
-        "Build-Indep-Architecture" => blank_to_null(val, |x| builder.set_build_indep_architecture(x)),
+        "Build-Indep-Architecture" => {
+            blank_to_null(val, |x| builder.set_build_indep_architecture(x))
+        }
         "Built-For-Profiles" => blank_to_null(val, |x| builder.set_built_for_profiles(x)),
         "Built-Using" => blank_to_null(val, |x| builder.set_built_using(x)),
         "Class" => blank_to_null(val, |x| builder.set_class(x)),
