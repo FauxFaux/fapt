@@ -28,7 +28,34 @@ fn run() -> Result<()> {
         {
             let mut output = message.init_root::<source::Builder>();
             output.set_package(input.get_package()?);
+            output.set_version(input.get_version()?);
+            {
+                let reader = input.get_files()?;
+                let mut builder = output.init_files(reader.len());
+                for i in 0..reader.len() {
+                    let reader = reader.borrow().get(i);
+                    let mut builder = builder.borrow().get(i);
+                    blank_to_null(reader.get_name()?, |x| builder.set_name(x));
+                    builder.set_size(reader.get_size());
+                    blank_to_null(reader.get_md5()?, |x| builder.set_md5(x));
+                    blank_to_null(reader.get_sha1()?, |x| builder.set_sha1(x));
+                    blank_to_null(reader.get_sha256()?, |x| builder.set_sha256(x));
+                    blank_to_null(reader.get_sha512()?, |x| builder.set_sha512(x));
+                }
+            }
         }
         serialize::write_message(&mut stdout, &message)?;
     }
+}
+
+fn blank_to_null<F>(value: &str, into: F)
+where
+    F: FnOnce(&str),
+{
+    let cleaned = value.trim();
+    if cleaned.is_empty() {
+        return;
+    }
+
+    into(cleaned)
 }
