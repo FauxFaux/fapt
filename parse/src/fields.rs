@@ -4,7 +4,7 @@ use apt_capnp::source;
 use errors::*;
 use blank_to_null;
 
-const HANDLED_FIELDS: [&'static str; 28] = [
+const HANDLED_FIELDS: [&'static str; 29] = [
     "Architecture",
     "Binaries",
     "Build-Conflicts",
@@ -20,6 +20,7 @@ const HANDLED_FIELDS: [&'static str; 28] = [
     "Files",
     "Format",
     "Package",
+    "Package-List",
     "Priority",
     "Source",
     "Vcs-Arch",
@@ -71,7 +72,6 @@ pub fn set_field(key: &str, val: &str, builder: &mut source::Builder) -> Result<
         "Optional" => blank_to_null(val, |x| builder.set_optional(x)),
         "Origin" => blank_to_null(val, |x| builder.set_origin(x)),
         "Original-Maintainer" => blank_to_null(val, |x| builder.set_original_maintainer(x)),
-        "Package-List" => blank_to_null(val, |x| builder.set_package_list(x)),
         "Package-Revision" => blank_to_null(val, |x| builder.set_package_revision(x)),
         "Package-Type" => blank_to_null(val, |x| builder.set_package_type(x)),
         "Package_Revision" => blank_to_null(val, |x| builder.set_package_revision(x)),

@@ -16,6 +16,7 @@ HANDLED_FIELDS = {
 
     # parsed into Binaries
     'Binaries',
+    'Package-List',
 
     # parsed into Files
     'Files',
