@@ -104,6 +104,9 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
 
     vcs::extract(&handled_entries, &mut output.borrow())?;
 
+    use std::io::Write;
+    writeln!(std::io::stderr(), "{:?}", deps::read(&handled_entries["Build-Depends"])?)?;
+
     {
         let reader = input.get_entries()?;
         for i in 0..reader.len() {

@@ -4,21 +4,21 @@ use nom;
 use nom::IResult;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct Dep {
+pub struct Dep {
     alternate: Vec<SingleDep>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct SingleDep {
+pub struct SingleDep {
     package: String,
-    arch: String,
+    arch: Option<String>,
     version_constraints: Vec<Constraint>,
     arch_filter: Vec<String>,
     stage_filter: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct Constraint {
+pub struct Constraint {
     version: String,
     operator: Op,
 }
@@ -33,7 +33,7 @@ impl Constraint {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-enum Op {
+pub enum Op {
     Ge,
     Eq,
     Le,
@@ -41,8 +41,18 @@ enum Op {
     Lt,
 }
 
-fn read(val: &str) -> Result<Vec<Dep>> {
-    unimplemented!()
+pub fn read(val: &str) -> Result<Vec<Dep>> {
+    let res = parse(val);
+
+    if res.is_incomplete() {
+        bail!("unexpected end of dependency line ({:?}): {}", res, val);
+    }
+
+    res.to_result().chain_err(|| format!("parsing: '{}'", val))
+}
+
+fn is_arch_char(val: char) -> bool {
+    val.is_alphanumeric()
 }
 
 fn is_package_name_char(val: char) -> bool {
@@ -90,12 +100,13 @@ named!(stage_filter<&str, &str>,
 named!(single<&str, SingleDep>,
     ws!(do_parse!(
         package: package_name >>
-        version_constraints: many0!(version_constraint) >>
-        arch_filter: many0!(arch_filter) >>
-        stage_filter: many0!(stage_filter) >>
+        arch: opt!(preceded!(tag!(":"), take_while1_s!(is_arch_char))) >>
+        version_constraints: ws!(many0!(version_constraint)) >>
+        arch_filter: ws!(many0!(arch_filter)) >>
+        stage_filter: ws!(many0!(stage_filter)) >>
         ( SingleDep {
             package: package.to_string(),
-            arch: "TODO".to_string(),
+            arch: arch.map(|x| x.to_string()),
             version_constraints,
             arch_filter: arch_filter.into_iter().map(|x| x.to_string()).collect(),
             stage_filter: stage_filter.into_iter().map(|x| x.to_string()).collect(),
@@ -103,6 +114,14 @@ named!(single<&str, SingleDep>,
     ))
 );
 
+named!(dep<&str, Dep>,
+    ws!(do_parse!(
+        alternate: ws!(separated_nonempty_list!(tag!("|"), single)) >>
+        ( Dep { alternate })
+    ))
+);
+
+named!(parse<&str, Vec<Dep>>, ws!(separated_list!(tag!(","), dep)));
 
 #[test]
 fn check() {
@@ -114,5 +133,9 @@ fn check() {
         version_constraint("(>> 1)")
     );
 
-    println!("{:?}", single("foo (>> 1) (<< 9) [linux-any]"))
+    println!("{:?}", single("foo (>> 1) (<< 9) [linux-any]"));
+    println!("{:?}", single("foo"));
+    println!("{:?}", dep("foo|baz"));
+    println!("{:?}", dep("foo | baz"));
+    println!("{:?}", parse("foo, baz"));
 }
