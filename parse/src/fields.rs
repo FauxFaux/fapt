@@ -6,7 +6,7 @@ use blank_to_null;
 
 pub const HANDLED_FIELDS: [&'static str; 29] = [
     "Architecture",
-    "Binaries",
+    "Binary",
     "Build-Conflicts",
     "Build-Conflicts-Arch",
     "Build-Conflicts-Indep",
@@ -34,11 +34,11 @@ pub const HANDLED_FIELDS: [&'static str; 29] = [
     "Vcs-Mtn",
     "Vcs-Svn",
     "Version",
+
 ];
 
 pub fn set_field(key: &str, val: &str, builder: &mut source::Builder) -> Result<()> {
     match key {
-        "Binary" => blank_to_null(val, |x| builder.set_binary(x)),
         "Breaks" => blank_to_null(val, |x| builder.set_breaks(x)),
         "Bugs" => blank_to_null(val, |x| builder.set_bugs(x)),
         "Built-For-Profiles" => blank_to_null(val, |x| builder.set_built_for_profiles(x)),

@@ -15,7 +15,7 @@ HANDLED_FIELDS = {
     'Format',
 
     # parsed into Binaries
-    'Binaries',
+    'Binary',
     'Package-List',
 
     # parsed into Files
