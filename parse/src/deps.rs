@@ -5,22 +5,22 @@ use nom::IResult;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Dep {
-    alternate: Vec<SingleDep>,
+    pub alternate: Vec<SingleDep>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SingleDep {
-    package: String,
-    arch: Option<String>,
-    version_constraints: Vec<Constraint>,
-    arch_filter: Vec<String>,
-    stage_filter: Vec<String>,
+    pub package: String,
+    pub arch: Option<String>,
+    pub version_constraints: Vec<Constraint>,
+    pub arch_filter: Vec<String>,
+    pub stage_filter: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Constraint {
-    version: String,
-    operator: Op,
+    pub version: String,
+    pub operator: Op,
 }
 
 impl Constraint {

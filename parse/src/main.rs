@@ -104,10 +104,58 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
 
     vcs::extract(&handled_entries, &mut output.borrow())?;
 
-    use std::io::Write;
     if let Some(dep) = handled_entries.get("Build-Depends") {
         let read = deps::read(&dep)?;
-//        writeln!(std::io::stderr(), "{:?}", read)?;
+        let mut builder = output.borrow().init_build_dep(as_u32(read.len()));
+        for (i, alt) in read.into_iter().enumerate() {
+            let mut builder = builder.borrow().get(as_u32(i)).init_alternate(
+                as_u32(alt.alternate.len()),
+            );
+            for (i, single) in alt.alternate.into_iter().enumerate() {
+                let mut builder = builder.borrow().get(as_u32(i));
+                builder.set_package(&single.package);
+                if let Some(ref arch) = single.arch {
+                    builder.set_arch(arch);
+                }
+
+                if !single.version_constraints.is_empty() {
+                    let mut builder = builder.borrow().init_version_constraints(
+                        as_u32(single.version_constraints.len()),
+                    );
+                    for (i, version) in single.version_constraints.into_iter().enumerate() {
+                        let mut builder = builder.borrow().get(as_u32(i));
+                        builder.set_version(&version.version);
+                        use deps::Op;
+                        match version.operator {
+                            Op::Ge => builder.init_operator().set_ge(()),
+                            Op::Eq => builder.init_operator().set_eq(()),
+                            Op::Le => builder.init_operator().set_le(()),
+                            Op::Gt => builder.init_operator().set_gt(()),
+                            Op::Lt => builder.init_operator().set_lt(()),
+                        }
+                    }
+                }
+
+                if !single.arch_filter.is_empty() {
+                    let mut builder = builder.borrow().init_arch_filter(
+                        as_u32(single.arch_filter.len()),
+                    );
+                    for (i, arch) in single.arch_filter.into_iter().enumerate() {
+                        builder.set(as_u32(i), &arch);
+                    }
+                }
+
+                if !single.stage_filter.is_empty() {
+                    let mut builder = builder.borrow().init_stage_filter(
+                        as_u32(single.stage_filter.len()),
+                    );
+                    for (i, stage) in single.stage_filter.into_iter().enumerate() {
+                        builder.set(as_u32(i), &stage);
+                    }
+                }
+            }
+        }
+
     }
 
     {
