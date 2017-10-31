@@ -3,6 +3,7 @@ import collections
 import re
 from typing import Set
 
+# fields apt likes, and we like too; we're going to parse them
 HANDLED_FIELDS = {
     # core
     'Package',
@@ -48,6 +49,31 @@ HANDLED_FIELDS = {
     'Checksums-Sha512',
 }
 
+# Fields that have been seen in the wild, but which apt ignores.
+EXTRA_FIELDS = {
+    'Autobuild',
+    'Testsuite-Restrictions',
+
+    'Build-Indep-Architecture',
+
+    'Debian-Vcs-Browser',
+    'Debian-Vcs-Git',
+    'Debian-Vcs-Svn',
+    'Dgit',
+    'Orig-Vcs-Browser',
+    'Orig-Vcs-Git',
+    'Orig-Vcs-Svn',
+    'Original-Vcs-Browser',
+    'Original-Vcs-Bzr',
+    'Upstream-Vcs-Bzr',
+    'Vcs-Upstream-Bzr',
+
+    'Go-Import-Path',
+    'Python-Version',
+    'Python3-Version',
+    'Ruby-Versions',
+}
+
 
 def to_snake(s: str) -> str:
     return re.sub(r'(?!^)[_-]([a-zA-Z])', lambda m: m.group(1).upper(), s.lower())
@@ -58,7 +84,7 @@ def to_rust(s: str) -> str:
 
 
 def main(known_fields: Set[str]):
-    text_fields = known_fields - HANDLED_FIELDS
+    text_fields = known_fields.union(EXTRA_FIELDS) - HANDLED_FIELDS
     base_index = 19
     max_len = max(len(to_snake(field)) for field in text_fields)
     capnp_format_string = ('    {: <' + str(max_len) + '} @{} :Text;')

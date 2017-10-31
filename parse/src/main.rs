@@ -43,10 +43,12 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
 
     let handled_entries = get_handled_entries(input)?;
 
-    set_priority(
-        output.borrow().init_priority(),
-        &handled_entries["Priority"],
-    );
+    if let Some(priority) = handled_entries.get("Priority") {
+        set_priority(
+            output.borrow().init_priority(),
+            priority,
+        );
+    }
 
     {
         let mut parts: Vec<&str> = handled_entries["Architecture"]
@@ -63,8 +65,8 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
 
     set_format(output.borrow().init_format(), &handled_entries["Format"]);
 
-    {
-        let lines: Vec<&str> = handled_entries["Package-List"]
+    if let Some(list) = handled_entries.get("Package-List") {
+        let lines: Vec<&str> = list
             .split('\n')
             .map(|x| x.trim())
             .collect();
@@ -113,7 +115,10 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
 
             let val = reader.get_value()?;
 
-            fields::set_field(key, val, &mut output.borrow())?;
+            if let Err(e) = fields::set_field(key, val, &mut output.borrow()) {
+                use std::io::Write;
+                write!(std::io::stderr(), "field: {:?}\n", e)?;
+            }
         }
     }
 
