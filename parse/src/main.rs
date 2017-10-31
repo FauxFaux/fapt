@@ -2,6 +2,8 @@ extern crate capnp;
 #[macro_use]
 extern crate error_chain;
 
+use std::collections::HashMap;
+
 use capnp::serialize;
 
 mod apt_capnp;
@@ -39,12 +41,25 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
     output.set_version(input.get_version()?);
     output.set_index(input.get_index()?);
 
+    let handled_entries = get_handled_entries(input)?;
+
     set_priority(
         output.borrow().init_priority(),
-        &get_entry(input, "Priority")?,
+        &handled_entries["Priority"],
     );
 
+    {
+        let mut parts: Vec<&str> = handled_entries["Architecture"]
+            .split(' ')
+            .map(|x| x.trim())
+            .collect();
+        parts.sort();
 
+        let mut builder = output.borrow().init_arch(as_u32(parts.len()));
+        for (i, part) in parts.into_iter().enumerate() {
+            builder.set(as_u32(i), part);
+        }
+    }
 
     {
         let reader = input.get_files()?;
@@ -80,17 +95,21 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
     Ok(())
 }
 
-fn get_entry(input: apt_capnp::raw_source::Reader, name: &str) -> Result<String> {
+fn get_handled_entries(input: apt_capnp::raw_source::Reader) -> Result<HashMap<String, String>> {
+    let mut ret = HashMap::with_capacity(fields::HANDLED_FIELDS.len());
+
     let reader = input.get_entries()?;
     for i in 0..reader.len() {
         let reader = reader.borrow().get(i);
         let key = reader.get_key()?;
-        if name == key {
-            return Ok(reader.get_value()?.to_string());
+        if !fields::HANDLED_FIELDS.contains(&key) {
+            continue;
         }
+
+        ret.insert(key.to_string(), reader.get_value()?.to_string());
     }
 
-    Ok(String::new())
+    Ok(ret)
 }
 
 fn set_priority(mut into: apt_capnp::priority::Builder, string: &str) {
@@ -115,4 +134,9 @@ where
     }
 
     into(cleaned)
+}
+
+fn as_u32(val: usize) -> u32 {
+    assert!(val < (std::u32::MAX as usize), "can't have more than 2^32 anything");
+    val as u32
 }
