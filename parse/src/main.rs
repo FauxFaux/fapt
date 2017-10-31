@@ -104,19 +104,29 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
 
     vcs::extract(&handled_entries, &mut output.borrow())?;
 
-    if let Some(dep) = handled_entries.get("Build-Depends") {
-        let read = deps::read(&dep)?;
-        let mut builder = output.borrow().init_build_dep(as_u32(read.len()));
-        for (i, alt) in read.into_iter().enumerate() {
-            let mut builder = builder.borrow().get(as_u32(i)).init_alternate(
-                as_u32(alt.alternate.len()),
-            );
-            for (i, single) in alt.alternate.into_iter().enumerate() {
-                let builder = builder.borrow().get(as_u32(i));
-                fill_single_dep(single, builder);
-            }
-        }
-    }
+    fill_build_dep(handled_entries.get("Build-Depends"), |len| {
+        output.borrow().init_build_dep(len)
+    })?;
+
+    fill_build_dep(handled_entries.get("Build-Depends-Arch"), |len| {
+        output.borrow().init_build_dep_arch(len)
+    })?;
+
+    fill_build_dep(handled_entries.get("Build-Depends-Indep"), |len| {
+        output.borrow().init_build_dep_indep(len)
+    })?;
+
+    fill_build_dep(handled_entries.get("Build-Conflicts"), |len| {
+        output.borrow().init_build_conflict(len)
+    })?;
+
+    fill_build_dep(handled_entries.get("Build-Conflicts-Arch"), |len| {
+        output.borrow().init_build_conflict_arch(len)
+    })?;
+
+    fill_build_dep(handled_entries.get("Build-Conflicts-Indep"), |len| {
+        output.borrow().init_build_conflict_indep(len)
+    })?;
 
     {
         let reader = input.get_entries()?;
@@ -134,6 +144,34 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
                 use std::io::Write;
                 write!(std::io::stderr(), "field: {:?}\n", e)?;
             }
+        }
+    }
+
+    Ok(())
+}
+
+fn fill_build_dep<'a, F>(raw: Option<&String>, init: F) -> Result<()>
+where
+    F: FnOnce(u32) -> capnp::struct_list::Builder<'a, apt_capnp::dependency::Owned>,
+{
+    if raw.is_none() {
+        return Ok(());
+    }
+
+    let read = deps::read(raw.unwrap())?;
+
+    if read.is_empty() {
+        return Ok(());
+    }
+
+    let mut builder = init(as_u32(read.len()));
+    for (i, alt) in read.into_iter().enumerate() {
+        let mut builder = builder.borrow().get(as_u32(i)).init_alternate(
+            as_u32(alt.alternate.len()),
+        );
+        for (i, single) in alt.alternate.into_iter().enumerate() {
+            let builder = builder.borrow().get(as_u32(i));
+            fill_single_dep(single, builder);
         }
     }
 
