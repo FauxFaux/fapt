@@ -1,6 +1,5 @@
 use errors::*;
 
-use nom;
 use nom::IResult;
 
 #[derive(Clone, Debug, PartialEq, Eq)]

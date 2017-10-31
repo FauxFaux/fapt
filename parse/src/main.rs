@@ -112,50 +112,10 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
                 as_u32(alt.alternate.len()),
             );
             for (i, single) in alt.alternate.into_iter().enumerate() {
-                let mut builder = builder.borrow().get(as_u32(i));
-                builder.set_package(&single.package);
-                if let Some(ref arch) = single.arch {
-                    builder.set_arch(arch);
-                }
-
-                if !single.version_constraints.is_empty() {
-                    let mut builder = builder.borrow().init_version_constraints(
-                        as_u32(single.version_constraints.len()),
-                    );
-                    for (i, version) in single.version_constraints.into_iter().enumerate() {
-                        let mut builder = builder.borrow().get(as_u32(i));
-                        builder.set_version(&version.version);
-                        use deps::Op;
-                        match version.operator {
-                            Op::Ge => builder.init_operator().set_ge(()),
-                            Op::Eq => builder.init_operator().set_eq(()),
-                            Op::Le => builder.init_operator().set_le(()),
-                            Op::Gt => builder.init_operator().set_gt(()),
-                            Op::Lt => builder.init_operator().set_lt(()),
-                        }
-                    }
-                }
-
-                if !single.arch_filter.is_empty() {
-                    let mut builder = builder.borrow().init_arch_filter(
-                        as_u32(single.arch_filter.len()),
-                    );
-                    for (i, arch) in single.arch_filter.into_iter().enumerate() {
-                        builder.set(as_u32(i), &arch);
-                    }
-                }
-
-                if !single.stage_filter.is_empty() {
-                    let mut builder = builder.borrow().init_stage_filter(
-                        as_u32(single.stage_filter.len()),
-                    );
-                    for (i, stage) in single.stage_filter.into_iter().enumerate() {
-                        builder.set(as_u32(i), &stage);
-                    }
-                }
+                let builder = builder.borrow().get(as_u32(i));
+                fill_single_dep(single, builder);
             }
         }
-
     }
 
     {
@@ -178,6 +138,51 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
     }
 
     Ok(())
+}
+
+
+fn fill_single_dep(single: deps::SingleDep, mut builder: apt_capnp::single_dependency::Builder) {
+    builder.set_package(&single.package);
+
+    if let Some(ref arch) = single.arch {
+        builder.set_arch(arch);
+    }
+
+    if !single.version_constraints.is_empty() {
+        let mut builder = builder.borrow().init_version_constraints(
+            as_u32(single.version_constraints.len()),
+        );
+        for (i, version) in single.version_constraints.into_iter().enumerate() {
+            let mut builder = builder.borrow().get(as_u32(i));
+            builder.set_version(&version.version);
+            use deps::Op;
+            match version.operator {
+                Op::Ge => builder.init_operator().set_ge(()),
+                Op::Eq => builder.init_operator().set_eq(()),
+                Op::Le => builder.init_operator().set_le(()),
+                Op::Gt => builder.init_operator().set_gt(()),
+                Op::Lt => builder.init_operator().set_lt(()),
+            }
+        }
+    }
+
+    if !single.arch_filter.is_empty() {
+        let mut builder = builder.borrow().init_arch_filter(
+            as_u32(single.arch_filter.len()),
+        );
+        for (i, arch) in single.arch_filter.into_iter().enumerate() {
+            builder.set(as_u32(i), &arch);
+        }
+    }
+
+    if !single.stage_filter.is_empty() {
+        let mut builder = builder.borrow().init_stage_filter(
+            as_u32(single.stage_filter.len()),
+        );
+        for (i, stage) in single.stage_filter.into_iter().enumerate() {
+            builder.set(as_u32(i), &stage);
+        }
+    }
 }
 
 fn get_handled_entries(input: apt_capnp::raw_source::Reader) -> Result<HashMap<String, String>> {
