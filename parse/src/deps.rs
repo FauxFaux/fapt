@@ -44,9 +44,9 @@ pub enum Op {
 pub fn read(val: &str) -> Result<Vec<Dep>> {
     match parse(val) {
         IResult::Done("", val) => Ok(val),
-        IResult::Incomplete(_) => bail!("unexpected end of input"),
-        IResult::Done(trailing, _) => bail!("trailing data: '{:?}'", trailing),
-        x @ IResult::Error(_) => x.to_result(),
+        IResult::Incomplete(_) => Err("unexpected end of input".into()),
+        IResult::Done(trailing, _) => Err(format!("trailing data: '{:?}'", trailing).into()),
+        x @ IResult::Error(_) => x.to_result().chain_err(|| "executing nom"),
     }.chain_err(|| format!("parsing: '{}'", val))
 }
 
@@ -59,7 +59,7 @@ fn is_package_name_char(val: char) -> bool {
 }
 
 fn is_version_char(val: char) -> bool {
-    val.is_alphanumeric() || '.' == val || '~' == val || '+' == val || ':' == val
+    val.is_alphanumeric() || '.' == val || '~' == val || '+' == val || ':' == val || '-' == val
 }
 
 named!(package_name<&str, &str>, take_while1_s!(is_package_name_char));
@@ -70,10 +70,10 @@ named!(version_constraint<&str, Constraint>,
         tag!("(") >>
         operator: alt!(
             tag!(">=") => { |_| Op::Ge } |
-            tag!("==") => { |_| Op::Eq } |
             tag!("<=") => { |_| Op::Le } |
             tag!(">>") => { |_| Op::Gt } |
-            tag!("<<") => { |_| Op::Lt }
+            tag!("<<") => { |_| Op::Lt } |
+            tag!("=") => { |_| Op::Eq }
         ) >>
         version: version >>
         tag!(")") >>
@@ -92,7 +92,7 @@ named!(stage_filter<&str, &str>,
     delimited!(
         tag!("<"),
         take_until_s!(">"),
-        tag!("<")
+        tag!(">")
     )
 );
 
