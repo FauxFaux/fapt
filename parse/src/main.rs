@@ -2,11 +2,15 @@ extern crate capnp;
 #[macro_use]
 extern crate error_chain;
 
+#[macro_use]
+extern crate nom;
+
 use std::collections::HashMap;
 
 use capnp::serialize;
 
 mod apt_capnp;
+mod deps;
 mod errors;
 mod fields;
 mod vcs;

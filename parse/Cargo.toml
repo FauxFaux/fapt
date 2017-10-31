@@ -9,3 +9,4 @@ capnpc = "0.8.7"
 [dependencies]
 capnp = "0.8.11"
 error-chain = "0.11.0"
+nom = "3.2.1"
