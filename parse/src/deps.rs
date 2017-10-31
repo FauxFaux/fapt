@@ -42,13 +42,12 @@ pub enum Op {
 }
 
 pub fn read(val: &str) -> Result<Vec<Dep>> {
-    let res = parse(val);
-
-    if res.is_incomplete() {
-        bail!("unexpected end of dependency line ({:?}): {}", res, val);
-    }
-
-    res.to_result().chain_err(|| format!("parsing: '{}'", val))
+    match parse(val) {
+        IResult::Done("", val) => Ok(val),
+        IResult::Incomplete(_) => bail!("unexpected end of input"),
+        IResult::Done(trailing, _) => bail!("trailing data: '{:?}'", trailing),
+        x @ IResult::Error(_) => x.to_result(),
+    }.chain_err(|| format!("parsing: '{}'", val))
 }
 
 fn is_arch_char(val: char) -> bool {
@@ -97,13 +96,17 @@ named!(stage_filter<&str, &str>,
     )
 );
 
+named!(arch_suffix<&str, &str>,
+    preceded!(tag!(":"), take_while1_s!(is_arch_char))
+);
+
 named!(single<&str, SingleDep>,
     ws!(do_parse!(
         package: package_name >>
-        arch: opt!(preceded!(tag!(":"), take_while1_s!(is_arch_char))) >>
-        version_constraints: ws!(many0!(version_constraint)) >>
-        arch_filter: ws!(many0!(arch_filter)) >>
-        stage_filter: ws!(many0!(stage_filter)) >>
+        arch: opt!(complete!(arch_suffix)) >>
+        version_constraints: ws!(many0!(complete!(version_constraint))) >>
+        arch_filter: ws!(many0!(complete!(arch_filter))) >>
+        stage_filter: ws!(many0!(complete!(stage_filter))) >>
         ( SingleDep {
             package: package.to_string(),
             arch: arch.map(|x| x.to_string()),
@@ -116,12 +119,22 @@ named!(single<&str, SingleDep>,
 
 named!(dep<&str, Dep>,
     ws!(do_parse!(
-        alternate: ws!(separated_nonempty_list!(tag!("|"), single)) >>
+        alternate: ws!(separated_nonempty_list!(
+            complete!(tag!("|")),
+            single)
+        ) >>
         ( Dep { alternate })
     ))
 );
 
-named!(parse<&str, Vec<Dep>>, ws!(separated_list!(tag!(","), dep)));
+named!(parse<&str, Vec<Dep>>,
+    ws!(
+        separated_list!(
+            complete!(tag!(",")),
+            dep
+        )
+    )
+);
 
 #[test]
 fn check() {
@@ -138,4 +151,8 @@ fn check() {
     println!("{:?}", dep("foo|baz"));
     println!("{:?}", dep("foo | baz"));
     println!("{:?}", parse("foo, baz"));
+
+    named!(l<&str, Vec<&str>>,
+        separated_nonempty_list!(complete!(tag!(",")), tag!("foo")));
+    println!("{:?}", l("foo,foo"));
 }
