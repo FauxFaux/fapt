@@ -30,24 +30,32 @@ HANDLED_FIELDS = {
     'Build-Depends-Arch',
     'Build-Depends-Indep',
 
-    # parsed into VCS
-    'Vcs-Arch',
-    'Vcs-Browse',
-    'Vcs-Browser',
-    'Vcs-Bzr',
-    'Vcs-Cvs',
-    'Vcs-Darcs',
-    'Vcs-Git',
-    'Vcs-Hg',
-    'Vcs-Mtn',
-    'Vcs-Svn',
-
     # folded into Files
     'Checksums-Md5',
     'Checksums-Sha1',
     'Checksums-Sha256',
     'Checksums-Sha512',
 }
+
+# What a mess.
+for vcs in [
+    'Arch',
+    'Browse',
+    'Browser',
+    'Bzr',
+    'Cvs',
+    'Darcs',
+    'Git',
+    'Hg',
+    'Mtn',
+    'Svn',
+]:
+    HANDLED_FIELDS.add('Vcs-' + vcs)
+    HANDLED_FIELDS.add('Orig-Vcs-' + vcs)
+    HANDLED_FIELDS.add('Original-Vcs-' + vcs)
+    HANDLED_FIELDS.add('Debian-Vcs-' + vcs)
+    HANDLED_FIELDS.add('Upstream-Vcs-' + vcs)
+    HANDLED_FIELDS.add('Vcs-Upstream-' + vcs)
 
 # Fields that have been seen in the wild, but which apt ignores.
 EXTRA_FIELDS = {

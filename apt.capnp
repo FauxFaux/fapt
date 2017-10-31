@@ -65,67 +65,56 @@ struct Source {
     conffiles              @26 :Text;
     configVersion          @27 :Text;
     conflicts              @28 :Text;
-    debianVcsBrowser       @29 :Text;
-    debianVcsGit           @30 :Text;
-    debianVcsSvn           @31 :Text;
-    depends                @32 :Text;
-    description            @33 :Text;
-    descriptionMd5         @34 :Text;
-    dgit                   @35 :Text;
-    directory              @36 :Text;
-    dmUploadAllowed        @37 :Text;
-    enhances               @38 :Text;
-    essential              @39 :Text;
-    filename               @40 :Text;
-    goImportPath           @41 :Text;
-    homepage               @42 :Text;
-    important              @43 :Text;
-    installedSize          @44 :Text;
-    installerMenuItem      @45 :Text;
-    kernelVersion          @46 :Text;
-    maintainer             @47 :Text;
-    md5sum                 @48 :Text;
-    msdosFilename          @49 :Text;
-    multiArch              @50 :Text;
-    optional               @51 :Text;
-    origVcsBrowser         @52 :Text;
-    origVcsGit             @53 :Text;
-    origVcsSvn             @54 :Text;
-    origin                 @55 :Text;
-    originalMaintainer     @56 :Text;
-    originalVcsBrowser     @57 :Text;
-    originalVcsBzr         @58 :Text;
-    packageRevision        @59 :Text;
-    packageType            @60 :Text;
-    preDepends             @61 :Text;
-    provides               @62 :Text;
-    python3Version         @63 :Text;
-    pythonVersion          @64 :Text;
-    recommended            @65 :Text;
-    recommends             @66 :Text;
-    replaces               @67 :Text;
-    revision               @68 :Text;
-    rubyVersions           @69 :Text;
-    section                @70 :Text;
-    sha1                   @71 :Text;
-    sha256                 @72 :Text;
-    sha512                 @73 :Text;
-    size                   @74 :Text;
-    standardsVersion       @75 :Text;
-    status                 @76 :Text;
-    subarchitecture        @77 :Text;
-    suggests               @78 :Text;
-    tag                    @79 :Text;
-    task                   @80 :Text;
-    testsuite              @81 :Text;
-    testsuiteRestrictions  @82 :Text;
-    testsuiteTriggers      @83 :Text;
-    triggersAwaited        @84 :Text;
-    triggersPending        @85 :Text;
-    uploaders              @86 :Text;
-    upstreamVcsBzr         @87 :Text;
-    vcsUpstreamBzr         @88 :Text;
-
+    depends                @29 :Text;
+    description            @30 :Text;
+    descriptionMd5         @31 :Text;
+    dgit                   @32 :Text;
+    directory              @33 :Text;
+    dmUploadAllowed        @34 :Text;
+    enhances               @35 :Text;
+    essential              @36 :Text;
+    filename               @37 :Text;
+    goImportPath           @38 :Text;
+    homepage               @39 :Text;
+    important              @40 :Text;
+    installedSize          @41 :Text;
+    installerMenuItem      @42 :Text;
+    kernelVersion          @43 :Text;
+    maintainer             @44 :Text;
+    md5sum                 @45 :Text;
+    msdosFilename          @46 :Text;
+    multiArch              @47 :Text;
+    optional               @48 :Text;
+    origin                 @49 :Text;
+    originalMaintainer     @50 :Text;
+    packageRevision        @51 :Text;
+    packageType            @52 :Text;
+    preDepends             @53 :Text;
+    provides               @54 :Text;
+    python3Version         @55 :Text;
+    pythonVersion          @56 :Text;
+    recommended            @57 :Text;
+    recommends             @58 :Text;
+    replaces               @59 :Text;
+    revision               @60 :Text;
+    rubyVersions           @61 :Text;
+    section                @62 :Text;
+    sha1                   @63 :Text;
+    sha256                 @64 :Text;
+    sha512                 @65 :Text;
+    size                   @66 :Text;
+    standardsVersion       @67 :Text;
+    status                 @68 :Text;
+    subarchitecture        @69 :Text;
+    suggests               @70 :Text;
+    tag                    @71 :Text;
+    task                   @72 :Text;
+    testsuite              @73 :Text;
+    testsuiteRestrictions  @74 :Text;
+    testsuiteTriggers      @75 :Text;
+    triggersAwaited        @76 :Text;
+    triggersPending        @77 :Text;
+    uploaders              @78 :Text;
 # END GENERATED
 }
 
@@ -154,6 +143,7 @@ struct Constraint {
 
 struct Vcs {
     description @0 :Text;
+
     type :union {
         browser @1 :Void;
         arch    @2 :Void;
@@ -164,6 +154,13 @@ struct Vcs {
         hg      @7 :Void;
         mtn     @8 :Void;
         svn     @9 :Void;
+    }
+
+    tag :union {
+        vcs      @10 :Void;
+        orig     @11 :Void;
+        debian   @12 :Void;
+        upstream @13 :Void;
     }
 }
 
