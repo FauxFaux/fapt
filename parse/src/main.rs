@@ -44,10 +44,7 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
     let handled_entries = get_handled_entries(input)?;
 
     if let Some(priority) = handled_entries.get("Priority") {
-        set_priority(
-            output.borrow().init_priority(),
-            priority,
-        );
+        set_priority(output.borrow().init_priority(), priority);
     }
 
     {
@@ -66,10 +63,7 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
     set_format(output.borrow().init_format(), &handled_entries["Format"]);
 
     if let Some(list) = handled_entries.get("Package-List") {
-        let lines: Vec<&str> = list
-            .split('\n')
-            .map(|x| x.trim())
-            .collect();
+        let lines: Vec<&str> = list.split('\n').map(|x| x.trim()).collect();
         let mut builder = output.borrow().init_binaries(as_u32(lines.len()));
         for (i, line) in lines.into_iter().enumerate() {
             let mut builder = builder.borrow().get(as_u32(i));
