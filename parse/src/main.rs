@@ -53,19 +53,13 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
         }
     }
 
-    let handled_keys = &[
-        "Architecture",
-        "Format",
-        "Priority",
-    ];
-
     {
         let reader = input.get_entries()?;
         for i in 0..reader.len() {
             let reader = reader.borrow().get(i);
             let key = reader.get_key()?;
 
-            if handled_keys.contains(&key) {
+            if fields::HANDLED_FIELDS.contains(key) {
                 continue;
             }
 

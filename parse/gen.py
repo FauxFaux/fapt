@@ -78,7 +78,7 @@ use apt_capnp::source;
 use errors::*;
 use blank_to_null;
 
-const HANDLED_FIELDS: [&'static str; """ + str(len(HANDLED_FIELDS)) + """] = [
+pub const HANDLED_FIELDS: [&'static str; """ + str(len(HANDLED_FIELDS)) + """] = [
 """)
         for field in sorted(HANDLED_FIELDS):
             f.write('    "{}",\n'.format(field))
@@ -87,10 +87,6 @@ const HANDLED_FIELDS: [&'static str; """ + str(len(HANDLED_FIELDS)) + """] = [
 ];
 
 pub fn set_field(key: &str, val: &str, builder: &mut source::Builder) -> Result<()> {
-    if HANDLED_FIELDS.contains(&key) {
-        return Ok(());
-    }
-
     match key {
 """)
         for orig in sorted(text_fields):
@@ -98,7 +94,7 @@ pub fn set_field(key: &str, val: &str, builder: &mut source::Builder) -> Result<
         f.write("""
         other => bail!("unrecognised field: {}", other), 
     }
-    
+
     Ok(())
 }
 """)

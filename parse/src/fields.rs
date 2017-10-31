@@ -4,7 +4,7 @@ use apt_capnp::source;
 use errors::*;
 use blank_to_null;
 
-const HANDLED_FIELDS: [&'static str; 29] = [
+pub const HANDLED_FIELDS: [&'static str; 29] = [
     "Architecture",
     "Binaries",
     "Build-Conflicts",
@@ -34,14 +34,9 @@ const HANDLED_FIELDS: [&'static str; 29] = [
     "Vcs-Mtn",
     "Vcs-Svn",
     "Version",
-
 ];
 
 pub fn set_field(key: &str, val: &str, builder: &mut source::Builder) -> Result<()> {
-    if HANDLED_FIELDS.contains(&key) {
-        return Ok(());
-    }
-
     match key {
         "Binary" => blank_to_null(val, |x| builder.set_binary(x)),
         "Breaks" => blank_to_null(val, |x| builder.set_breaks(x)),
@@ -100,6 +95,6 @@ pub fn set_field(key: &str, val: &str, builder: &mut source::Builder) -> Result<
 
         other => bail!("unrecognised field: {}", other), 
     }
-    
+
     Ok(())
 }
