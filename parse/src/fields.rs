@@ -34,7 +34,6 @@ pub const HANDLED_FIELDS: [&'static str; 29] = [
     "Vcs-Mtn",
     "Vcs-Svn",
     "Version",
-
 ];
 
 pub fn set_field(key: &str, val: &str, builder: &mut source::Builder) -> Result<()> {

@@ -64,6 +64,29 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
     set_format(output.borrow().init_format(), &handled_entries["Format"]);
 
     {
+        let lines: Vec<&str> = handled_entries["Package-List"]
+            .split('\n')
+            .map(|x| x.trim())
+            .collect();
+        let mut builder = output.borrow().init_binaries(as_u32(lines.len()));
+        for (i, line) in lines.into_iter().enumerate() {
+            let mut builder = builder.borrow().get(as_u32(i));
+            let parts: Vec<&str> = line.split(' ').collect();
+            builder.set_name(parts[0]);
+            builder.set_style(parts[1]);
+            builder.set_section(parts[2]);
+            set_priority(builder.borrow().init_priority(), parts[3]);
+
+            if parts.len() > 4 {
+                let mut builder = builder.init_extras(as_u32(parts.len() - 4));
+                for (i, part) in parts[4..].iter().enumerate() {
+                    builder.set(as_u32(i), part);
+                }
+            }
+        }
+    }
+
+    {
         let reader = input.get_files()?;
         let mut builder = output.borrow().init_files(reader.len());
         for i in 0..reader.len() {
@@ -150,7 +173,7 @@ where
 
 fn as_u32(val: usize) -> u32 {
     assert!(
-        val < (std::u32::MAX as usize),
+        val <= (std::u32::MAX as usize),
         "can't have more than 2^32 anything"
     );
     val as u32
