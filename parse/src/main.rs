@@ -38,6 +38,14 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
     output.set_package(input.get_package()?);
     output.set_version(input.get_version()?);
     output.set_index(input.get_index()?);
+
+    set_priority(
+        output.borrow().init_priority(),
+        &get_entry(input, "Priority")?,
+    );
+
+
+
     {
         let reader = input.get_files()?;
         let mut builder = output.borrow().init_files(reader.len());
@@ -59,7 +67,7 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
             let reader = reader.borrow().get(i);
             let key = reader.get_key()?;
 
-            if fields::HANDLED_FIELDS.contains(key) {
+            if fields::HANDLED_FIELDS.contains(&key) {
                 continue;
             }
 
@@ -70,6 +78,31 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
     }
 
     Ok(())
+}
+
+fn get_entry(input: apt_capnp::raw_source::Reader, name: &str) -> Result<String> {
+    let reader = input.get_entries()?;
+    for i in 0..reader.len() {
+        let reader = reader.borrow().get(i);
+        let key = reader.get_key()?;
+        if name == key {
+            return Ok(reader.get_value()?.to_string());
+        }
+    }
+
+    Ok(String::new())
+}
+
+fn set_priority(mut into: apt_capnp::priority::Builder, string: &str) {
+    match string {
+        "required" => into.set_required(()),
+        "important" => into.set_important(()),
+        "standard" => into.set_standard(()),
+        "optional" => into.set_optional(()),
+        "extra" => into.set_extra(()),
+        "source" => into.set_source(()),
+        _ => unimplemented!(),
+    }
 }
 
 fn blank_to_null<F>(value: &str, into: F)
