@@ -61,6 +61,8 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
         }
     }
 
+    set_format(output.borrow().init_format(), &handled_entries["Format"]);
+
     {
         let reader = input.get_files()?;
         let mut builder = output.borrow().init_files(reader.len());
@@ -120,7 +122,17 @@ fn set_priority(mut into: apt_capnp::priority::Builder, string: &str) {
         "optional" => into.set_optional(()),
         "extra" => into.set_extra(()),
         "source" => into.set_source(()),
-        _ => unimplemented!(),
+        other => panic!("unsupported priority: '{}'", other),
+    }
+}
+
+fn set_format(mut into: apt_capnp::source::format::Builder, string: &str) {
+    match string {
+        "3.0 (quilt)" => into.set_quilt3dot0(()),
+        "1.0" => into.set_original(()),
+        "3.0 (git)" => into.set_git3dot0(()),
+        "3.0 (native)" => into.set_native3dot0(()),
+        other => panic!("unsupported source format: '{}'", other),
     }
 }
 
@@ -137,6 +149,9 @@ where
 }
 
 fn as_u32(val: usize) -> u32 {
-    assert!(val < (std::u32::MAX as usize), "can't have more than 2^32 anything");
+    assert!(
+        val < (std::u32::MAX as usize),
+        "can't have more than 2^32 anything"
+    );
     val as u32
 }
