@@ -118,12 +118,13 @@ struct Source {
     tag                    @79 :Text;
     task                   @80 :Text;
     testsuite              @81 :Text;
-    testsuiteTriggers      @82 :Text;
-    triggersAwaited        @83 :Text;
-    triggersPending        @84 :Text;
-    uploaders              @85 :Text;
-    upstreamVcsBzr         @86 :Text;
-    vcsUpstreamBzr         @87 :Text;
+    testsuiteRestrictions  @82 :Text;
+    testsuiteTriggers      @83 :Text;
+    triggersAwaited        @84 :Text;
+    triggersPending        @85 :Text;
+    uploaders              @86 :Text;
+    upstreamVcsBzr         @87 :Text;
+    vcsUpstreamBzr         @88 :Text;
 
 # END GENERATED
 }

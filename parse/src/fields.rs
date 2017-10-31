@@ -104,6 +104,7 @@ pub fn set_field(key: &str, val: &str, builder: &mut source::Builder) -> Result<
         "Tag" => blank_to_null(val, |x| builder.set_tag(x)),
         "Task" => blank_to_null(val, |x| builder.set_task(x)),
         "Testsuite" => blank_to_null(val, |x| builder.set_testsuite(x)),
+        "Testsuite-Restrictions" => blank_to_null(val, |x| builder.set_testsuite_restrictions(x)),
         "Testsuite-Triggers" => blank_to_null(val, |x| builder.set_testsuite_triggers(x)),
         "Triggers-Awaited" => blank_to_null(val, |x| builder.set_triggers_awaited(x)),
         "Triggers-Pending" => blank_to_null(val, |x| builder.set_triggers_pending(x)),
