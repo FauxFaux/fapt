@@ -2,6 +2,14 @@
 
 # code/apt/apt-pkg/tagfile-keys.list
 
+struct Item {
+    union {
+        end       @0 :Void;
+        rawSource @1 :RawSource;
+        source    @2 :Source;
+    }
+}
+
 struct RawSource {
     package  @0 :Text;
     version  @1 :Text;

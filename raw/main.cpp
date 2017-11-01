@@ -51,8 +51,9 @@ static void rewind(const int fd) {
 static void render(const int temp, const pkgSrcRecords::Parser *cursor) {
 
     ::capnp::MallocMessageBuilder message;
+    auto item = message.initRoot<Item>();
 
-    auto root = message.initRoot<RawSource>();
+    auto root = item.initRawSource();
 
     root.setPackage(cursor->Package());
 

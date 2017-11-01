@@ -15,6 +15,7 @@ mod errors;
 mod fields;
 mod vcs;
 
+use apt_capnp::item;
 use apt_capnp::raw_source;
 use apt_capnp::source;
 use errors::*;
@@ -30,7 +31,15 @@ fn run() -> Result<()> {
 
     loop {
         let input = serialize::read_message(&mut stdin, capnp::message::ReaderOptions::new())?;
-        let input = input.get_root::<raw_source::Reader>()?;
+
+        let input = input.get_root::<item::Reader>()?;
+
+        let input = match input.which()? {
+            item::End(()) => return Ok(()),
+            item::Source(_) => bail!("unexpected item type in stream: already processed"),
+            item::RawSource(e) => e?,
+        };
+
         let mut message = capnp::message::Builder::new_default();
         {
             let output = message.init_root::<source::Builder>();
