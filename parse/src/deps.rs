@@ -72,6 +72,8 @@ named!(version_constraint<&str, Constraint>,
             tag!("<=") => { |_| Op::Le } |
             tag!(">>") => { |_| Op::Gt } |
             tag!("<<") => { |_| Op::Lt } |
+            tag!(">") => { |_| Op::Gt } |
+            tag!("<") => { |_| Op::Lt } |
             tag!("=") => { |_| Op::Eq }
         ) >>
         version: version >>
