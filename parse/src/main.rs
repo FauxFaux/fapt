@@ -34,38 +34,45 @@ fn run() -> Result<()> {
 
         let input = input.get_root::<item::Reader>()?;
 
-        let input = match input.which()? {
+        let mut message = capnp::message::Builder::new_default();
+
+        match input.which()? {
             item::End(()) => return Ok(()),
-            item::Source(_) | item::Binary(_) => bail!("unexpected item type in stream: already processed?"),
-            item::RawSource(e) => e?,
+            item::Source(_) | item::Binary(_) => {
+                bail!("unexpected item type in stream: already processed?")
+            }
+            item::RawSource(e) => write_source(e?, &mut message)?,
             item::RawBinary(_) => continue,
         };
 
-        let name = input.get_package().chain_err(
-            || "early parse error: package name",
-        )?;
-        let version = input.get_version().chain_err(|| {
-            format!("early parse error: version for '{}'", name)
-        })?;
-
-        let mut message = capnp::message::Builder::new_default();
-        {
-            let mut output = message.init_root::<source::Builder>();
-
-            output.set_package(name);
-            output.set_version(version);
-
-            populate_message(input, output).chain_err(|| {
-                format!("parsing / generating '{}' '{}'", name, version)
-            })?;
-        }
-
-        serialize::write_message(&mut stdout, &message).chain_err(
-            || {
-                format!("writing out '{}' '{}'", name, version)
-            },
-        )?;
+        serialize::write_message(&mut stdout, &message)?;
     }
+}
+
+fn write_source<A: capnp::message::Allocator>(
+    input: apt_capnp::raw_source::Reader,
+    message: &mut capnp::message::Builder<A>,
+) -> Result<()> {
+    let name = input.get_package().chain_err(
+        || "early parse error: package name",
+    )?;
+
+    let version = input.get_version().chain_err(|| {
+        format!("early parse error: version for '{}'", name)
+    })?;
+
+    {
+        let mut output = message.init_root::<source::Builder>();
+
+        output.set_package(name);
+        output.set_version(version);
+
+        populate_message(input, output).chain_err(|| {
+            format!("parsing / generating '{}' '{}'", name, version)
+        })?;
+    }
+
+    Ok(())
 }
 
 fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> Result<()> {
@@ -173,9 +180,8 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
 
             let val = reader.get_value()?;
 
-            fields::set_field_source(key, val, &mut unparsed).chain_err(|| {
-                format!("setting extra field {}", key)
-            })?;
+            fields::set_field_source(key, val, &mut unparsed)
+                .chain_err(|| format!("setting extra field {}", key))?;
         }
     }
 
