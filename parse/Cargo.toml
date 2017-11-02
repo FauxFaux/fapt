@@ -13,4 +13,4 @@ nom = "3.2.1"
 
 [profile.release]
 lto = true
-debug = true
+#debug = true
