@@ -12,6 +12,7 @@
 
 static int temp_file();
 static void render(int temp, const pkgSrcRecords::Parser *cursor);
+static void end();
 
 int main(int argc, char *argv[]) {
     if (2 != argc || 0 != strcmp(argv[1], "raw-sources")) {
@@ -30,6 +31,8 @@ int main(int argc, char *argv[]) {
     while (const pkgSrcRecords::Parser *cursor = records->Step()) {
         render(temp, cursor);
     }
+
+    end();
 
     delete records;
     delete cache_file;
@@ -203,6 +206,13 @@ static void render(const int temp, const pkgSrcRecords::Parser *cursor) {
         }
     }
 
+    ::capnp::writeMessageToFd(1, message);
+}
+
+static void end() {
+    ::capnp::MallocMessageBuilder message;
+    auto item = message.initRoot<Item>();
+    item.setEnd();
     ::capnp::writeMessageToFd(1, message);
 }
 
