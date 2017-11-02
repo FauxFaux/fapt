@@ -120,6 +120,9 @@ KNOWN_FIELDS_BIN = [
     'Homepage',
     'Section',
 
+    # boolean?
+    'Build-Essential',
+
     # should we parse out humans? Probably yes. It's full of \xescapes. Definitely yes.
     'Maintainer',
     'Original-Maintainer',
@@ -153,6 +156,7 @@ KNOWN_FIELDS_BIN = [
     'Lua-Versions',
 
     'Python-Egg-Name',
+    'Ghc-Package',
 
     'Npp-Applications',
     'Npp-Description',
@@ -161,7 +165,9 @@ KNOWN_FIELDS_BIN = [
     'Npp-Name',
 
     'Postgresql-Catversion',
+    'Postgresql-Version',
     'Tads2-Version',
+    'Tads3-Version',
     'Xul-Appid',
 
     'Supported',
