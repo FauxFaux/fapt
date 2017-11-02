@@ -126,7 +126,6 @@ pub fn set_field(key: &str, val: &str, builder: &mut unparsed_source::Builder) -
         "Original-Maintainer" => blank_to_null(val, |x| builder.set_original_maintainer(x)),
         "Package-Revision" => blank_to_null(val, |x| builder.set_package_revision(x)),
         "Package-Type" => blank_to_null(val, |x| builder.set_package_type(x)),
-        "Package_Revision" => blank_to_null(val, |x| builder.set_package_revision(x)),
         "Pre-Depends" => blank_to_null(val, |x| builder.set_pre_depends(x)),
         "Provides" => blank_to_null(val, |x| builder.set_provides(x)),
         "Python-Version" => blank_to_null(val, |x| builder.set_python_version(x)),
@@ -153,6 +152,10 @@ pub fn set_field(key: &str, val: &str, builder: &mut unparsed_source::Builder) -
         "Triggers-Awaited" => blank_to_null(val, |x| builder.set_triggers_awaited(x)),
         "Triggers-Pending" => blank_to_null(val, |x| builder.set_triggers_pending(x)),
         "Uploaders" => blank_to_null(val, |x| builder.set_uploaders(x)),
+
+        // Typos
+        "Package_Revision" => blank_to_null(val, |x| builder.set_package_revision(x)),
+        "Orig-Maintainer" => blank_to_null(val, |x| builder.set_original_maintainer(x)),
 
         other => bail!("unrecognised field: {}", other), 
     }
