@@ -73,7 +73,8 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
     let handled_entries = get_handled_entries(input)?;
 
     if let Some(priority) = handled_entries.get("Priority") {
-        set_priority(output.borrow().init_priority(), priority);
+        set_priority(output.borrow().init_priority(), priority)
+            .chain_err(|| "top-level priority")?;
     }
 
     {
@@ -89,7 +90,7 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
         }
     }
 
-    set_format(output.borrow().init_format(), &handled_entries["Format"]);
+    set_format(output.borrow().init_format(), &handled_entries["Format"])?;
 
     if let Some(list) = handled_entries.get("Package-List") {
         let lines: Vec<&str> = list.split('\n').map(|x| x.trim()).collect();
@@ -100,7 +101,8 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
             builder.set_name(parts[0]);
             builder.set_style(parts[1]);
             builder.set_section(parts[2]);
-            set_priority(builder.borrow().init_priority(), parts[3]);
+            set_priority(builder.borrow().init_priority(), parts[3])
+                .chain_err(|| "priority inside package list")?;
 
             if parts.len() > 4 {
                 let mut builder = builder.init_extras(as_u32(parts.len() - 4));
@@ -266,7 +268,7 @@ fn get_handled_entries(input: apt_capnp::raw_source::Reader) -> Result<HashMap<S
     Ok(ret)
 }
 
-fn set_priority(mut into: apt_capnp::priority::Builder, string: &str) {
+fn set_priority(mut into: apt_capnp::priority::Builder, string: &str) -> Result<()> {
     match string {
         "required" => into.set_required(()),
         "important" => into.set_important(()),
@@ -274,18 +276,23 @@ fn set_priority(mut into: apt_capnp::priority::Builder, string: &str) {
         "optional" => into.set_optional(()),
         "extra" => into.set_extra(()),
         "source" => into.set_source(()),
-        other => panic!("unsupported priority: '{}'", other),
+        "unknown" => into.set_unknown(()),
+        other => bail!("unsupported priority: '{}'", other),
     }
+
+    Ok(())
 }
 
-fn set_format(mut into: apt_capnp::source::format::Builder, string: &str) {
+fn set_format(mut into: apt_capnp::source::format::Builder, string: &str) -> Result<()> {
     match string {
         "3.0 (quilt)" => into.set_quilt3dot0(()),
         "1.0" => into.set_original(()),
         "3.0 (git)" => into.set_git3dot0(()),
         "3.0 (native)" => into.set_native3dot0(()),
-        other => panic!("unsupported source format: '{}'", other),
+        other => bail!("unsupported source format: '{}'", other),
     }
+
+    Ok(())
 }
 
 fn blank_to_null<F>(value: &str, into: F)
