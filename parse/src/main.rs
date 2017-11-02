@@ -155,8 +155,10 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
         output.borrow().init_build_conflict_indep(len)
     }).chain_err(|| "parsing Build-Conflicts-Indep")?;
 
+    let mut unparsed = output.init_unparsed();
+
     if let Some(maintainer) = handled_entries.get("Orig-Maintainer") {
-        output.set_original_maintainer(maintainer);
+        unparsed.set_original_maintainer(maintainer);
     }
 
     {
@@ -171,8 +173,9 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
 
             let val = reader.get_value()?;
 
-            fields::set_field(key, val, &mut output.borrow())
-                .chain_err(|| format!("setting extra field {}", key))?;
+            fields::set_field(key, val, &mut unparsed).chain_err(|| {
+                format!("setting extra field {}", key)
+            })?;
         }
     }
 
