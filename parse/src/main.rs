@@ -36,7 +36,7 @@ fn run() -> Result<()> {
 
         let input = match input.which()? {
             item::End(()) => return Ok(()),
-            item::Source(_) => bail!("unexpected item type in stream: already processed?"),
+            item::Source(_) | item::Binary(_) => bail!("unexpected item type in stream: already processed?"),
             item::RawSource(e) => e?,
             item::RawBinary(_) => continue,
         };
@@ -167,13 +167,13 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
             let reader = reader.borrow().get(i);
             let key = reader.get_key()?;
 
-            if fields::HANDLED_FIELDS.contains(&key) {
+            if fields::HANDLED_FIELDS_SOURCE.contains(&key) {
                 continue;
             }
 
             let val = reader.get_value()?;
 
-            fields::set_field(key, val, &mut unparsed).chain_err(|| {
+            fields::set_field_source(key, val, &mut unparsed).chain_err(|| {
                 format!("setting extra field {}", key)
             })?;
         }
@@ -256,13 +256,13 @@ fn fill_single_dep(single: deps::SingleDep, mut builder: apt_capnp::single_depen
 }
 
 fn get_handled_entries(input: apt_capnp::raw_source::Reader) -> Result<HashMap<String, String>> {
-    let mut ret = HashMap::with_capacity(fields::HANDLED_FIELDS.len());
+    let mut ret = HashMap::with_capacity(fields::HANDLED_FIELDS_SOURCE.len());
 
     let reader = input.get_entries()?;
     for i in 0..reader.len() {
         let reader = reader.borrow().get(i);
         let key = reader.get_key()?;
-        if !fields::HANDLED_FIELDS.contains(&key) {
+        if !fields::HANDLED_FIELDS_SOURCE.contains(&key) {
             continue;
         }
 

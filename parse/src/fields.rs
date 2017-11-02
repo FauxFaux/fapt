@@ -2,10 +2,11 @@
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
 use apt_capnp::unparsed_source;
+use apt_capnp::unparsed_binary;
 use errors::*;
 use blank_to_null;
 
-pub const HANDLED_FIELDS: [&'static str; 81] = [
+pub const HANDLED_FIELDS_SOURCE: [&'static str; 80] = [
     "Architecture",
     "Binary",
     "Build-Conflicts",
@@ -53,7 +54,6 @@ pub const HANDLED_FIELDS: [&'static str; 81] = [
     "Original-Vcs-Svn",
     "Package",
     "Package-List",
-    "Package_Revision",
     "Priority",
     "Source",
     "Upstream-Vcs-Arch",
@@ -89,76 +89,94 @@ pub const HANDLED_FIELDS: [&'static str; 81] = [
     "Version",
 ];
 
-pub fn set_field(key: &str, val: &str, builder: &mut unparsed_source::Builder) -> Result<()> {
+pub fn set_field_source(key: &str, val: &str, builder: &mut unparsed_source::Builder) -> Result<()> {
     match key {
         "Autobuild" => blank_to_null(val, |x| builder.set_autobuild(x)),
-        "Breaks" => blank_to_null(val, |x| builder.set_breaks(x)),
-        "Bugs" => blank_to_null(val, |x| builder.set_bugs(x)),
         "Build-Indep-Architecture" => blank_to_null(val, |x| builder.set_build_indep_architecture(x)),
-        "Built-For-Profiles" => blank_to_null(val, |x| builder.set_built_for_profiles(x)),
-        "Built-Using" => blank_to_null(val, |x| builder.set_built_using(x)),
-        "Class" => blank_to_null(val, |x| builder.set_class(x)),
         "Comment" => blank_to_null(val, |x| builder.set_comment(x)),
-        "Conffiles" => blank_to_null(val, |x| builder.set_conffiles(x)),
-        "Config-Version" => blank_to_null(val, |x| builder.set_config_version(x)),
-        "Conflicts" => blank_to_null(val, |x| builder.set_conflicts(x)),
-        "Depends" => blank_to_null(val, |x| builder.set_depends(x)),
         "Description" => blank_to_null(val, |x| builder.set_description(x)),
         "Description-md5" => blank_to_null(val, |x| builder.set_description_md5(x)),
         "Dgit" => blank_to_null(val, |x| builder.set_dgit(x)),
         "Directory" => blank_to_null(val, |x| builder.set_directory(x)),
         "Dm-Upload-Allowed" => blank_to_null(val, |x| builder.set_dm_upload_allowed(x)),
-        "Enhances" => blank_to_null(val, |x| builder.set_enhances(x)),
-        "Essential" => blank_to_null(val, |x| builder.set_essential(x)),
         "Extra-Source-Only" => blank_to_null(val, |x| builder.set_extra_source_only(x)),
-        "Filename" => blank_to_null(val, |x| builder.set_filename(x)),
         "Go-Import-Path" => blank_to_null(val, |x| builder.set_go_import_path(x)),
         "Homepage" => blank_to_null(val, |x| builder.set_homepage(x)),
+        "Maintainer" => blank_to_null(val, |x| builder.set_maintainer(x)),
+        "Origin" => blank_to_null(val, |x| builder.set_origin(x)),
+        "Original-Maintainer" => blank_to_null(val, |x| builder.set_original_maintainer(x)),
+        "Python-Version" => blank_to_null(val, |x| builder.set_python_version(x)),
+        "Python3-Version" => blank_to_null(val, |x| builder.set_python3_version(x)),
+        "Ruby-Versions" => blank_to_null(val, |x| builder.set_ruby_versions(x)),
+        "Section" => blank_to_null(val, |x| builder.set_section(x)),
+        "Standards-Version" => blank_to_null(val, |x| builder.set_standards_version(x)),
+        "Testsuite" => blank_to_null(val, |x| builder.set_testsuite(x)),
+        "Testsuite-Restrictions" => blank_to_null(val, |x| builder.set_testsuite_restrictions(x)),
+        "Testsuite-Triggers" => blank_to_null(val, |x| builder.set_testsuite_triggers(x)),
+        "Uploaders" => blank_to_null(val, |x| builder.set_uploaders(x)),
+
+        // Typos
+        "Orig-Maintainer" => blank_to_null(val, |x| builder.set_original_maintainer(x)),
+
+        other => bail!("unrecognised source field: {}", other),
+    }
+
+    Ok(())
+}
+
+pub const HANDLED_FIELDS_BINARY: [&'static str; 2] = [
+    "Package",
+    "Version",
+];
+
+pub fn set_field_binary(key: &str, val: &str, builder: &mut unparsed_binary::Builder) -> Result<()> {
+    match key {
+        "Breaks" => blank_to_null(val, |x| builder.set_breaks(x)),
+        "Bugs" => blank_to_null(val, |x| builder.set_bugs(x)),
+        "Built-For-Profiles" => blank_to_null(val, |x| builder.set_built_for_profiles(x)),
+        "Built-Using" => blank_to_null(val, |x| builder.set_built_using(x)),
+        "Class" => blank_to_null(val, |x| builder.set_class(x)),
+        "Conffiles" => blank_to_null(val, |x| builder.set_conffiles(x)),
+        "Config-Version" => blank_to_null(val, |x| builder.set_config_version(x)),
+        "Conflicts" => blank_to_null(val, |x| builder.set_conflicts(x)),
+        "Depends" => blank_to_null(val, |x| builder.set_depends(x)),
+        "Enhances" => blank_to_null(val, |x| builder.set_enhances(x)),
+        "Essential" => blank_to_null(val, |x| builder.set_essential(x)),
+        "Filename" => blank_to_null(val, |x| builder.set_filename(x)),
+        "Files" => blank_to_null(val, |x| builder.set_files(x)),
         "Important" => blank_to_null(val, |x| builder.set_important(x)),
         "Installed-Size" => blank_to_null(val, |x| builder.set_installed_size(x)),
         "Installer-Menu-Item" => blank_to_null(val, |x| builder.set_installer_menu_item(x)),
         "Kernel-Version" => blank_to_null(val, |x| builder.set_kernel_version(x)),
         "MD5sum" => blank_to_null(val, |x| builder.set_md5sum(x)),
         "MSDOS-Filename" => blank_to_null(val, |x| builder.set_msdos_filename(x)),
-        "Maintainer" => blank_to_null(val, |x| builder.set_maintainer(x)),
         "Multi-Arch" => blank_to_null(val, |x| builder.set_multi_arch(x)),
         "Optional" => blank_to_null(val, |x| builder.set_optional(x)),
-        "Origin" => blank_to_null(val, |x| builder.set_origin(x)),
-        "Original-Maintainer" => blank_to_null(val, |x| builder.set_original_maintainer(x)),
         "Package-Revision" => blank_to_null(val, |x| builder.set_package_revision(x)),
         "Package-Type" => blank_to_null(val, |x| builder.set_package_type(x)),
         "Pre-Depends" => blank_to_null(val, |x| builder.set_pre_depends(x)),
         "Provides" => blank_to_null(val, |x| builder.set_provides(x)),
-        "Python-Version" => blank_to_null(val, |x| builder.set_python_version(x)),
-        "Python3-Version" => blank_to_null(val, |x| builder.set_python3_version(x)),
         "Recommended" => blank_to_null(val, |x| builder.set_recommended(x)),
         "Recommends" => blank_to_null(val, |x| builder.set_recommends(x)),
         "Replaces" => blank_to_null(val, |x| builder.set_replaces(x)),
         "Revision" => blank_to_null(val, |x| builder.set_revision(x)),
-        "Ruby-Versions" => blank_to_null(val, |x| builder.set_ruby_versions(x)),
         "SHA1" => blank_to_null(val, |x| builder.set_sha1(x)),
         "SHA256" => blank_to_null(val, |x| builder.set_sha256(x)),
         "SHA512" => blank_to_null(val, |x| builder.set_sha512(x)),
-        "Section" => blank_to_null(val, |x| builder.set_section(x)),
         "Size" => blank_to_null(val, |x| builder.set_size(x)),
-        "Standards-Version" => blank_to_null(val, |x| builder.set_standards_version(x)),
+        "Source" => blank_to_null(val, |x| builder.set_source(x)),
         "Status" => blank_to_null(val, |x| builder.set_status(x)),
         "Subarchitecture" => blank_to_null(val, |x| builder.set_subarchitecture(x)),
         "Suggests" => blank_to_null(val, |x| builder.set_suggests(x)),
         "Tag" => blank_to_null(val, |x| builder.set_tag(x)),
         "Task" => blank_to_null(val, |x| builder.set_task(x)),
-        "Testsuite" => blank_to_null(val, |x| builder.set_testsuite(x)),
-        "Testsuite-Restrictions" => blank_to_null(val, |x| builder.set_testsuite_restrictions(x)),
-        "Testsuite-Triggers" => blank_to_null(val, |x| builder.set_testsuite_triggers(x)),
         "Triggers-Awaited" => blank_to_null(val, |x| builder.set_triggers_awaited(x)),
         "Triggers-Pending" => blank_to_null(val, |x| builder.set_triggers_pending(x)),
-        "Uploaders" => blank_to_null(val, |x| builder.set_uploaders(x)),
 
         // Typos
         "Package_Revision" => blank_to_null(val, |x| builder.set_package_revision(x)),
-        "Orig-Maintainer" => blank_to_null(val, |x| builder.set_original_maintainer(x)),
 
-        other => bail!("unrecognised field: {}", other), 
+        other => bail!("unrecognised binary field: {}", other),
     }
 
     Ok(())

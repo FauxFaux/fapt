@@ -8,6 +8,7 @@ struct Item {
         rawSource @1 :RawSource;
         rawBinary @2 :RawBinary;
         source    @3 :Source;
+        binary    @4 :Binary;
     }
 }
 
@@ -69,6 +70,14 @@ struct Source {
     buildConflictIndep @18 :List(Dependency);
 
     unparsed @19 :UnparsedSource;
+}
+
+struct Binary {
+    package @0 :Text;
+    version @1 :Text;
+    index   @2 :IndexFile;
+
+    unparsed @3 :UnparsedBinary;
 }
 
 struct Dependency {
@@ -168,52 +177,57 @@ struct UnparsedSource {
     dmUploadAllowed        @11 :Text;
     description            @12 :Text;
     descriptionMd5         @13 :Text;
-    breaks                 @14 :Text;
-    bugs                   @15 :Text;
-    builtForProfiles       @16 :Text;
-    builtUsing             @17 :Text;
-    class                  @18 :Text;
-    conffiles              @19 :Text;
-    configVersion          @20 :Text;
-    conflicts              @21 :Text;
-    depends                @22 :Text;
-    enhances               @23 :Text;
-    essential              @24 :Text;
-    filename               @25 :Text;
-    important              @26 :Text;
-    installedSize          @27 :Text;
-    installerMenuItem      @28 :Text;
-    kernelVersion          @29 :Text;
-    md5sum                 @30 :Text;
-    msdosFilename          @31 :Text;
-    multiArch              @32 :Text;
-    optional               @33 :Text;
-    origin                 @34 :Text;
-    packageRevision        @35 :Text;
-    packageType            @36 :Text;
-    preDepends             @37 :Text;
-    provides               @38 :Text;
-    recommended            @39 :Text;
-    recommends             @40 :Text;
-    replaces               @41 :Text;
-    revision               @42 :Text;
-    sha1                   @43 :Text;
-    sha256                 @44 :Text;
-    sha512                 @45 :Text;
-    size                   @46 :Text;
-    status                 @47 :Text;
-    subarchitecture        @48 :Text;
-    suggests               @49 :Text;
-    tag                    @50 :Text;
-    task                   @51 :Text;
-    triggersAwaited        @52 :Text;
-    triggersPending        @53 :Text;
-    extraSourceOnly        @54 :Text;
-    buildIndepArchitecture @55 :Text;
-    dgit                   @56 :Text;
-    goImportPath           @57 :Text;
-    pythonVersion          @58 :Text;
-    python3Version         @59 :Text;
-    rubyVersions           @60 :Text;
-    comment                @61 :Text;
+    extraSourceOnly        @14 :Text;
+    buildIndepArchitecture @15 :Text;
+    dgit                   @16 :Text;
+    goImportPath           @17 :Text;
+    pythonVersion          @18 :Text;
+    python3Version         @19 :Text;
+    rubyVersions           @20 :Text;
+    comment                @21 :Text;
+    origin                 @22 :Text;
+}
+
+struct UnparsedBinary {
+    breaks            @0 :Text;
+    bugs              @1 :Text;
+    builtForProfiles  @2 :Text;
+    builtUsing        @3 :Text;
+    class             @4 :Text;
+    conffiles         @5 :Text;
+    configVersion     @6 :Text;
+    conflicts         @7 :Text;
+    depends           @8 :Text;
+    enhances          @9 :Text;
+    essential         @10 :Text;
+    filename          @11 :Text;
+    files             @12 :Text;
+    important         @13 :Text;
+    installedSize     @14 :Text;
+    installerMenuItem @15 :Text;
+    kernelVersion     @16 :Text;
+    md5sum            @17 :Text;
+    msdosFilename     @18 :Text;
+    multiArch         @19 :Text;
+    optional          @20 :Text;
+    packageRevision   @21 :Text;
+    packageType       @22 :Text;
+    preDepends        @23 :Text;
+    provides          @24 :Text;
+    recommended       @25 :Text;
+    recommends        @26 :Text;
+    replaces          @27 :Text;
+    revision          @28 :Text;
+    sha1              @29 :Text;
+    sha256            @30 :Text;
+    sha512            @31 :Text;
+    size              @32 :Text;
+    source            @33 :Text;
+    status            @34 :Text;
+    subarchitecture   @35 :Text;
+    suggests          @36 :Text;
+    tag               @37 :Text;
+    task              @38 :Text;
+    triggersAwaited   @39 :Text;
+    triggersPending   @40 :Text;
 }
