@@ -244,15 +244,7 @@ static std::vector<std::string> keys_in_section(pkgTagSection &sect) {
             }
 
             auto key = std::string(start, colon);
-            if (key != "Package" &&
-                key != "Version" &&
-                key != "Binary" &&
-                key != "Files" &&
-                key != "Checksums-Sha1" &&
-                key != "Checksums-Sha256" &&
-                key != "Checksums-Sha512") {
-                keys.emplace_back(key);
-            }
+            keys.emplace_back(key);
         }
     }
     if (keys.size() > std::numeric_limits<uint>::max()) {

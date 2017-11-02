@@ -10,9 +10,6 @@ use as_u32;
 use blank_to_null;
 use get_handled_entries;
 
-use std::io;
-use std::io::Write;
-
 pub fn populate(input: raw_binary::Reader, root: &mut item::Builder) -> Result<()> {
     let mut output = root.borrow().init_binary();
 

@@ -126,15 +126,46 @@ KNOWN_FIELDS_BIN = [
 
     # Related fields to be simplified
     'Description',
+    'Description-en',
+    'Description-en_GB',
     'Description-md5',
 
     # junk seen in the wild
     'Modaliases',
+
     'Gstreamer-Decoders',
     'Gstreamer-Elements',
     'Gstreamer-Encoders',
     'Gstreamer-Uri-Sinks',
     'Gstreamer-Uri-Sources',
+    'Gstreamer-Version',
+
+    'License',
+    'Vendor',
+
+    'Auto-Built-Package',
+    'Build-Ids',
+
+    'Go-Import-Path',
+    'Python-Version',
+    'Python3-Version',
+    'Ruby-Versions',
+    'Lua-Versions',
+
+    'Python-Egg-Name',
+
+    'Npp-Applications',
+    'Npp-Description',
+    'Npp-File',
+    'Npp-Mimetype',
+    'Npp-Name',
+
+    'Postgresql-Catversion',
+    'Tads2-Version',
+    'Xul-Appid',
+
+    'Supported',
+    'Phased-Update-Percentage',
 
     # original apt list
     'Breaks',
@@ -158,6 +189,7 @@ KNOWN_FIELDS_BIN = [
     'MSDOS-Filename',
     'Multi-Arch',
     'Optional',
+    'Origin',
     'Package-Revision',
     'Package-Type',
     'Pre-Depends',
