@@ -64,6 +64,7 @@ for vcs in [
 EXTRA_FIELDS = {
     'Autobuild',
     'Testsuite-Restrictions',
+    'Extra-Source-Only',
 
     'Build-Indep-Architecture',
 
@@ -83,6 +84,8 @@ EXTRA_FIELDS = {
     'Python-Version',
     'Python3-Version',
     'Ruby-Versions',
+
+    'Comment',
 }
 
 
