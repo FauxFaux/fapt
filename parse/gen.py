@@ -60,12 +60,34 @@ for vcs in [
     HANDLED_FIELDS.add('Upstream-Vcs-' + vcs)
     HANDLED_FIELDS.add('Vcs-Upstream-' + vcs)
 
+# finding new fields:
+# ../raw/build/apt-dump raw-sources | cargo run --release | capnp decode ../apt.capnp Source --short | sed -n 's/.*unparsed = (//p' | sed 's/", /"\n/g' | cut -d= -f 1 | sort | uniq -c | sort -n
+
 KNOWN_FIELDS = [
     # definitely just normal strings, don't need parsing
     'Directory',
     'Homepage',
     'Standards-Version',
     'Section',
+
+    # should we parse out humans? Probably yes. It's full of \xescapes. Definitely yes.
+    'Maintainer',
+    'Original-Maintainer',
+    'Uploaders',
+
+    # should enum up Testsuite, and parse package list out of Triggers
+    # https://anonscm.debian.org/git/lintian/lintian.git/tree/checks/testsuite.pm
+    'Testsuite',
+    'Testsuite-Triggers',
+    'Testsuite-Restrictions',
+
+    # booleans?
+    'Autobuild',
+    'Dm-Upload-Allowed',
+
+    # Related fields to be simplified
+    'Description',
+    'Description-md5',
 
     # Other things apt reads
     'Breaks',
@@ -77,9 +99,6 @@ KNOWN_FIELDS = [
     'Config-Version',
     'Conflicts',
     'Depends',
-    'Description',
-    'Description-md5',
-    'Dm-Upload-Allowed',
     'Enhances',
     'Essential',
     'Filename',
@@ -88,13 +107,11 @@ KNOWN_FIELDS = [
     'Installed-Size',
     'Installer-Menu-Item',
     'Kernel-Version',
-    'Maintainer',
     'MD5sum',
     'MSDOS-Filename',
     'Multi-Arch',
     'Optional',
     'Origin',
-    'Original-Maintainer',
     'Package-Revision',
     'Package-Type',
     'Pre-Depends',
@@ -113,41 +130,15 @@ KNOWN_FIELDS = [
     'Suggests',
     'Tag',
     'Task',
-    'Testsuite',
-    'Testsuite-Triggers',
     'Triggers-Awaited',
     'Triggers-Pending',
-    'Uploaders',
-    'Vcs-Arch',
-    'Vcs-Browse',
-    'Vcs-Browser',
-    'Vcs-Bzr',
-    'Vcs-Cvs',
-    'Vcs-Darcs',
-    'Vcs-Git',
-    'Vcs-Hg',
-    'Vcs-Mtn',
-    'Vcs-Svn',
-    'Version',
 
     # Fields that have been seen in the wild, but which apt ignores.
-    'Autobuild',
-    'Testsuite-Restrictions',
     'Extra-Source-Only',
 
     'Build-Indep-Architecture',
 
-    'Debian-Vcs-Browser',
-    'Debian-Vcs-Git',
-    'Debian-Vcs-Svn',
     'Dgit',
-    'Orig-Vcs-Browser',
-    'Orig-Vcs-Git',
-    'Orig-Vcs-Svn',
-    'Original-Vcs-Browser',
-    'Original-Vcs-Bzr',
-    'Upstream-Vcs-Bzr',
-    'Vcs-Upstream-Bzr',
 
     'Go-Import-Path',
     'Python-Version',
