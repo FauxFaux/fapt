@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use apt_capnp::item;
 use apt_capnp::raw_binary;
 use apt_capnp::binary;
@@ -8,23 +10,37 @@ use as_u32;
 use blank_to_null;
 use get_handled_entries;
 
+use std::io;
+use std::io::Write;
+
 pub fn populate(input: raw_binary::Reader, root: &mut item::Builder) -> Result<()> {
-    let output = root.borrow().init_binary();
+    let mut output = root.borrow().init_binary();
 
-    // TODO: find package name earlier so we can display it
+    let handled_entries =
+        get_handled_entries(input.get_entries()?, &fields::HANDLED_FIELDS_BINARY)
+            .chain_err(|| "early parse error finding handled fields (including name)")?;
 
-    populate_message(input, output)?;
+    let package = if let Some(package) = handled_entries.get("Package") {
+        output.set_package(package);
+        package.clone()
+    } else {
+        String::new()
+    };
+
+    populate_message(input, output, handled_entries).chain_err(
+        || {
+            format!("populating package '{}'", package)
+        },
+    )?;
 
     Ok(())
 }
 
-fn populate_message(input: raw_binary::Reader, mut output: binary::Builder) -> Result<()> {
-    let handled_entries =
-        get_handled_entries(input.get_entries()?, &fields::HANDLED_FIELDS_BINARY)?;
-
-    if let Some(package) = handled_entries.get("Package") {
-        output.set_package(package);
-    }
+fn populate_message(
+    input: raw_binary::Reader,
+    mut output: binary::Builder,
+    handled_entries: HashMap<String, String>,
+) -> Result<()> {
 
     if let Some(version) = handled_entries.get("Version") {
         output.set_version(version);

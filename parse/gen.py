@@ -92,9 +92,6 @@ KNOWN_FIELDS_SOURCE = [
     'Autobuild',
     'Dm-Upload-Allowed',
 
-    # Related fields to be simplified
-    'Description',
-    'Description-md5',
 
     # Fields that have been seen in the wild, but which apt ignores.
     'Extra-Source-Only',
@@ -120,6 +117,26 @@ HANDLED_FIELDS_BINARY = {
 }
 
 KNOWN_FIELDS_BIN = [
+    'Homepage',
+    'Section',
+
+    # should we parse out humans? Probably yes. It's full of \xescapes. Definitely yes.
+    'Maintainer',
+    'Original-Maintainer',
+
+    # Related fields to be simplified
+    'Description',
+    'Description-md5',
+
+    # junk seen in the wild
+    'Modaliases',
+    'Gstreamer-Decoders',
+    'Gstreamer-Elements',
+    'Gstreamer-Encoders',
+    'Gstreamer-Uri-Sinks',
+    'Gstreamer-Uri-Sources',
+
+    # original apt list
     'Breaks',
     'Bugs',
     'Built-For-Profiles',
