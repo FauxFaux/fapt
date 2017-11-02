@@ -40,10 +40,12 @@ fn run() -> Result<()> {
             item::RawSource(e) => e?,
         };
 
-        let name = input.get_package()
-            .chain_err(|| "early parse error: package name")?;
-        let version = input.get_version()
-            .chain_err(|| format!("early parse error: version for '{}'", name))?;
+        let name = input.get_package().chain_err(
+            || "early parse error: package name",
+        )?;
+        let version = input.get_version().chain_err(|| {
+            format!("early parse error: version for '{}'", name)
+        })?;
 
         let mut message = capnp::message::Builder::new_default();
         {
@@ -52,12 +54,16 @@ fn run() -> Result<()> {
             output.set_package(name);
             output.set_version(version);
 
-            populate_message(input, output)
-                .chain_err(|| format!("parsing / generating '{}' '{}'", name, version))?;
+            populate_message(input, output).chain_err(|| {
+                format!("parsing / generating '{}' '{}'", name, version)
+            })?;
         }
 
-        serialize::write_message(&mut stdout, &message)
-            .chain_err(|| format!("writing out '{}' '{}'", name, version))?;
+        serialize::write_message(&mut stdout, &message).chain_err(
+            || {
+                format!("writing out '{}' '{}'", name, version)
+            },
+        )?;
     }
 }
 
@@ -145,6 +151,10 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
     fill_build_dep(handled_entries.get("Build-Conflicts-Indep"), |len| {
         output.borrow().init_build_conflict_indep(len)
     }).chain_err(|| "parsing Build-Conflicts-Indep")?;
+
+    if let Some(maintainer) = handled_entries.get("Orig-Maintainer") {
+        output.set_original_maintainer(maintainer);
+    }
 
     {
         let reader = input.get_entries()?;

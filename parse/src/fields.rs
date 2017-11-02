@@ -4,7 +4,7 @@ use apt_capnp::source;
 use errors::*;
 use blank_to_null;
 
-pub const HANDLED_FIELDS: [&'static str; 79] = [
+pub const HANDLED_FIELDS: [&'static str; 80] = [
     "Architecture",
     "Binary",
     "Build-Conflicts",
@@ -29,6 +29,7 @@ pub const HANDLED_FIELDS: [&'static str; 79] = [
     "Debian-Vcs-Svn",
     "Files",
     "Format",
+    "Orig-Maintainer",
     "Orig-Vcs-Arch",
     "Orig-Vcs-Browse",
     "Orig-Vcs-Browser",

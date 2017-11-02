@@ -22,6 +22,9 @@ HANDLED_FIELDS = {
     # parsed into Files
     'Files',
 
+    # typo of Original-Maintainer, upstart in xenial
+    'Orig-Maintainer',
+
     # parsed build-deps
     'Build-Conflicts',
     'Build-Conflicts-Arch',
