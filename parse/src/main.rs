@@ -149,10 +149,7 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
 
             let val = reader.get_value()?;
 
-            if let Err(e) = fields::set_field(key, val, &mut output.borrow()) {
-                use std::io::Write;
-                write!(std::io::stderr(), "field: {:?}\n", e)?;
-            }
+            fields::set_field(key, val, &mut output.borrow())?;
         }
     }
 
