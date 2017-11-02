@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use capnp;
 
 use apt_capnp::dependency;
@@ -15,11 +13,9 @@ use vcs;
 
 use as_u32;
 use blank_to_null;
+use get_handled_entries;
 
-pub fn populate(
-    input: raw_source::Reader,
-    root: &mut item::Builder,
-) -> Result<()> {
+pub fn populate(input: raw_source::Reader, root: &mut item::Builder) -> Result<()> {
     let name = input.get_package().chain_err(
         || "early parse error: package name",
     )?;
@@ -28,16 +24,14 @@ pub fn populate(
         format!("early parse error: version for '{}'", name)
     })?;
 
-    {
-        let mut output = root.borrow().init_source();
+    let mut output = root.borrow().init_source();
 
-        output.set_package(name);
-        output.set_version(version);
+    output.set_package(name);
+    output.set_version(version);
 
-        populate_message(input, output).chain_err(|| {
-            format!("parsing / generating '{}' '{}'", name, version)
-        })?;
-    }
+    populate_message(input, output).chain_err(|| {
+        format!("parsing / generating '{}' '{}'", name, version)
+    })?;
 
     Ok(())
 }
@@ -45,7 +39,8 @@ pub fn populate(
 fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> Result<()> {
     output.set_index(input.get_index()?);
 
-    let handled_entries = get_handled_entries(input)?;
+    let handled_entries =
+        get_handled_entries(input.get_entries()?, &fields::HANDLED_FIELDS_SOURCE)?;
 
     if let Some(priority) = handled_entries.get("Priority") {
         set_priority(output.borrow().init_priority(), priority)
@@ -131,25 +126,19 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
 
     let mut unparsed = output.init_unparsed();
 
-    if let Some(maintainer) = handled_entries.get("Orig-Maintainer") {
-        unparsed.set_original_maintainer(maintainer);
-    }
+    let reader = input.get_entries()?;
+    for i in 0..reader.len() {
+        let reader = reader.borrow().get(i);
+        let key = reader.get_key()?;
 
-    {
-        let reader = input.get_entries()?;
-        for i in 0..reader.len() {
-            let reader = reader.borrow().get(i);
-            let key = reader.get_key()?;
-
-            if fields::HANDLED_FIELDS_SOURCE.contains(&key) {
-                continue;
-            }
-
-            let val = reader.get_value()?;
-
-            fields::set_field_source(key, val, &mut unparsed)
-                .chain_err(|| format!("setting extra field {}", key))?;
+        if fields::HANDLED_FIELDS_SOURCE.contains(&key) {
+            continue;
         }
+
+        let val = reader.get_value()?;
+
+        fields::set_field_source(key, val, &mut unparsed)
+            .chain_err(|| format!("setting extra field {}", key))?;
     }
 
     Ok(())
@@ -226,23 +215,6 @@ fn fill_single_dep(single: deps::SingleDep, mut builder: single_dependency::Buil
             builder.set(as_u32(i), &stage);
         }
     }
-}
-
-fn get_handled_entries(input: raw_source::Reader) -> Result<HashMap<String, String>> {
-    let mut ret = HashMap::with_capacity(fields::HANDLED_FIELDS_SOURCE.len());
-
-    let reader = input.get_entries()?;
-    for i in 0..reader.len() {
-        let reader = reader.borrow().get(i);
-        let key = reader.get_key()?;
-        if !fields::HANDLED_FIELDS_SOURCE.contains(&key) {
-            continue;
-        }
-
-        ret.insert(key.to_string(), reader.get_value()?.to_string());
-    }
-
-    Ok(ret)
 }
 
 fn set_priority(mut into: priority::Builder, string: &str) -> Result<()> {

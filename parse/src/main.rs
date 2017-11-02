@@ -5,9 +5,12 @@ extern crate error_chain;
 #[macro_use]
 extern crate nom;
 
+use std::collections::HashMap;
+
 use capnp::serialize;
 
 mod apt_capnp;
+mod bin;
 mod deps;
 mod errors;
 mod fields;
@@ -15,6 +18,7 @@ mod src;
 mod vcs;
 
 use apt_capnp::item;
+use apt_capnp::entry;
 use errors::*;
 
 quick_main!(run);
@@ -42,12 +46,31 @@ fn run() -> Result<()> {
                     bail!("unexpected item type in stream: already processed?")
                 }
                 item::RawSource(e) => src::populate(e?, &mut root)?,
-                item::RawBinary(_) => continue,
+                item::RawBinary(e) => bin::populate(e?, &mut root)?,
             };
         }
 
         serialize::write_message(&mut stdout, &message)?;
     }
+}
+
+fn get_handled_entries(
+    reader: capnp::struct_list::Reader<entry::Owned>,
+    handled: &[&str],
+) -> Result<HashMap<String, String>> {
+    let mut ret = HashMap::with_capacity(handled.len());
+
+    for i in 0..reader.len() {
+        let reader = reader.borrow().get(i);
+        let key = reader.get_key()?;
+        if !handled.contains(&key) {
+            continue;
+        }
+
+        ret.insert(key.to_string(), reader.get_value()?.to_string());
+    }
+
+    Ok(ret)
 }
 
 fn blank_to_null<F>(value: &str, into: F)
