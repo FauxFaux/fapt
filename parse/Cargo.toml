@@ -7,7 +7,7 @@ version = "0.1.0"
 capnpc = "0.8.7"
 
 [dependencies]
-capnp = "0.8.11"
+capnp = "0.8.12"
 error-chain = "0.11.0"
 nom = "3.2.1"
 
