@@ -50,7 +50,7 @@ fn populate_message(
         let reader = reader.borrow().get(i);
         let key = reader.get_key()?;
 
-        if fields::HANDLED_FIELDS_SOURCE.contains(&key) {
+        if fields::HANDLED_FIELDS_BINARY.contains(&key) {
             continue;
         }
 

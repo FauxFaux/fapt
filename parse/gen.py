@@ -114,24 +114,50 @@ KNOWN_FIELDS_SOURCE = [
 HANDLED_FIELDS_BINARY = {
     'Package',
     'Version',
+
+    # folded into File
+    'Filename',
+    'Size',
+    'MD5sum',
+    'SHA1',
+    'SHA256',
+    'SHA512',
+
+    # not text
+    'Installed-Size',
+    'Essential',
+    'Build-Essential',
+    'Priority',
+    'Architecture',
+
+    # package lists
+    'Depends',
+    'Recommends',
+    'Suggests',
+    'Enhances',
+    'Pre-Depends',
+    'Breaks',
+    'Conflicts',
+    'Replaces',
+    'Provides',
+
+    # folded into Description
+    'Description',
+    'Description-en',
+    'Description-en_GB',
+    'Description-md5',
 }
 
 KNOWN_FIELDS_BIN = [
     'Homepage',
     'Section',
-
-    # boolean?
-    'Build-Essential',
+    'Source',
+    'Task',
+    'Supported',
 
     # should we parse out humans? Probably yes. It's full of \xescapes. Definitely yes.
     'Maintainer',
     'Original-Maintainer',
-
-    # Related fields to be simplified
-    'Description',
-    'Description-en',
-    'Description-en_GB',
-    'Description-md5',
 
     # junk seen in the wild
     'Modaliases',
@@ -170,55 +196,36 @@ KNOWN_FIELDS_BIN = [
     'Tads3-Version',
     'Xul-Appid',
 
-    'Supported',
     'Phased-Update-Percentage',
 
     # original apt list
-    'Breaks',
     'Bugs',
     'Built-For-Profiles',
     'Built-Using',
     'Class',
     'Conffiles',
     'Config-Version',
-    'Conflicts',
-    'Depends',
-    'Enhances',
-    'Essential',
-    'Filename',
     'Files',
     'Important',
-    'Installed-Size',
     'Installer-Menu-Item',
     'Kernel-Version',
-    'MD5sum',
     'MSDOS-Filename',
     'Multi-Arch',
     'Optional',
     'Origin',
     'Package-Revision',
     'Package-Type',
-    'Pre-Depends',
-    'Provides',
     'Recommended',
-    'Recommends',
-    'Replaces',
     'Revision',
-    'SHA1',
-    'SHA256',
-    'SHA512',
-    'Size',
-    'Source',
     'Status',
     'Subarchitecture',
-    'Suggests',
     'Tag',
-    'Task',
     'Triggers-Awaited',
     'Triggers-Pending',
 ]
 
 ALIASES_BINARY = {
+    'Orig-Maintainer': 'Original-Maintainer',
     'Package_Revision': 'Package-Revision',
 }
 
