@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 import collections
-import re
-from typing import Set
-
 # fields apt likes, and we like too; we're going to parse them
 import os
+import re
 
 HANDLED_FIELDS = {
     # core
@@ -62,8 +60,92 @@ for vcs in [
     HANDLED_FIELDS.add('Upstream-Vcs-' + vcs)
     HANDLED_FIELDS.add('Vcs-Upstream-' + vcs)
 
-# Fields that have been seen in the wild, but which apt ignores.
-EXTRA_FIELDS = {
+KNOWN_FIELDS = [
+    # The set that apt supported on a random day
+    'Architecture',
+    'Binary',
+    'Breaks',
+    'Bugs',
+    'Build-Conflicts',
+    'Build-Conflicts-Arch',
+    'Build-Conflicts-Indep',
+    'Build-Depends',
+    'Build-Depends-Arch',
+    'Build-Depends-Indep',
+    'Built-For-Profiles',
+    'Built-Using',
+    'Checksums-Md5',
+    'Checksums-Sha1',
+    'Checksums-Sha256',
+    'Checksums-Sha512',
+    'Class',
+    'Conffiles',
+    'Config-Version',
+    'Conflicts',
+    'Depends',
+    'Description',
+    'Description-md5',
+    'Directory',
+    'Dm-Upload-Allowed',
+    'Enhances',
+    'Essential',
+    'Filename',
+    'Files',
+    'Format',
+    'Homepage',
+    'Important',
+    'Installed-Size',
+    'Installer-Menu-Item',
+    'Kernel-Version',
+    'Maintainer',
+    'MD5sum',
+    'MSDOS-Filename',
+    'Multi-Arch',
+    'Optional',
+    'Origin',
+    'Original-Maintainer',
+    'Package',
+    'Package-List',
+    'Package_Revision',
+    'Package-Revision',
+    'Package-Type',
+    'Pre-Depends',
+    'Priority',
+    'Provides',
+    'Recommended',
+    'Recommends',
+    'Replaces',
+    'Revision',
+    'Section',
+    'SHA1',
+    'SHA256',
+    'SHA512',
+    'Size',
+    'Source',
+    'Standards-Version',
+    'Status',
+    'Subarchitecture',
+    'Suggests',
+    'Tag',
+    'Task',
+    'Testsuite',
+    'Testsuite-Triggers',
+    'Triggers-Awaited',
+    'Triggers-Pending',
+    'Uploaders',
+    'Vcs-Arch',
+    'Vcs-Browse',
+    'Vcs-Browser',
+    'Vcs-Bzr',
+    'Vcs-Cvs',
+    'Vcs-Darcs',
+    'Vcs-Git',
+    'Vcs-Hg',
+    'Vcs-Mtn',
+    'Vcs-Svn',
+    'Version',
+
+    # Fields that have been seen in the wild, but which apt ignores.
     'Autobuild',
     'Testsuite-Restrictions',
     'Extra-Source-Only',
@@ -88,7 +170,7 @@ EXTRA_FIELDS = {
     'Ruby-Versions',
 
     'Comment',
-}
+]
 
 
 def to_snake(s: str) -> str:
@@ -99,8 +181,8 @@ def to_rust(s: str) -> str:
     return re.sub(r'[_-]', '_', s.lower())
 
 
-def main(known_fields: Set[str]):
-    text_fields = known_fields.union(EXTRA_FIELDS) - HANDLED_FIELDS
+def main():
+    text_fields = set(KNOWN_FIELDS) - HANDLED_FIELDS
     max_len = max(len(to_snake(field)) for field in text_fields)
     capnp_format_string = ('    {: <' + str(max_len) + '} @{} :Text;\n')
     rust_format_string = '        "{}" => blank_to_null(val, |x| builder.set_{}(x)),\n'
@@ -156,5 +238,4 @@ pub fn set_field(key: &str, val: &str, builder: &mut unparsed_source::Builder) -
 
 
 if __name__ == '__main__':
-    with open('tagfile-keys.list') as input:
-        main(set(line.strip() for line in input.readlines()))
+    main()
