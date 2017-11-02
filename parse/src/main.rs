@@ -36,8 +36,9 @@ fn run() -> Result<()> {
 
         let input = match input.which()? {
             item::End(()) => return Ok(()),
-            item::Source(_) => bail!("unexpected item type in stream: already processed"),
+            item::Source(_) => bail!("unexpected item type in stream: already processed?"),
             item::RawSource(e) => e?,
+            item::RawBinary(_) => continue,
         };
 
         let name = input.get_package().chain_err(

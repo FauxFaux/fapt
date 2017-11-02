@@ -6,7 +6,8 @@ struct Item {
     union {
         end       @0 :Void;
         rawSource @1 :RawSource;
-        source    @2 :Source;
+        rawBinary @2 :RawBinary;
+        source    @3 :Source;
     }
 }
 
@@ -19,6 +20,11 @@ struct RawSource {
     files    @4 :List(File);
 
     entries  @5 :List(Entry);
+}
+
+struct RawBinary {
+    index   @0 :IndexFile;
+    entries @1 :List(Entry);
 }
 
 struct File {
@@ -194,4 +200,16 @@ struct Priority {
         extra     @5 :Void;
         source    @6 :Void;
     }
+}
+
+struct IndexFile {
+    archive   @0 :Text;
+    version   @1 :Text;
+    origin    @2 :Text;
+    codename  @3 :Text;
+    label     @4 :Text;
+    site      @5 :Text;
+    component @6 :Text;
+    arch      @7 :Text;
+    type      @8 :Text;
 }

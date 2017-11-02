@@ -13,6 +13,11 @@
 static int temp_file();
 static void render(int temp, const pkgSrcRecords::Parser *cursor);
 static void end();
+static std::vector<std::string> keys_in_section(pkgTagSection &sect);
+static void render_bin(pkgCache::PkgFileIterator &file, pkgTagSection &sect);
+
+static void fill_keys(const pkgTagSection &sect, const vector<string> &keys,
+                      capnp::List<Entry, capnp::Kind::STRUCT>::Builder &builder);
 
 int main(int argc, char *argv[]) {
     if (2 != argc || 0 != strcmp(argv[1], "raw-sources")) {
@@ -22,14 +27,26 @@ int main(int argc, char *argv[]) {
 
     pkgInitConfig(*_config);
     pkgInitSystem(*_config, _system);
+    auto *cache_file = new pkgCacheFile();
 
     const int temp = temp_file();
-
-    auto *cache_file = new pkgCacheFile();
     pkgSourceList *sources = cache_file->GetSourceList();
     auto *records = new pkgSrcRecords(*sources);
+#if 0
     while (const pkgSrcRecords::Parser *cursor = records->Step()) {
         render(temp, cursor);
+    }
+#endif
+
+    auto pkg_cache = cache_file->GetPkgCache();
+    for (auto file = pkg_cache->FileBegin(); file != pkg_cache->FileEnd(); ++file) {
+        FileFd fd;
+        fd.Open(file.FileName(), FileFd::OpenMode::ReadOnly);
+        pkgTagFile tagFile(&fd);
+        pkgTagSection sect;
+        while (tagFile.Step(sect)) {
+            render_bin(file, sect);
+        }
     }
 
     end();
@@ -167,46 +184,83 @@ static void render(const int temp, const pkgSrcRecords::Parser *cursor) {
             throw std::runtime_error("didn't manage to load a record");
         }
 
-        std::vector<std::string> keys;
-        keys.reserve(sect.Count() - 4);
-
-        {
-            for (unsigned int i = 0; i < sect.Count(); ++i) {
-                const char *start;
-                const char *end;
-                sect.Get(start, end, i);
-
-                const char *colon = strchr(start, ':');
-                if (!colon || colon >= end) {
-                    throw std::runtime_error("couldn't find colon in field: " + std::string(start, end));
-                }
-
-                auto key = std::string(start, colon);
-                if (key != "Package" &&
-                    key != "Version" &&
-                    key != "Binary" &&
-                    key != "Files" &&
-                    key != "Checksums-Sha1" &&
-                    key != "Checksums-Sha256" &&
-                    key != "Checksums-Sha512") {
-                    keys.emplace_back(key);
-                }
-            }
-        }
-        if (keys.size() > std::numeric_limits<uint>::max()) {
-            throw std::runtime_error("can't have more than 'int' entries");
-        }
+        auto keys = keys_in_section(sect);
 
         auto builder = root.initEntries(static_cast<uint>(keys.size()));
-        uint pos = 0;
-        for (const std::string &key : keys) {
+        fill_keys(sect, keys, builder);
+    }
+
+    ::capnp::writeMessageToFd(1, message);
+}
+
+static void fill_keys(const pkgTagSection &sect, const vector<string> &keys,
+               capnp::List<Entry, capnp::Kind::STRUCT>::Builder &builder) {
+    uint pos = 0;
+    for (const string &key : keys) {
             auto entry = builder[pos++];
             entry.setKey(key);
             entry.setValue(sect.FindS(key.c_str()));
         }
-    }
+}
+
+static void render_bin(pkgCache::PkgFileIterator &file, pkgTagSection &sect) {
+    ::capnp::MallocMessageBuilder message;
+    auto item = message.initRoot<Item>();
+    auto root = item.initRawBinary();
+
+    auto index = root.initIndex();
+#define set(X) if (file.X() && *file.X()) { index.set##X(file.X()); }
+    set(Archive);
+    set(Version);
+    set(Origin);
+    set(Codename);
+    set(Label);
+    set(Site);
+    set(Component);
+#undef set
+
+    if (file.Architecture() && *file.Architecture()) { index.setArch(file.Architecture()); }
+    if (file.IndexType() && *file.IndexType()) { index.setType(file.IndexType()); }
+
+    auto keys = keys_in_section(sect);
+    auto builder = root.initEntries(keys.size());
+    fill_keys(sect, keys, builder);
 
     ::capnp::writeMessageToFd(1, message);
+}
+
+static std::vector<std::string> keys_in_section(pkgTagSection &sect) {
+    std::vector<std::string> keys;
+    keys.reserve(sect.Count());
+
+    {
+        for (unsigned int i = 0; i < sect.Count(); ++i) {
+            const char *start;
+            const char *end;
+            sect.Get(start, end, i);
+
+            const char *colon = strchr(start, ':');
+            if (!colon || colon >= end) {
+                throw std::runtime_error("couldn't find colon in field: " + std::string(start, end));
+            }
+
+            auto key = std::string(start, colon);
+            if (key != "Package" &&
+                key != "Version" &&
+                key != "Binary" &&
+                key != "Files" &&
+                key != "Checksums-Sha1" &&
+                key != "Checksums-Sha256" &&
+                key != "Checksums-Sha512") {
+                keys.emplace_back(key);
+            }
+        }
+    }
+    if (keys.size() > std::numeric_limits<uint>::max()) {
+        throw std::runtime_error("can't have more than 'int' entries");
+    }
+
+    return keys;
 }
 
 static void end() {
