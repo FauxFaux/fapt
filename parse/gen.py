@@ -68,8 +68,6 @@ KNOWN_FIELDS = [
     'Section',
 
     # Other things apt reads
-    'Architecture',
-    'Binary',
     'Breaks',
     'Bugs',
     'Built-For-Profiles',
@@ -86,7 +84,6 @@ KNOWN_FIELDS = [
     'Essential',
     'Filename',
     'Files',
-    'Format',
     'Important',
     'Installed-Size',
     'Installer-Menu-Item',
@@ -98,12 +95,9 @@ KNOWN_FIELDS = [
     'Optional',
     'Origin',
     'Original-Maintainer',
-    'Package',
-    'Package-List',
     'Package-Revision',
     'Package-Type',
     'Pre-Depends',
-    'Priority',
     'Provides',
     'Recommended',
     'Recommends',
@@ -167,6 +161,9 @@ ALIASES = {
     'Package_Revision': 'Package-Revision',
     'Orig-Maintainer': 'Original-Maintainer'
 }
+
+HANDLED_FIELDS.update(ALIASES.keys())
+
 
 def to_snake(s: str) -> str:
     return re.sub(r'(?!^)[_-]([a-zA-Z])', lambda m: m.group(1).upper(), s.lower())

@@ -5,7 +5,7 @@ use apt_capnp::unparsed_source;
 use errors::*;
 use blank_to_null;
 
-pub const HANDLED_FIELDS: [&'static str; 80] = [
+pub const HANDLED_FIELDS: [&'static str; 81] = [
     "Architecture",
     "Binary",
     "Build-Conflicts",
@@ -53,6 +53,7 @@ pub const HANDLED_FIELDS: [&'static str; 80] = [
     "Original-Vcs-Svn",
     "Package",
     "Package-List",
+    "Package_Revision",
     "Priority",
     "Source",
     "Upstream-Vcs-Arch",
