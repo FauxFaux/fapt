@@ -10,14 +10,15 @@
 
 #include "apt.capnp.h"
 
-static int temp_file();
-static void render(int temp, const pkgSrcRecords::Parser *cursor);
-static void end();
-static std::vector<std::string> keys_in_section(pkgTagSection &sect);
+static void render_src(int temp, const pkgSrcRecords::Parser *cursor);
 static void render_bin(pkgCache::PkgFileIterator &file, pkgTagSection &sect);
 
 static void fill_keys(const pkgTagSection &sect, const vector<string> &keys,
                       capnp::List<Entry, capnp::Kind::STRUCT>::Builder &builder);
+
+static int temp_file();
+static void end();
+static std::vector<std::string> keys_in_section(pkgTagSection &sect);
 
 int main(int argc, char *argv[]) {
     if (2 != argc || 0 != strcmp(argv[1], "raw-sources")) {
@@ -32,11 +33,9 @@ int main(int argc, char *argv[]) {
     const int temp = temp_file();
     pkgSourceList *sources = cache_file->GetSourceList();
     auto *records = new pkgSrcRecords(*sources);
-#if 0
     while (const pkgSrcRecords::Parser *cursor = records->Step()) {
-        render(temp, cursor);
+        render_src(temp, cursor);
     }
-#endif
 
     auto pkg_cache = cache_file->GetPkgCache();
     for (auto file = pkg_cache->FileBegin(); file != pkg_cache->FileEnd(); ++file) {
@@ -68,7 +67,7 @@ static void rewind(const int fd) {
     }
 }
 
-static void render(const int temp, const pkgSrcRecords::Parser *cursor) {
+static void render_src(int temp, const pkgSrcRecords::Parser *cursor) {
 
     ::capnp::MallocMessageBuilder message;
     auto item = message.initRoot<Item>();
