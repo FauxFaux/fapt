@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use capnp;
 
 use apt_capnp::dependency;
+use apt_capnp::item;
 use apt_capnp::priority;
 use apt_capnp::raw_source;
 use apt_capnp::single_dependency;
@@ -15,9 +16,9 @@ use vcs;
 use as_u32;
 use blank_to_null;
 
-pub fn populate<A: capnp::message::Allocator>(
+pub fn populate(
     input: raw_source::Reader,
-    message: &mut capnp::message::Builder<A>,
+    root: &mut item::Builder,
 ) -> Result<()> {
     let name = input.get_package().chain_err(
         || "early parse error: package name",
@@ -28,7 +29,7 @@ pub fn populate<A: capnp::message::Allocator>(
     })?;
 
     {
-        let mut output = message.init_root::<source::Builder>();
+        let mut output = root.borrow().init_source();
 
         output.set_package(name);
         output.set_version(version);

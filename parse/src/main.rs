@@ -33,14 +33,18 @@ fn run() -> Result<()> {
 
         let mut message = capnp::message::Builder::new_default();
 
-        match input.which()? {
-            item::End(()) => return Ok(()),
-            item::Source(_) | item::Binary(_) => {
-                bail!("unexpected item type in stream: already processed?")
-            }
-            item::RawSource(e) => src::populate(e?, &mut message)?,
-            item::RawBinary(_) => continue,
-        };
+        {
+            let mut root = message.init_root::<item::Builder>();
+
+            match input.which()? {
+                item::End(()) => return Ok(()),
+                item::Source(_) | item::Binary(_) => {
+                    bail!("unexpected item type in stream: already processed?")
+                }
+                item::RawSource(e) => src::populate(e?, &mut root)?,
+                item::RawBinary(_) => continue,
+            };
+        }
 
         serialize::write_message(&mut stdout, &message)?;
     }
