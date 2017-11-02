@@ -40,19 +40,28 @@ fn run() -> Result<()> {
             item::RawSource(e) => e?,
         };
 
+        let name = input.get_package()
+            .chain_err(|| "early parse error: package name")?;
+        let version = input.get_version()
+            .chain_err(|| format!("early parse error: version for '{}'", name))?;
+
         let mut message = capnp::message::Builder::new_default();
         {
-            let output = message.init_root::<source::Builder>();
-            populate_message(input, output)?;
+            let mut output = message.init_root::<source::Builder>();
+
+            output.set_package(name);
+            output.set_version(version);
+
+            populate_message(input, output)
+                .chain_err(|| format!("parsing / generating '{}' '{}'", name, version))?;
         }
 
-        serialize::write_message(&mut stdout, &message)?;
+        serialize::write_message(&mut stdout, &message)
+            .chain_err(|| format!("writing out '{}' '{}'", name, version))?;
     }
 }
 
 fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> Result<()> {
-    output.set_package(input.get_package()?);
-    output.set_version(input.get_version()?);
     output.set_index(input.get_index()?);
 
     let handled_entries = get_handled_entries(input)?;
@@ -115,27 +124,27 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
 
     fill_build_dep(handled_entries.get("Build-Depends"), |len| {
         output.borrow().init_build_dep(len)
-    })?;
+    }).chain_err(|| "parsing Build-Depends")?;
 
     fill_build_dep(handled_entries.get("Build-Depends-Arch"), |len| {
         output.borrow().init_build_dep_arch(len)
-    })?;
+    }).chain_err(|| "parsing Build-Depends-Arch")?;
 
     fill_build_dep(handled_entries.get("Build-Depends-Indep"), |len| {
         output.borrow().init_build_dep_indep(len)
-    })?;
+    }).chain_err(|| "parsing Build-Depends-Indep")?;
 
     fill_build_dep(handled_entries.get("Build-Conflicts"), |len| {
         output.borrow().init_build_conflict(len)
-    })?;
+    }).chain_err(|| "parsing Build-Conflicts")?;
 
     fill_build_dep(handled_entries.get("Build-Conflicts-Arch"), |len| {
         output.borrow().init_build_conflict_arch(len)
-    })?;
+    }).chain_err(|| "parsing Build-Conflicts-Arch")?;
 
     fill_build_dep(handled_entries.get("Build-Conflicts-Indep"), |len| {
         output.borrow().init_build_conflict_indep(len)
-    })?;
+    }).chain_err(|| "parsing Build-Conflicts-Indep")?;
 
     {
         let reader = input.get_entries()?;
@@ -149,7 +158,8 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
 
             let val = reader.get_value()?;
 
-            fields::set_field(key, val, &mut output.borrow())?;
+            fields::set_field(key, val, &mut output.borrow())
+                .chain_err(|| format!("setting extra field {}", key))?;
         }
     }
 
