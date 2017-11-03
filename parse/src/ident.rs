@@ -23,9 +23,12 @@ named!(ident<&str, Result<Identity>>,
 
 named!(parse<&str, Vec<Result<Identity>>>,
     ws!(
-        separated_list!(
-            complete!(tag!(",")),
-            ident
+        terminated!(
+            separated_list!(
+                complete!(tag!(",")),
+                complete!(ident)
+            ),
+            opt!(complete!(tag!(",")))
         )
     )
 );
