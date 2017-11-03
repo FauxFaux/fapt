@@ -85,7 +85,8 @@ where
         return Ok(());
     }
 
-    let idents = ident::read(value.unwrap())?;
+    let idents = ident::read(value.unwrap())
+        .chain_err(|| format!("parsing {}", value.unwrap()))?;
 
     let mut builder = into(as_u32(idents.len()));
 

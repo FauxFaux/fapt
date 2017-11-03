@@ -121,7 +121,7 @@ pub fn set_field_source(key: &str, val: &str, builder: &mut unparsed_source::Bui
     Ok(())
 }
 
-pub const HANDLED_FIELDS_BINARY: [&'static str; 26] = [
+pub const HANDLED_FIELDS_BINARY: [&'static str; 28] = [
     "Architecture",
     "Breaks",
     "Build-Essential",
@@ -136,6 +136,8 @@ pub const HANDLED_FIELDS_BINARY: [&'static str; 26] = [
     "Filename",
     "Installed-Size",
     "MD5sum",
+    "Maintainer",
+    "Original-Maintainer",
     "Package",
     "Pre-Depends",
     "Priority",
@@ -176,7 +178,6 @@ pub fn set_field_binary(key: &str, val: &str, builder: &mut unparsed_binary::Bui
         "License" => blank_to_null(val, |x| builder.set_license(x)),
         "Lua-Versions" => blank_to_null(val, |x| builder.set_lua_versions(x)),
         "MSDOS-Filename" => blank_to_null(val, |x| builder.set_msdos_filename(x)),
-        "Maintainer" => blank_to_null(val, |x| builder.set_maintainer(x)),
         "Modaliases" => blank_to_null(val, |x| builder.set_modaliases(x)),
         "Multi-Arch" => blank_to_null(val, |x| builder.set_multi_arch(x)),
         "Npp-Applications" => blank_to_null(val, |x| builder.set_npp_applications(x)),
@@ -185,8 +186,8 @@ pub fn set_field_binary(key: &str, val: &str, builder: &mut unparsed_binary::Bui
         "Npp-Mimetype" => blank_to_null(val, |x| builder.set_npp_mimetype(x)),
         "Npp-Name" => blank_to_null(val, |x| builder.set_npp_name(x)),
         "Optional" => blank_to_null(val, |x| builder.set_optional(x)),
+        "Orig-Maintainer" => blank_to_null(val, |x| builder.set_orig_maintainer(x)),
         "Origin" => blank_to_null(val, |x| builder.set_origin(x)),
-        "Original-Maintainer" => blank_to_null(val, |x| builder.set_original_maintainer(x)),
         "Package-Revision" => blank_to_null(val, |x| builder.set_package_revision(x)),
         "Package-Type" => blank_to_null(val, |x| builder.set_package_type(x)),
         "Phased-Update-Percentage" => blank_to_null(val, |x| builder.set_phased_update_percentage(x)),
@@ -213,7 +214,6 @@ pub fn set_field_binary(key: &str, val: &str, builder: &mut unparsed_binary::Bui
         "Xul-Appid" => blank_to_null(val, |x| builder.set_xul_appid(x)),
 
         // Typos
-        "Orig-Maintainer" => blank_to_null(val, |x| builder.set_original_maintainer(x)),
         "Package_Revision" => blank_to_null(val, |x| builder.set_package_revision(x)),
 
         other => bail!("unrecognised binary field: {}", other),

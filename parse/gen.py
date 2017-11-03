@@ -146,6 +146,10 @@ HANDLED_FIELDS_BINARY = {
     'Description-en',
     'Description-en_GB',
     'Description-md5',
+
+    # parsed as Identities
+    'Maintainer',
+    'Original-Maintainer',
 }
 
 KNOWN_FIELDS_BIN = [
@@ -159,10 +163,6 @@ KNOWN_FIELDS_BIN = [
     'Origin',
 
     'Status',
-
-    # should we parse out humans? Probably yes. It's full of \xescapes. Definitely yes.
-    'Maintainer',
-    'Original-Maintainer',
 
     # should probably convert to types
     'Build-Ids',  # List[Sha1]
@@ -225,10 +225,12 @@ KNOWN_FIELDS_BIN = [
     'Tag',
     'Triggers-Awaited',
     'Triggers-Pending',
+
+    # TODO: should be an alias for Original-Maintainer; typo
+    'Orig-Maintainer',
 ]
 
 ALIASES_BINARY = {
-    'Orig-Maintainer': 'Original-Maintainer',
     'Package_Revision': 'Package-Revision',
 }
 

@@ -9,6 +9,7 @@ use fields;
 use as_u32;
 use blank_to_null;
 use get_handled_entries;
+use fill_identity;
 
 pub fn populate(input: raw_binary::Reader, root: &mut item::Builder) -> Result<()> {
     let mut output = root.borrow().init_binary();
@@ -27,7 +28,7 @@ pub fn populate(input: raw_binary::Reader, root: &mut item::Builder) -> Result<(
 
     populate_message(input, output, handled_entries).chain_err(
         || {
-            format!("populating package '{}'", package)
+            format!("populating binary package '{}'", package)
         },
     )?;
 
@@ -43,6 +44,14 @@ fn populate_message(
     if let Some(version) = handled_entries.get("Version") {
         output.set_version(version);
     }
+
+    fill_identity(handled_entries.get("Maintainer"), |len| {
+        output.borrow().init_maintainer(len)
+    }).chain_err(|| "parsing Maintainer")?;
+
+    fill_identity(handled_entries.get("Original-Maintainer"), |len| {
+        output.borrow().init_original_maintainer(len)
+    }).chain_err(|| "parsing Original-Maintainer")?;
 
     let mut unparsed = output.init_unparsed();
 
