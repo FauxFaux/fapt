@@ -13,9 +13,10 @@ use get_handled_entries;
 pub fn populate(input: raw_binary::Reader, root: &mut item::Builder) -> Result<()> {
     let mut output = root.borrow().init_binary();
 
-    let handled_entries =
-        get_handled_entries(input.get_entries()?, &fields::HANDLED_FIELDS_BINARY)
-            .chain_err(|| "early parse error finding handled fields (including name)")?;
+    let handled_entries = get_handled_entries(input.get_entries()?, &fields::HANDLED_FIELDS_BINARY)
+        .chain_err(
+            || "early parse error finding handled fields (including name)",
+        )?;
 
     let package = if let Some(package) = handled_entries.get("Package") {
         output.set_package(package);

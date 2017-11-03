@@ -39,6 +39,11 @@ HANDLED_FIELDS_SOURCE = {
     'Checksums-Sha1',
     'Checksums-Sha256',
     'Checksums-Sha512',
+
+    # parsed into Identities
+    'Maintainer',
+    'Original-Maintainer',
+    'Uploaders',
 }
 
 # What a mess.
@@ -61,8 +66,9 @@ for vcs in [
     HANDLED_FIELDS_SOURCE.add('Upstream-Vcs-' + vcs)
     HANDLED_FIELDS_SOURCE.add('Vcs-Upstream-' + vcs)
 
+# TODO: this alias needs to be at handled time, not here
 ALIASES_SOURCE = {
-    'Orig-Maintainer': 'Original-Maintainer'
+    # 'Orig-Maintainer': 'Original-Maintainer'
 }
 
 HANDLED_FIELDS_SOURCE.update(ALIASES_SOURCE.keys())
@@ -76,11 +82,6 @@ KNOWN_FIELDS_SOURCE = [
     'Homepage',
     'Standards-Version',
     'Section',
-
-    # should we parse out humans? Probably yes. It's full of \xescapes. Definitely yes.
-    'Maintainer',
-    'Original-Maintainer',
-    'Uploaders',
 
     # should enum up Testsuite, and parse package list out of Triggers
     # https://anonscm.debian.org/git/lintian/lintian.git/tree/checks/testsuite.pm

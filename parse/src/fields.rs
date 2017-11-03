@@ -6,7 +6,7 @@ use apt_capnp::unparsed_binary;
 use errors::*;
 use blank_to_null;
 
-pub const HANDLED_FIELDS_SOURCE: [&'static str; 80] = [
+pub const HANDLED_FIELDS_SOURCE: [&'static str; 83] = [
     "Architecture",
     "Binary",
     "Build-Conflicts",
@@ -31,6 +31,7 @@ pub const HANDLED_FIELDS_SOURCE: [&'static str; 80] = [
     "Debian-Vcs-Svn",
     "Files",
     "Format",
+    "Maintainer",
     "Orig-Maintainer",
     "Orig-Vcs-Arch",
     "Orig-Vcs-Browse",
@@ -42,6 +43,7 @@ pub const HANDLED_FIELDS_SOURCE: [&'static str; 80] = [
     "Orig-Vcs-Hg",
     "Orig-Vcs-Mtn",
     "Orig-Vcs-Svn",
+    "Original-Maintainer",
     "Original-Vcs-Arch",
     "Original-Vcs-Browse",
     "Original-Vcs-Browser",
@@ -56,6 +58,7 @@ pub const HANDLED_FIELDS_SOURCE: [&'static str; 80] = [
     "Package-List",
     "Priority",
     "Source",
+    "Uploaders",
     "Upstream-Vcs-Arch",
     "Upstream-Vcs-Browse",
     "Upstream-Vcs-Browser",
@@ -100,9 +103,7 @@ pub fn set_field_source(key: &str, val: &str, builder: &mut unparsed_source::Bui
         "Extra-Source-Only" => blank_to_null(val, |x| builder.set_extra_source_only(x)),
         "Go-Import-Path" => blank_to_null(val, |x| builder.set_go_import_path(x)),
         "Homepage" => blank_to_null(val, |x| builder.set_homepage(x)),
-        "Maintainer" => blank_to_null(val, |x| builder.set_maintainer(x)),
         "Origin" => blank_to_null(val, |x| builder.set_origin(x)),
-        "Original-Maintainer" => blank_to_null(val, |x| builder.set_original_maintainer(x)),
         "Python-Version" => blank_to_null(val, |x| builder.set_python_version(x)),
         "Python3-Version" => blank_to_null(val, |x| builder.set_python3_version(x)),
         "Ruby-Versions" => blank_to_null(val, |x| builder.set_ruby_versions(x)),
@@ -111,10 +112,8 @@ pub fn set_field_source(key: &str, val: &str, builder: &mut unparsed_source::Bui
         "Testsuite" => blank_to_null(val, |x| builder.set_testsuite(x)),
         "Testsuite-Restrictions" => blank_to_null(val, |x| builder.set_testsuite_restrictions(x)),
         "Testsuite-Triggers" => blank_to_null(val, |x| builder.set_testsuite_triggers(x)),
-        "Uploaders" => blank_to_null(val, |x| builder.set_uploaders(x)),
 
         // Typos
-        "Orig-Maintainer" => blank_to_null(val, |x| builder.set_original_maintainer(x)),
 
         other => bail!("unrecognised source field: {}", other),
     }

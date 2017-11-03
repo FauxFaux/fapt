@@ -14,11 +14,15 @@ mod bin;
 mod deps;
 mod errors;
 mod fields;
+mod ident;
 mod src;
 mod vcs;
 
 use apt_capnp::item;
 use apt_capnp::entry;
+
+use apt_capnp::identity;
+
 use errors::*;
 
 quick_main!(run);
@@ -71,6 +75,27 @@ fn get_handled_entries(
     }
 
     Ok(ret)
+}
+
+fn fill_identity<'a, F>(value: Option<&String>, into: F) -> Result<()>
+where
+    F: FnOnce(u32) -> capnp::struct_list::Builder<'a, identity::Owned>,
+{
+    if value.is_none() {
+        return Ok(());
+    }
+
+    let idents = ident::read(value.unwrap())?;
+
+    let mut builder = into(as_u32(idents.len()));
+
+    for (i, ident) in idents.into_iter().enumerate() {
+        let mut builder = builder.borrow().get(as_u32(i));
+        builder.set_name(&ident.name);
+        builder.set_email(&ident.email);
+    }
+
+    Ok(())
 }
 
 fn blank_to_null<F>(value: &str, into: F)

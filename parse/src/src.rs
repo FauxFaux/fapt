@@ -14,6 +14,7 @@ use vcs;
 use as_u32;
 use blank_to_null;
 use get_handled_entries;
+use fill_identity;
 
 pub fn populate(input: raw_source::Reader, root: &mut item::Builder) -> Result<()> {
     let name = input.get_package().chain_err(
@@ -123,6 +124,18 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
     fill_build_dep(handled_entries.get("Build-Conflicts-Indep"), |len| {
         output.borrow().init_build_conflict_indep(len)
     }).chain_err(|| "parsing Build-Conflicts-Indep")?;
+
+    fill_identity(handled_entries.get("Maintainer"), |len| {
+        output.borrow().init_maintainer(len)
+    })?;
+
+    fill_identity(handled_entries.get("Original-Maintainer"), |len| {
+        output.borrow().init_original_maintainer(len)
+    })?;
+
+    fill_identity(handled_entries.get("Uploaders"), |len| {
+        output.borrow().init_uploaders(len)
+    })?;
 
     let mut unparsed = output.init_unparsed();
 
