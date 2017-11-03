@@ -92,7 +92,6 @@ KNOWN_FIELDS_SOURCE = [
     'Autobuild',
     'Dm-Upload-Allowed',
 
-
     # Fields that have been seen in the wild, but which apt ignores.
     'Extra-Source-Only',
 
@@ -153,11 +152,23 @@ KNOWN_FIELDS_BIN = [
     'Section',
     'Source',
     'Task',
+
+    'Bugs',
     'Supported',
+    'Origin',
+
+    'Status',
 
     # should we parse out humans? Probably yes. It's full of \xescapes. Definitely yes.
     'Maintainer',
     'Original-Maintainer',
+
+    # should probably convert to types
+    'Build-Ids',  # List[Sha1]
+    'Multi-Arch',  # {'same', 'foreign'}
+    'Package-Type',  # {'ddeb'}
+    'Auto-Built-Package',  # {'debug-symbols'}
+    'Built-Using',  # List[Dependency]
 
     # junk seen in the wild
     'Modaliases',
@@ -171,9 +182,6 @@ KNOWN_FIELDS_BIN = [
 
     'License',
     'Vendor',
-
-    'Auto-Built-Package',
-    'Build-Ids',
 
     'Go-Import-Path',
     'Python-Version',
@@ -199,9 +207,7 @@ KNOWN_FIELDS_BIN = [
     'Phased-Update-Percentage',
 
     # original apt list
-    'Bugs',
     'Built-For-Profiles',
-    'Built-Using',
     'Class',
     'Conffiles',
     'Config-Version',
@@ -210,14 +216,10 @@ KNOWN_FIELDS_BIN = [
     'Installer-Menu-Item',
     'Kernel-Version',
     'MSDOS-Filename',
-    'Multi-Arch',
     'Optional',
-    'Origin',
     'Package-Revision',
-    'Package-Type',
     'Recommended',
     'Revision',
-    'Status',
     'Subarchitecture',
     'Tag',
     'Triggers-Awaited',
