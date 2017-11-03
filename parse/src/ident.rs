@@ -8,6 +8,36 @@ pub struct Identity {
     pub email: String,
 }
 
+fn email_user_char(c: char) -> bool {
+    '@' != c && !c.is_whitespace()
+}
+
+fn email_domain_char(c: char) -> bool {
+    '<' != c && !c.is_whitespace()
+}
+
+// [^ ]+@[^ ]+
+named!(email<&str, String>,
+    do_parse!(
+        user: complete!(take_while1_s!(email_user_char)) >>
+        tag!("@") >>
+        domain: take_while1_s!(email_domain_char) >>
+        ( format!("{}@{}", user, domain) )
+    )
+);
+
+named!(email_only_ident<&str, Result<Identity>>,
+    do_parse!(
+        email: email >>
+        (
+            Ok(Identity {
+                name: String::new(),
+                email: email.to_string(),
+            })
+        )
+    )
+);
+
 named!(ident<&str, Result<Identity>>,
     do_parse!(
         name: take_until_and_consume_s!(" <") >>
@@ -26,7 +56,7 @@ named!(parse<&str, Vec<Result<Identity>>>,
         terminated!(
             separated_list!(
                 complete!(tag!(",")),
-                complete!(ident)
+                alt_complete!(ident | email_only_ident)
             ),
             opt!(complete!(tag!(",")))
         )
@@ -88,24 +118,6 @@ mod tests {
     }
 
     #[test]
-    fn ident() {
-        use nom::IResult;
-        use super::ident;
-        use super::Identity;
-
-        assert_eq!(
-            IResult::Done(
-                "",
-                Identity {
-                    name: "foo".to_string(),
-                    email: "bar".to_string(),
-                },
-            ),
-            ident("foo <bar>")
-        );
-    }
-
-    #[test]
     fn read() {
         use super::read;
         use super::Identity;
@@ -117,5 +129,11 @@ mod tests {
             ],
             read("foo <bar>, baz <quux>").unwrap()
         );
+    }
+
+    #[test]
+    fn trailing() {
+        use super::read;
+        assert_eq!(1, read("foo <bar>,").unwrap().len())
     }
 }

@@ -91,8 +91,13 @@ where
 
     for (i, ident) in idents.into_iter().enumerate() {
         let mut builder = builder.borrow().get(as_u32(i));
-        builder.set_name(&ident.name);
-        builder.set_email(&ident.email);
+        if !ident.name.is_empty() {
+            builder.set_name(&ident.name);
+        }
+
+        if !ident.email.is_empty() {
+            builder.set_email(&ident.email);
+        }
     }
 
     Ok(())
