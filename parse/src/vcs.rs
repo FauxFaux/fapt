@@ -24,7 +24,7 @@ impl Entry {
     }
 }
 
-pub fn extract(vals: &HashMap<&str, &str>, builder: &mut apt_capnp::source::Builder) -> Result<()> {
+pub fn extract(map: &mut HashMap<&str, &str>, builder: &mut apt_capnp::source::Builder) -> Result<()> {
     let mut found = Vec::with_capacity(4);
 
     for &(vcs_token, ref vcs) in
@@ -43,7 +43,7 @@ pub fn extract(vals: &HashMap<&str, &str>, builder: &mut apt_capnp::source::Buil
     {
 
         // Simplest form: Vcs-Git
-        if let Some(x) = vals.get(format!("Vcs-{}", vcs_token).as_str()) {
+        if let Some(x) = map.remove(format!("Vcs-{}", vcs_token).as_str()) {
             found.push(Entry::new(x, vcs, &VcsTag::Vcs));
         }
 
@@ -56,11 +56,11 @@ pub fn extract(vals: &HashMap<&str, &str>, builder: &mut apt_capnp::source::Buil
             ].into_iter()
         {
             // Common form: Debian-Vcs-Git, Orig-Vcs-Browser, Original-Vcs-Bzr, Upstream-Vcs-Bzr
-            if let Some(x) = vals.get(format!("{}-Vcs-{}", tag_token, vcs_token).as_str()) {
+            if let Some(x) = map.remove(format!("{}-Vcs-{}", tag_token, vcs_token).as_str()) {
                 found.push(Entry::new(x, vcs, tag));
             }
             // Vcs-Upstream-Bzr seen in the wild
-            else if let Some(x) = vals.get(format!("Vcs-{}-{}", tag_token, vcs_token).as_str()) {
+            else if let Some(x) = map.remove(format!("Vcs-{}-{}", tag_token, vcs_token).as_str()) {
                 found.push(Entry::new(x, vcs, tag));
             }
         }

@@ -59,7 +59,7 @@ pub fn populate<'a>(
         }
     }
 
-    vcs::extract(&map, &mut output.borrow())?;
+    vcs::extract(map, &mut output.borrow())?;
 
     fill_dep(
         map,
