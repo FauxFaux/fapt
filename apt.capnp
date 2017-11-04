@@ -1,5 +1,7 @@
 @0xaf696212bdf0eef6;
 
+### Everything deals with streams of Items.
+
 struct Item {
     union {
         end     @0 :Void;
@@ -9,29 +11,38 @@ struct Item {
     }
 }
 
-enum RawPackageType {
-    source @0;
-    binary @1;
-}
+### An unparsed, raw package
 
 struct RawPackage {
     type    @0 :RawPackageType;
     entries @1 :List(Entry);
 }
 
-struct File {
-    name   @0 :Text;
-    size   @1 :UInt64;
-    md5    @2 :Text;
-    sha1   @3 :Text;
-    sha256 @4 :Text;
-    sha512 @5 :Text;
+enum RawPackageType {
+    source @0;
+    binary @1;
 }
 
 struct Entry {
     key   @0 :Text;
     value @1 :Text;
 }
+
+### An unparsed, raw index
+
+struct RawIndex {
+    archive   @0 :Text;
+    version   @1 :Text;
+    origin    @2 :Text;
+    codename  @3 :Text;
+    label     @4 :Text;
+    site      @5 :Text;
+    component @6 :Text;
+    arch      @7 :Text;
+    type      @8 :Text;
+}
+
+### The parsed top-level types for package
 
 struct Package {
     name     @0 :Text;
@@ -95,6 +106,8 @@ struct Binary {
     unparsed   @14 :UnparsedBinary;
 }
 
+### The dependency chain types
+
 struct Dependency {
     alternate @0 :List(SingleDependency);
 }
@@ -116,6 +129,17 @@ struct Constraint {
         gt @4 :Void;
         lt @5 :Void;
     }
+}
+
+### Other types
+
+struct File {
+    name   @0 :Text;
+    size   @1 :UInt64;
+    md5    @2 :Text;
+    sha1   @3 :Text;
+    sha256 @4 :Text;
+    sha512 @5 :Text;
 }
 
 struct Vcs {
@@ -161,18 +185,6 @@ struct Priority {
         extra     @5 :Void;
         source    @6 :Void;
     }
-}
-
-struct RawIndex {
-    archive   @0 :Text;
-    version   @1 :Text;
-    origin    @2 :Text;
-    codename  @3 :Text;
-    label     @4 :Text;
-    site      @5 :Text;
-    component @6 :Text;
-    arch      @7 :Text;
-    type      @8 :Text;
 }
 
 struct Description {
