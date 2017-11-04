@@ -121,14 +121,16 @@ struct SingleDependency {
 }
 
 struct Constraint {
-    version @0 :Text;
-    operator :union {
-        ge @1 :Void;
-        eq @2 :Void;
-        le @3 :Void;
-        gt @4 :Void;
-        lt @5 :Void;
-    }
+    version  @0 :Text;
+    operator @1 :ConstraintOperator;
+}
+
+enum ConstraintOperator {
+    ge @0;
+    eq @1;
+    le @2;
+    gt @3;
+    lt @4;
 }
 
 ### Other types

@@ -95,8 +95,7 @@ fn fill_package<'a, 'b>(
     };
 
     if let Some(priority) = map.get("Priority") {
-        output.set_priority(parse_priority(priority)
-            .chain_err(|| "top-level priority")?);
+        output.set_priority(parse_priority(priority).chain_err(|| "top-level priority")?);
     }
 
     {
@@ -221,13 +220,14 @@ fn fill_single_dep(single: deps::SingleDep, mut builder: single_dependency::Buil
             let mut builder = builder.borrow().get(as_u32(i));
             builder.set_version(&version.version);
             use deps::Op;
-            match version.operator {
-                Op::Ge => builder.init_operator().set_ge(()),
-                Op::Eq => builder.init_operator().set_eq(()),
-                Op::Le => builder.init_operator().set_le(()),
-                Op::Gt => builder.init_operator().set_gt(()),
-                Op::Lt => builder.init_operator().set_lt(()),
-            }
+            use apt_capnp::ConstraintOperator::*;
+            builder.set_operator(match version.operator {
+                Op::Ge => Ge,
+                Op::Eq => Eq,
+                Op::Le => Le,
+                Op::Gt => Gt,
+                Op::Lt => Lt,
+            });
         }
     }
 
