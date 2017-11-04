@@ -7,36 +7,15 @@ use errors::*;
 use apt_capnp::VcsTag;
 use apt_capnp::VcsType;
 
-#[derive(Copy, Clone, Debug)]
-enum Vcs {
-    Arch,
-    Browser,
-    Bzr,
-    Cvs,
-    Darcs,
-    Git,
-    Hg,
-    Mtn,
-    Svn,
-}
-
-#[derive(Copy, Clone, Debug)]
-enum Tag {
-    Vcs,
-    Orig,
-    Debian,
-    Upstream,
-}
-
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 struct Entry {
     description: String,
-    vcs: Vcs,
-    tag: Tag,
+    vcs: VcsType,
+    tag: VcsTag,
 }
 
 impl Entry {
-    pub fn new(description: &str, vcs: &Vcs, tag: &Tag) -> Self {
+    pub fn new(description: &str, vcs: &VcsType, tag: &VcsTag) -> Self {
         Entry {
             description: description.to_string(),
             vcs: *vcs,
@@ -50,30 +29,30 @@ pub fn extract(vals: &HashMap<&str, &str>, builder: &mut apt_capnp::source::Buil
 
     for &(vcs_token, ref vcs) in
         [
-            ("Arch", Vcs::Arch),
-            ("Browser", Vcs::Browser),
-            ("Browse", Vcs::Browser),
-            ("Bzr", Vcs::Bzr),
-            ("Cvs", Vcs::Cvs),
-            ("Darcs", Vcs::Darcs),
-            ("Git", Vcs::Git),
-            ("Hg", Vcs::Hg),
-            ("Mtn", Vcs::Mtn),
-            ("Svn", Vcs::Svn),
+            ("Arch", VcsType::Arch),
+            ("Browser", VcsType::Browser),
+            ("Browse", VcsType::Browser),
+            ("Bzr", VcsType::Bzr),
+            ("Cvs", VcsType::Cvs),
+            ("Darcs", VcsType::Darcs),
+            ("Git", VcsType::Git),
+            ("Hg", VcsType::Hg),
+            ("Mtn", VcsType::Mtn),
+            ("Svn", VcsType::Svn),
         ].into_iter()
     {
 
         // Simplest form: Vcs-Git
         if let Some(x) = vals.get(format!("Vcs-{}", vcs_token).as_str()) {
-            found.push(Entry::new(x, vcs, &Tag::Vcs));
+            found.push(Entry::new(x, vcs, &VcsTag::Vcs));
         }
 
         for &(tag_token, ref tag) in
             [
-                ("Orig", Tag::Orig),
-                ("Original", Tag::Orig),
-                ("Debian", Tag::Debian),
-                ("Upstream", Tag::Upstream),
+                ("Orig", VcsTag::Orig),
+                ("Original", VcsTag::Orig),
+                ("Debian", VcsTag::Debian),
+                ("Upstream", VcsTag::Upstream),
             ].into_iter()
         {
             // Common form: Debian-Vcs-Git, Orig-Vcs-Browser, Original-Vcs-Bzr, Upstream-Vcs-Bzr
@@ -92,24 +71,8 @@ pub fn extract(vals: &HashMap<&str, &str>, builder: &mut apt_capnp::source::Buil
     for (i, entry) in found.into_iter().enumerate() {
         let mut builder = builder.borrow().get(as_u32(i));
         builder.set_description(&entry.description);
-        builder.set_type(match entry.vcs {
-            Vcs::Browser => VcsType::Browser,
-            Vcs::Arch => VcsType::Arch,
-            Vcs::Bzr => VcsType::Bzr,
-            Vcs::Cvs => VcsType::Cvs,
-            Vcs::Darcs => VcsType::Darcs,
-            Vcs::Git => VcsType::Git,
-            Vcs::Hg => VcsType::Hg,
-            Vcs::Mtn => VcsType::Mtn,
-            Vcs::Svn => VcsType::Svn,
-        });
-
-        builder.set_tag(match entry.tag {
-            Tag::Vcs => VcsTag::Vcs,
-            Tag::Orig => VcsTag::Orig,
-            Tag::Debian => VcsTag::Debian,
-            Tag::Upstream => VcsTag::Upstream,
-        });
+        builder.set_type(entry.vcs);
+        builder.set_tag(entry.tag);
     }
 
     Ok(())
