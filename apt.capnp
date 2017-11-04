@@ -73,7 +73,9 @@ struct Source {
     originalMaintainer @20 :List(Identity);
     uploaders          @21 :List(Identity);
 
-    unparsed           @22 :UnparsedSource;
+    parseErrors        @22 :List(Text);
+    unrecognisedFields @23 :List(Text);
+    unparsed           @24 :UnparsedSource;
 }
 
 struct Binary {
@@ -107,6 +109,8 @@ struct Binary {
     maintainer         @19 :List(Identity);
     originalMaintainer @20 :List(Identity);
 
+    parseErrors        @22 :List(Text);
+    unrecognisedFields @23 :List(Text);
     unparsed @21 :UnparsedBinary;
 }
 
