@@ -26,7 +26,11 @@ static void render_index(const IndexFileData &index_file);
 static void render_whole_file(const char *name, bool src);
 static void render_end();
 
+static void render_src(const pkgSourceList *apt_sources_list);
+static void render_bin(pkgCache *pkg_cache);
+
 static std::vector<std::string> keys_in_section(pkgTagSection &sect);
+
 
 int main(int argc, char *argv[]) {
     if (2 != argc || 0 != strcmp(argv[1], "raw-sources")) {
@@ -39,15 +43,27 @@ int main(int argc, char *argv[]) {
     auto *cache_file = new pkgCacheFile();
 
     pkgSourceList *apt_sources_list = cache_file->GetSourceList();
+    render_src(apt_sources_list);
 
-    // like "pkgSrcRecords::pkgSrcRecords(pkgSourceList &List) {"
+    auto pkg_cache = cache_file->GetPkgCache();
+    render_bin(pkg_cache);
+
+    render_end();
+
+    delete cache_file;
+
+    return 0;
+
+}
+
+static void render_src(const pkgSourceList *apt_sources_list) {// like "pkgSrcRecords::pkgSrcRecords(pkgSourceList &List) {"
     // apt_source_list_entry is something like "all the lines for a url and distribution (sid)";
     // e.g. "deb http://foo sid main lol; deb-src http://foo sid main lol"
     // .. which appears to be what a Release file contains. Right.
     for (metaIndex *apt_sources_list_entry : *apt_sources_list) {
         for (auto const &target : apt_sources_list_entry->GetIndexTargets()) {
             // like "std::vector<pkgIndexFile *> *debReleaseIndex::GetIndexFiles()"
-            const std::string createdBy = target.Option(IndexTarget::CREATED_BY);
+            const string createdBy = target.Option(IndexTarget::CREATED_BY);
 
             auto filename = target.Option(IndexTarget::FILENAME);
             printf("%s\n", filename.c_str());
@@ -73,8 +89,9 @@ int main(int argc, char *argv[]) {
             render_whole_file(filename.c_str(), true);
         }
     }
+}
 
-    auto pkg_cache = cache_file->GetPkgCache();
+static void render_bin(pkgCache *pkg_cache) {
     for (auto file = pkg_cache->FileBegin(); file != pkg_cache->FileEnd(); ++file) {
         IndexFileData index_file = {};
 #define set(X) if (file.X() && *file.X()) { index_file.X = file.X(); }
@@ -93,13 +110,6 @@ int main(int argc, char *argv[]) {
         render_index(index_file);
         render_whole_file(file.FileName(), false);
     }
-
-    render_end();
-
-    delete cache_file;
-
-    return 0;
-
 }
 
 void render_index(const IndexFileData &index_file) {
