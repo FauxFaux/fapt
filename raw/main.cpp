@@ -1,24 +1,31 @@
-#include <iostream>
-#include <fstream>
-#include <map>
-#include <regex>
+#include <cassert>
+#include <string>
+#include <limits>
+#include <vector>
 
 #include <apt-pkg/cachefile.h>
-#include <apt-pkg/debindexfile.h>
 
 #include <capnp/message.h>
 #include <capnp/serialize-packed.h>
 
 #include "apt.capnp.h"
 
-static void render_src(int temp, const pkgSrcRecords::Parser *cursor);
-static void render_bin(pkgCache::PkgFileIterator &file, pkgTagSection &sect);
+struct IndexFileData {
+    std::string Archive;
+    std::string Version;
+    std::string Origin;
+    std::string Codename;
+    std::string Label;
+    std::string Site;
+    std::string Component;
+    std::string Arch;
+    std::string Type;
+};
 
-static void fill_keys(const pkgTagSection &sect, const vector<string> &keys,
-                      capnp::List<Entry, capnp::Kind::STRUCT>::Builder &builder);
+static void render_index(const IndexFileData &index_file);
+static void render_whole_file(const char *name, bool src);
+static void render_end();
 
-static int temp_file();
-static void end();
 static std::vector<std::string> keys_in_section(pkgTagSection &sect);
 
 int main(int argc, char *argv[]) {
@@ -31,192 +38,76 @@ int main(int argc, char *argv[]) {
     pkgInitSystem(*_config, _system);
     auto *cache_file = new pkgCacheFile();
 
-    const int temp = temp_file();
-    pkgSourceList *sources = cache_file->GetSourceList();
-    auto *records = new pkgSrcRecords(*sources);
-    while (const pkgSrcRecords::Parser *cursor = records->Step()) {
-        render_src(temp, cursor);
+    pkgSourceList *apt_sources_list = cache_file->GetSourceList();
+
+    // like "pkgSrcRecords::pkgSrcRecords(pkgSourceList &List) {"
+    // apt_source_list_entry is something like "all the lines for a url and distribution (sid)";
+    // e.g. "deb http://foo sid main lol; deb-src http://foo sid main lol"
+    // .. which appears to be what a Release file contains. Right.
+    for (metaIndex *apt_sources_list_entry : *apt_sources_list) {
+        for (auto const &target : apt_sources_list_entry->GetIndexTargets()) {
+            // like "std::vector<pkgIndexFile *> *debReleaseIndex::GetIndexFiles()"
+            const std::string createdBy = target.Option(IndexTarget::CREATED_BY);
+
+            auto filename = target.Option(IndexTarget::FILENAME);
+            printf("%s\n", filename.c_str());
+
+            if ("Sources" != createdBy) {
+                continue;
+            }
+
+            IndexFileData index_file;
+
+            // TODO: Only two missing? Miracle.
+//            index_file.Archive = apt_sources_list_entry->ArchiveURI()
+            index_file.Version = apt_sources_list_entry->GetVersion();
+            index_file.Origin = apt_sources_list_entry->GetOrigin();
+            index_file.Codename = apt_sources_list_entry->GetCodename();
+            index_file.Label = apt_sources_list_entry->GetLabel();
+            index_file.Site = target.Option(IndexTarget::SITE);
+            index_file.Component = target.Option(IndexTarget::COMPONENT);
+//            index_file.Arch = target.Option(IndexTarget::);
+            index_file.Type = apt_sources_list_entry->GetType();
+
+            render_index(index_file);
+            render_whole_file(filename.c_str(), true);
+        }
     }
 
     auto pkg_cache = cache_file->GetPkgCache();
     for (auto file = pkg_cache->FileBegin(); file != pkg_cache->FileEnd(); ++file) {
-        FileFd fd;
-        fd.Open(file.FileName(), FileFd::OpenMode::ReadOnly);
-        pkgTagFile tagFile(&fd);
-        pkgTagSection sect;
-        while (tagFile.Step(sect)) {
-            render_bin(file, sect);
-        }
+        IndexFileData index_file = {};
+#define set(X) if (file.X() && *file.X()) { index_file.X = file.X(); }
+        set(Archive);
+        set(Version);
+        set(Origin);
+        set(Codename);
+        set(Label);
+        set(Site);
+        set(Component);
+#undef set
+
+        if (file.Architecture() && *file.Architecture()) { index_file.Arch = file.Architecture(); }
+        if (file.IndexType() && *file.IndexType()) { index_file.Type = file.IndexType(); }
+
+        render_index(index_file);
+        render_whole_file(file.FileName(), false);
     }
 
-    end();
+    render_end();
 
-    delete records;
     delete cache_file;
-
-    if (0 != ftruncate(temp, 0)) {
-        throw std::runtime_error("couldn't empty temporary file");
-    }
 
     return 0;
 
 }
 
-static void rewind(const int fd) {
-    if (0 != lseek(fd, 0, SEEK_SET)) {
-        throw std::runtime_error("couldn't rewind file");
-    }
-}
-
-static void render_src(int temp, const pkgSrcRecords::Parser *cursor) {
-
-    ::capnp::MallocMessageBuilder message;
+void render_index(const IndexFileData &index_file) {
+    capnp::MallocMessageBuilder message;
     auto item = message.initRoot<Item>();
+    auto builder = item.initIndex();
 
-    auto root = item.initRawSource();
-
-    root.setPackage(cursor->Package());
-
-    root.setVersion(cursor->Version());
-
-#if 0
-    root.setIndex(cursor->Index().Describe(false));
-    try {
-        auto x = dynamic_cast<const debSourcesIndex&>(cursor->Index());
-        x.IndexFileName();
-    } catch (std::bad_cast &) {
-    }
-#endif
-
-    {
-        std::vector<std::string> raw_binaries;
-
-        {
-            // slightly less obviously safe
-            const char **b = const_cast<pkgSrcRecords::Parser *>(cursor)->Binaries();
-            do {
-                raw_binaries.emplace_back(std::string(*b));
-            } while (*++b);
-        }
-
-        if (raw_binaries.size() > std::numeric_limits<uint>::max()) {
-            throw std::runtime_error("can't have more than 'int' binaries");
-        }
-        auto binaries_builder = root.initBinaries(static_cast<uint>(raw_binaries.size()));
-        for (uint i = 0; i < binaries_builder.size(); ++i) {
-            binaries_builder.set(i, raw_binaries[i]);
-        }
-    }
-
-    {
-        std::vector<pkgSrcRecords::File2> raw;
-        const_cast<pkgSrcRecords::Parser *>(cursor)->Files2(raw);
-
-        if (raw.size() > std::numeric_limits<uint>::max()) {
-            throw std::runtime_error("can't have more than 'int' files");
-        }
-
-        auto files = root.initFiles(static_cast<uint>(raw.size()));
-
-        uint pos = 0;
-        for (auto &file2 : raw) {
-            std::string name = file2.Path;
-
-            files[pos].setName(name);
-            files[pos].setSize(file2.FileSize);
-            const HashString *const md5 = file2.Hashes.find("MD5Sum");
-            if (md5) {
-                files[pos].setMd5(md5->HashValue());
-            }
-
-            const HashString *const sha1 = file2.Hashes.find("SHA1");
-            if (sha1) {
-                files[pos].setSha1(sha1->HashValue());
-            }
-
-            const HashString *const sha256 = file2.Hashes.find("SHA256");
-            if (sha256) {
-                files[pos].setSha256(sha256->HashValue());
-            }
-
-            const HashString *const sha512 = file2.Hashes.find("Sha512");
-            if (sha512) {
-                files[pos].setSha512(sha512->HashValue());
-            }
-
-            ++pos;
-        }
-    }
-
-    {
-        // This is so dumb. Can't even get access to the parsed data,
-        // so we have to re-serialise and re-parse it.
-
-        // It's like being stabbed repeatedly in the face.
-
-        // No idea why this is a const method; pretty angry.
-        std::string body = const_cast<pkgSrcRecords::Parser *>(cursor)->AsStr();
-        body.push_back('\n');
-
-        rewind(temp);
-
-        size_t written = 0;
-        const char *data = body.c_str();
-
-        while (true) {
-            const ssize_t to_write = body.size() - written;
-            ssize_t wrote = write(temp, data + written, to_write);
-            if (wrote == to_write) {
-                break;
-            }
-            if (wrote <= 0) {
-                if (EAGAIN == errno) {
-                    continue;
-                }
-
-                throw std::runtime_error("couldn't write file");
-            }
-            written += wrote;
-        }
-
-        rewind(temp);
-    }
-
-    {
-        FileFd fd;
-        fd.OpenDescriptor(temp, FileFd::OpenMode::ReadOnly, FileFd::CompressMode::None);
-        pkgTagFile a(&fd);
-        pkgTagSection sect;
-        if (!a.Step(sect)) {
-            throw std::runtime_error("didn't manage to load a record");
-        }
-
-        auto keys = keys_in_section(sect);
-
-        auto builder = root.initEntries(static_cast<uint>(keys.size()));
-        fill_keys(sect, keys, builder);
-    }
-
-    ::capnp::writeMessageToFd(1, message);
-}
-
-static void fill_keys(const pkgTagSection &sect, const vector<string> &keys,
-               capnp::List<Entry, capnp::Kind::STRUCT>::Builder &builder) {
-    uint pos = 0;
-    for (const string &key : keys) {
-            auto entry = builder[pos++];
-            entry.setKey(key);
-            entry.setValue(sect.FindS(key.c_str()));
-        }
-}
-
-static void render_bin(pkgCache::PkgFileIterator &file, pkgTagSection &sect) {
-    ::capnp::MallocMessageBuilder message;
-    auto item = message.initRoot<Item>();
-    auto root = item.initRawBinary();
-
-    auto index = root.initIndex();
-#define set(X) if (file.X() && *file.X()) { index.set##X(file.X()); }
+#define set(X) if (!index_file.X.empty()) { builder.set##X(index_file.X); }
     set(Archive);
     set(Version);
     set(Origin);
@@ -224,15 +115,44 @@ static void render_bin(pkgCache::PkgFileIterator &file, pkgTagSection &sect) {
     set(Label);
     set(Site);
     set(Component);
+    set(Arch);
+    set(Type);
 #undef set
 
-    if (file.Architecture() && *file.Architecture()) { index.setArch(file.Architecture()); }
-    if (file.IndexType() && *file.IndexType()) { index.setType(file.IndexType()); }
+    writeMessageToFd(1, message);
+}
 
-    auto keys = keys_in_section(sect);
-    auto builder = root.initEntries(keys.size());
-    fill_keys(sect, keys, builder);
+void render_whole_file(const char *name, bool src) {
+    FileFd fd;
+    fd.Open(name, FileFd::ReadOnly);
+    pkgTagFile tagFile(&fd);
+    pkgTagSection sect;
+    while (tagFile.Step(sect)) {
+        capnp::MallocMessageBuilder message;
+        auto item = message.initRoot<Item>();
+        auto root = item.initRaw();
 
+        root.setType(src ? RawPackageType::SOURCE : RawPackageType::BINARY);
+
+        auto keys = keys_in_section(sect);
+        assert(keys.size() < std::numeric_limits<unsigned int>::max());
+        auto builder = root.initEntries(keys.size());
+
+        uint pos = 0;
+        for (const string &key : keys) {
+            auto entry = builder[pos++];
+            entry.setKey(key);
+            entry.setValue(sect.FindS(key.c_str()));
+        }
+
+        writeMessageToFd(1, message);
+    }
+}
+
+static void render_end() {
+    ::capnp::MallocMessageBuilder message;
+    auto item = message.initRoot<Item>();
+    item.setEnd();
     ::capnp::writeMessageToFd(1, message);
 }
 
@@ -260,24 +180,4 @@ static std::vector<std::string> keys_in_section(pkgTagSection &sect) {
     }
 
     return keys;
-}
-
-static void end() {
-    ::capnp::MallocMessageBuilder message;
-    auto item = message.initRoot<Item>();
-    item.setEnd();
-    ::capnp::writeMessageToFd(1, message);
-}
-
-static int temp_file() {
-    constexpr size_t len = 30;
-    char buf[len] = {};
-    snprintf(buf, len - 1, "/tmp/apt-dump.XXXXXX");
-    int fd = mkstemp(buf);
-
-    if (-1 == fd) {
-        throw std::runtime_error("couldn't create temporary file");
-    }
-
-    return fd;
 }

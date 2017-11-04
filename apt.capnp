@@ -4,26 +4,20 @@
 
 struct Item {
     union {
-        end       @0 :Void;
-        rawSource @1 :RawSource;
-        rawBinary @2 :RawBinary;
-        package   @3 :Package;
+        end     @0 :Void;
+        raw     @1 :RawPackage;
+        index   @2 :RawIndex;
+        package @3 :Package;
     }
 }
 
-struct RawSource {
-    package  @0 :Text;
-    version  @1 :Text;
-    index    @2 :Text;
-
-    binaries @3 :List(Text);
-    files    @4 :List(File);
-
-    entries  @5 :List(Entry);
+enum RawPackageType {
+    source @0;
+    binary @1;
 }
 
-struct RawBinary {
-    index   @0 :IndexFile;
+struct RawPackage {
+    type    @0 :RawPackageType;
     entries @1 :List(Entry);
 }
 
@@ -44,19 +38,18 @@ struct Entry {
 struct Package {
     name     @0 :Text;
     version  @1 :Text;
-    index    @2 :IndexFile;
-    priority @3 :Priority;
-    arch     @4 :List(Text);
+    priority @2 :Priority;
+    arch     @3 :List(Text);
 
-    maintainer         @5 :List(Identity);
-    originalMaintainer @6 :List(Identity);
+    maintainer         @4 :List(Identity);
+    originalMaintainer @5 :List(Identity);
 
-    parseErrors        @7 :List(Text);
-    unrecognisedFields @8 :List(Text);
+    parseErrors        @6 :List(Text);
+    unrecognisedFields @7 :List(Text);
 
     style :union {
-        source @9  :Source;
-        binary @10 :Binary;
+        source @8  :Source;
+        binary @9 :Binary;
     }
 }
 
@@ -172,7 +165,7 @@ struct Priority {
     }
 }
 
-struct IndexFile {
+struct RawIndex {
     archive   @0 :Text;
     version   @1 :Text;
     origin    @2 :Text;
