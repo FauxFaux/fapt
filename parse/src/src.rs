@@ -12,9 +12,11 @@ use fill_identity;
 use parse_priority;
 use fill_dep;
 
-pub fn populate(mut output: source::Builder, map: HashMap<&str, &str>) -> Result<()> {
+pub fn populate(mut output: source::Builder, map: &mut HashMap<&str, &str>) -> Result<()> {
 
-    output.set_format(parse_format(&map["Format"])?);
+    if let Some(format) = map.remove("Format") {
+        output.set_format(parse_format(format)?);
+    }
 
     if let Some(list) = map.get("Package-List") {
         let lines: Vec<&str> = list.split('\n').map(|x| x.trim()).collect();
@@ -57,32 +59,32 @@ pub fn populate(mut output: source::Builder, map: HashMap<&str, &str>) -> Result
     vcs::extract(&map, &mut output.borrow())?;
 
     fill_dep(
-        &map,
+        map,
         "Build-Depends",
         |len| output.borrow().init_build_dep(len),
     )?;
 
-    fill_dep(&map, "Build-Depends-Arch", |len| {
+    fill_dep(map, "Build-Depends-Arch", |len| {
         output.borrow().init_build_dep_arch(len)
     })?;
 
-    fill_dep(&map, "Build-Depends-Indep", |len| {
+    fill_dep(map, "Build-Depends-Indep", |len| {
         output.borrow().init_build_dep_indep(len)
     })?;
 
-    fill_dep(&map, "Build-Conflicts", |len| {
+    fill_dep(map, "Build-Conflicts", |len| {
         output.borrow().init_build_conflict(len)
     })?;
 
-    fill_dep(&map, "Build-Conflicts-Arch", |len| {
+    fill_dep(map, "Build-Conflicts-Arch", |len| {
         output.borrow().init_build_conflict_arch(len)
     })?;
 
-    fill_dep(&map, "Build-Conflicts-Indep", |len| {
+    fill_dep(map, "Build-Conflicts-Indep", |len| {
         output.borrow().init_build_conflict_indep(len)
     })?;
 
-    fill_identity(map.get("Uploaders"), |len| {
+    fill_identity(map.remove("Uploaders"), |len| {
         output.borrow().init_uploaders(len)
     })?;
 

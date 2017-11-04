@@ -59,15 +59,15 @@ fn run() -> Result<()> {
 
                 let mut package = message.init_root::<item::Builder>().init_package();
 
-                let map = to_map(input.get_entries()?)?;
+                let mut map = to_map(input.get_entries()?)?;
 
-                let (name, version) = fill_package(&mut package, &map)?;
+                let (name, version) = fill_package(&mut package, &mut map)?;
 
                 let style = package.init_style();
 
                 match input.get_type()? {
-                    RawPackageType::Source => src::populate(style.init_source(), map),
-                    RawPackageType::Binary => bin::populate(style.init_binary(), map),
+                    RawPackageType::Source => src::populate(style.init_source(), &mut map),
+                    RawPackageType::Binary => bin::populate(style.init_binary(), &mut map),
                 }.chain_err(|| format!("parsing package {:?} {:?}", name, version))?
             }
         };
@@ -78,28 +78,28 @@ fn run() -> Result<()> {
 
 fn fill_package<'a, 'b>(
     output: &mut package::Builder,
-    map: &HashMap<&str, &'b str>,
+    map: &mut HashMap<&str, &'b str>,
 ) -> Result<(&'b str, &'b str)> {
-    let package_name = if let Some(name) = map.get("Package") {
+    let package_name = if let Some(name) = map.remove("Package") {
         output.set_name(name);
         name
     } else {
         ""
     };
 
-    let package_version = if let Some(version) = map.get("Version") {
+    let package_version = if let Some(version) = map.remove("Version") {
         output.set_version(version);
         version
     } else {
         ""
     };
 
-    if let Some(priority) = map.get("Priority") {
+    if let Some(priority) = map.remove("Priority") {
         output.set_priority(parse_priority(priority).chain_err(|| "top-level priority")?);
     }
 
-    {
-        let mut parts: Vec<&str> = map["Architecture"].split(' ').map(|x| x.trim()).collect();
+    if let Some(arch) = map.remove("Architecture") {
+        let mut parts: Vec<&str> = arch.split(' ').map(|x| x.trim()).collect();
         parts.sort();
 
         let mut builder = output.borrow().init_arch(as_u32(parts.len()));
@@ -108,11 +108,11 @@ fn fill_package<'a, 'b>(
         }
     }
 
-    fill_identity(map.get("Maintainer"), |len| {
+    fill_identity(map.remove("Maintainer"), |len| {
         output.borrow().init_maintainer(len)
     }).chain_err(|| "parsing Maintainer")?;
 
-    fill_identity(map.get("Original-Maintainer"), |len| {
+    fill_identity(map.remove("Original-Maintainer"), |len| {
         output.borrow().init_original_maintainer(len)
     }).chain_err(|| "parsing Original-Maintainer")?;
 
@@ -130,7 +130,7 @@ fn to_map<'a>(reader: capnp::struct_list::Reader<entry::Owned>) -> Result<HashMa
     Ok(ret)
 }
 
-fn fill_identity<'a, F>(value: Option<&&str>, into: F) -> Result<()>
+fn fill_identity<'a, F>(value: Option<&str>, into: F) -> Result<()>
 where
     F: FnOnce(u32) -> capnp::struct_list::Builder<'a, identity::Owned>,
 {
@@ -171,11 +171,11 @@ fn parse_priority(string: &str) -> Result<Priority> {
     })
 }
 
-fn fill_dep<'a, F>(map: &HashMap<&str, &str>, key: &str, init: F) -> Result<()>
+fn fill_dep<'a, F>(map: &mut HashMap<&str, &str>, key: &str, init: F) -> Result<()>
 where
     F: FnOnce(u32) -> capnp::struct_list::Builder<'a, dependency::Owned>,
 {
-    match map.get(key) {
+    match map.remove(key) {
         Some(raw) => fill_dep_in(raw, init).chain_err(|| format!("parsing {}", key)),
         None => Ok(()),
     }
