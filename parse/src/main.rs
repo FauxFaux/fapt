@@ -62,7 +62,7 @@ fn run() -> Result<()> {
                     let input = input?;
                     let handled =
                         get_handled_entries(input.get_entries()?, &fields::HANDLED_FIELDS_BINARY)?;
-                    fill_package(&mut package, input.get_index()?, &handled)?;
+                    fill_package(&mut package, Index::Provided(input.get_index()?), &handled)?;
                     bin::populate(input, package.init_style().init_binary(), handled)?;
                 }
             };
@@ -72,9 +72,9 @@ fn run() -> Result<()> {
     }
 }
 
-fn fill_package(
+fn fill_package<'a>(
     output: &mut package::Builder,
-    index: index_file::Reader,
+    index: Index<'a>,
     handled_entries: &HashMap<String, String>,
 ) -> Result<()> {
 
@@ -86,7 +86,14 @@ fn fill_package(
         output.set_version(version);
     }
 
-    output.set_index(index)?;
+    match index {
+        Index::Provided(index) => output.set_index(index)?,
+        Index::Parsed { } => {
+            let mut builder = output.borrow().init_index();
+
+        }
+    }
+
 
     if let Some(priority) = handled_entries.get("Priority") {
         fill_priority(output.borrow().init_priority(), priority)
@@ -117,8 +124,19 @@ fn fill_package(
     Ok(())
 }
 
-fn parse_index(index: &str) -> Result<index_file::Reader> {
-    unimplemented!()
+enum Index<'a> {
+    Provided(index_file::Reader<'a>),
+    Parsed {
+
+    }
+}
+
+fn parse_index(index: &str) -> Result<Index> {
+    let parts = index.split(' ').collect();
+    ensure!(3 == parts.len(), "wrong number of tokens in index string: {}", index)
+    Ok(Index::Parsed {
+
+    })
 }
 
 fn get_handled_entries(

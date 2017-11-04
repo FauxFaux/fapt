@@ -4,6 +4,7 @@
 #include <regex>
 
 #include <apt-pkg/cachefile.h>
+#include <apt-pkg/debindexfile.h>
 
 #include <capnp/message.h>
 #include <capnp/serialize-packed.h>
@@ -78,7 +79,14 @@ static void render_src(int temp, const pkgSrcRecords::Parser *cursor) {
 
     root.setVersion(cursor->Version());
 
-    root.setIndex(cursor->Index().Describe(true));
+#if 0
+    root.setIndex(cursor->Index().Describe(false));
+    try {
+        auto x = dynamic_cast<const debSourcesIndex&>(cursor->Index());
+        x.IndexFileName();
+    } catch (std::bad_cast &) {
+    }
+#endif
 
     {
         std::vector<std::string> raw_binaries;
