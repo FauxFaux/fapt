@@ -42,10 +42,7 @@ impl Entry {
     }
 }
 
-pub fn extract(
-    vals: &HashMap<&str, &str>,
-    builder: &mut apt_capnp::source::Builder,
-) -> Result<()> {
+pub fn extract(vals: &HashMap<&str, &str>, builder: &mut apt_capnp::source::Builder) -> Result<()> {
     let mut found = Vec::with_capacity(4);
 
     for &(vcs_token, ref vcs) in

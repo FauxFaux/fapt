@@ -42,35 +42,31 @@ fn run() -> Result<()> {
         let input = serialize::read_message(&mut stdin, capnp::message::ReaderOptions::new())?;
 
         let input = input.get_root::<item::Reader>()?;
-
         let mut message = capnp::message::Builder::new_default();
 
-        {
-            let mut package = message.init_root::<item::Builder>().init_package();
+        match input.which()? {
+            item::End(()) => return Ok(()),
+            item::Package(_) => bail!("unexpected item type in stream: already processed?"),
+            item::Index(index) => {
+                message.init_root::<item::Builder>().set_index(index?)?;
+            }
+            item::Raw(input) => {
+                let input = input?;
 
-            match input.which()? {
-                item::End(()) => return Ok(()),
-                item::Package(_) => bail!("unexpected item type in stream: already processed?"),
-                item::Index(_) => {
-                    // TODO
-                    continue;
-                },
-                item::Raw(input) => {
-                    let input = input?;
+                let mut package = message.init_root::<item::Builder>().init_package();
 
-                    let map = to_map(input.get_entries()?)?;
+                let map = to_map(input.get_entries()?)?;
 
-                    fill_package(&mut package, &map)?;
+                fill_package(&mut package, &map)?;
 
-                    let style = package.init_style();
+                let style = package.init_style();
 
-                    match input.get_type()? {
-                        RawPackageType::Source => src::populate(style.init_source(), map)?,
-                        RawPackageType::Binary => bin::populate(style.init_binary(), map)?,
-                    }
+                match input.get_type()? {
+                    RawPackageType::Source => src::populate(style.init_source(), map)?,
+                    RawPackageType::Binary => bin::populate(style.init_binary(), map)?,
                 }
-            };
-        }
+            }
+        };
 
         serialize::write_message(&mut stdout, &message)?;
     }
