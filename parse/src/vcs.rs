@@ -24,7 +24,10 @@ impl Entry {
     }
 }
 
-pub fn extract(map: &mut HashMap<&str, &str>, builder: &mut apt_capnp::source::Builder) -> Result<()> {
+pub fn extract(
+    map: &mut HashMap<&str, &str>,
+    builder: &mut apt_capnp::source::Builder,
+) -> Result<()> {
     let mut found = Vec::with_capacity(4);
 
     for &(vcs_token, ref vcs) in
@@ -60,7 +63,10 @@ pub fn extract(map: &mut HashMap<&str, &str>, builder: &mut apt_capnp::source::B
                 found.push(Entry::new(x, vcs, tag));
             }
             // Vcs-Upstream-Bzr seen in the wild
-            else if let Some(x) = map.remove(format!("Vcs-{}-{}", tag_token, vcs_token).as_str()) {
+            else if let Some(x) = map.remove(
+                format!("Vcs-{}-{}", tag_token, vcs_token).as_str(),
+            )
+            {
                 found.push(Entry::new(x, vcs, tag));
             }
         }

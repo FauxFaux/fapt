@@ -105,10 +105,9 @@ KNOWN_FIELDS_SOURCE = [
     'Python3-Version',
     'Ruby-Versions',
 
-    'Comment',
-
-    # apt fields
-    'Origin',
+    # seen things which are probably all errors
+    # 'Comment',
+    # 'Origin',
 ]
 
 HANDLED_FIELDS_BINARY = {
@@ -143,6 +142,8 @@ HANDLED_FIELDS_BINARY = {
 
     # folded into Description
     'Description',
+    'Description-en',
+    'Description-en_GB',
     'Description-md5',
 
     # parsed as Identities
@@ -223,9 +224,6 @@ KNOWN_FIELDS_BIN = [
     'Tag',
     'Triggers-Awaited',
     'Triggers-Pending',
-
-    # TODO: should be an alias for Original-Maintainer; typo
-    'Orig-Maintainer',
 ]
 
 ALIASES_BINARY = {

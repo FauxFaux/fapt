@@ -11,6 +11,8 @@ pub fn populate<'a>(
     mut output: binary::Builder,
     map: &mut HashMap<&'a str, &str>,
 ) -> Result<(Vec<&'a str>, Vec<String>)> {
+    let allowed_errors = Vec::new();
+
     {
         let mut builder = output.borrow().init_file();
         if let Some(s) = map.remove("Filename") {
@@ -51,15 +53,15 @@ pub fn populate<'a>(
     }
 
     if let Some(text) = map.remove("Description") {
-        if let Some(expected_md5) = map.remove("Description-md5") {
-            ensure!(
-                expected_md5 == format!("{:032x}", ::md5::compute(text.as_bytes())).as_str(),
-                "Invalid md5 ({:?}) on Description",
-                expected_md5
-            );
-        }
+        output.set_description(text);
+    } else if let Some(text) = map.remove("Description-en") {
+        output.set_description(text);
+    } else if let Some(text) = map.remove("Description-en_GB") {
         output.set_description(text);
     }
+
+    // Validating this doesn't make sense: it's the md5 of the translation's description
+    map.remove("Description-md5");
 
     fill_dep(map, "Depends", |len| output.borrow().init_depends(len))?;
 
@@ -98,5 +100,5 @@ pub fn populate<'a>(
         }
     }
 
-    Ok((unrecognised_fields, Vec::new()))
+    Ok((unrecognised_fields, allowed_errors))
 }

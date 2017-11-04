@@ -226,8 +226,6 @@ struct UnparsedSource {
     pythonVersion          @13 :Text;
     python3Version         @14 :Text;
     rubyVersions           @15 :Text;
-    comment                @16 :Text;
-    origin                 @17 :Text;
 }
 
 struct UnparsedBinary {
