@@ -50,18 +50,18 @@ fn run() -> Result<()> {
 
             match input.which()? {
                 item::End(()) => return Ok(()),
-                item::Package(_) => {
-                    bail!("unexpected item type in stream: already processed?")
-                }
+                item::Package(_) => bail!("unexpected item type in stream: already processed?"),
                 item::RawSource(input) => {
                     let input = input?;
-                    let handled = get_handled_entries(input.get_entries()?, &fields::HANDLED_FIELDS_SOURCE)?;
+                    let handled =
+                        get_handled_entries(input.get_entries()?, &fields::HANDLED_FIELDS_SOURCE)?;
                     fill_package(&mut package, parse_index(input.get_index()?)?, &handled)?;
                     src::populate(input, package.init_style().init_source(), handled)?;
-                },
+                }
                 item::RawBinary(input) => {
                     let input = input?;
-                    let handled = get_handled_entries(input.get_entries()?, &fields::HANDLED_FIELDS_BINARY)?;
+                    let handled =
+                        get_handled_entries(input.get_entries()?, &fields::HANDLED_FIELDS_BINARY)?;
                     fill_package(&mut package, input.get_index()?, &handled)?;
                     bin::populate(input, package.init_style().init_binary(), handled)?;
                 }
@@ -72,7 +72,11 @@ fn run() -> Result<()> {
     }
 }
 
-fn fill_package(output: &mut package::Builder, index: index_file::Reader, handled_entries: &HashMap<String, String>) -> Result<()> {
+fn fill_package(
+    output: &mut package::Builder,
+    index: index_file::Reader,
+    handled_entries: &HashMap<String, String>,
+) -> Result<()> {
 
     if let Some(name) = handled_entries.get("Package") {
         output.set_name(name);
@@ -144,8 +148,9 @@ where
         return Ok(());
     }
 
-    let idents = ident::read(value.unwrap())
-        .chain_err(|| format!("parsing {}", value.unwrap()))?;
+    let idents = ident::read(value.unwrap()).chain_err(|| {
+        format!("parsing {}", value.unwrap())
+    })?;
 
     let mut builder = into(as_u32(idents.len()));
 

@@ -21,13 +21,21 @@ use get_handled_entries;
 use fill_identity;
 use fill_priority;
 
-pub fn populate(input: raw_source::Reader, output: source::Builder, handled_entries: HashMap<String, String>) -> Result<()> {
+pub fn populate(
+    input: raw_source::Reader,
+    output: source::Builder,
+    handled_entries: HashMap<String, String>,
+) -> Result<()> {
     populate_message(input, output, handled_entries)?;
 
     Ok(())
 }
 
-fn populate_message(input: raw_source::Reader, mut output: source::Builder, handled_entries: HashMap<String, String>) -> Result<()> {
+fn populate_message(
+    input: raw_source::Reader,
+    mut output: source::Builder,
+    handled_entries: HashMap<String, String>,
+) -> Result<()> {
 
     output.set_format(parse_format(&handled_entries["Format"])?);
 
