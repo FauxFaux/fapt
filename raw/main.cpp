@@ -87,7 +87,6 @@ static void render_src(const pkgSourceList *apt_sources_list) {
             const string createdBy = target.Option(IndexTarget::CREATED_BY);
 
             auto filename = target.Option(IndexTarget::FILENAME);
-            printf("%s\n", filename.c_str());
 
             if ("Sources" != createdBy) {
                 continue;
