@@ -1,7 +1,5 @@
 @0xaf696212bdf0eef6;
 
-# code/apt/apt-pkg/tagfile-keys.list
-
 struct Item {
     union {
         end     @0 :Void;
