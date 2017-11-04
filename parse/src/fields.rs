@@ -6,93 +6,8 @@ use apt_capnp::unparsed_binary;
 use errors::*;
 use blank_to_null;
 
-pub const HANDLED_FIELDS_SOURCE: [&'static str; 83] = [
-    "Architecture",
-    "Binary",
-    "Build-Conflicts",
-    "Build-Conflicts-Arch",
-    "Build-Conflicts-Indep",
-    "Build-Depends",
-    "Build-Depends-Arch",
-    "Build-Depends-Indep",
-    "Checksums-Md5",
-    "Checksums-Sha1",
-    "Checksums-Sha256",
-    "Checksums-Sha512",
-    "Debian-Vcs-Arch",
-    "Debian-Vcs-Browse",
-    "Debian-Vcs-Browser",
-    "Debian-Vcs-Bzr",
-    "Debian-Vcs-Cvs",
-    "Debian-Vcs-Darcs",
-    "Debian-Vcs-Git",
-    "Debian-Vcs-Hg",
-    "Debian-Vcs-Mtn",
-    "Debian-Vcs-Svn",
-    "Files",
-    "Format",
-    "Maintainer",
-    "Orig-Maintainer",
-    "Orig-Vcs-Arch",
-    "Orig-Vcs-Browse",
-    "Orig-Vcs-Browser",
-    "Orig-Vcs-Bzr",
-    "Orig-Vcs-Cvs",
-    "Orig-Vcs-Darcs",
-    "Orig-Vcs-Git",
-    "Orig-Vcs-Hg",
-    "Orig-Vcs-Mtn",
-    "Orig-Vcs-Svn",
-    "Original-Maintainer",
-    "Original-Vcs-Arch",
-    "Original-Vcs-Browse",
-    "Original-Vcs-Browser",
-    "Original-Vcs-Bzr",
-    "Original-Vcs-Cvs",
-    "Original-Vcs-Darcs",
-    "Original-Vcs-Git",
-    "Original-Vcs-Hg",
-    "Original-Vcs-Mtn",
-    "Original-Vcs-Svn",
-    "Package",
-    "Package-List",
-    "Priority",
-    "Source",
-    "Uploaders",
-    "Upstream-Vcs-Arch",
-    "Upstream-Vcs-Browse",
-    "Upstream-Vcs-Browser",
-    "Upstream-Vcs-Bzr",
-    "Upstream-Vcs-Cvs",
-    "Upstream-Vcs-Darcs",
-    "Upstream-Vcs-Git",
-    "Upstream-Vcs-Hg",
-    "Upstream-Vcs-Mtn",
-    "Upstream-Vcs-Svn",
-    "Vcs-Arch",
-    "Vcs-Browse",
-    "Vcs-Browser",
-    "Vcs-Bzr",
-    "Vcs-Cvs",
-    "Vcs-Darcs",
-    "Vcs-Git",
-    "Vcs-Hg",
-    "Vcs-Mtn",
-    "Vcs-Svn",
-    "Vcs-Upstream-Arch",
-    "Vcs-Upstream-Browse",
-    "Vcs-Upstream-Browser",
-    "Vcs-Upstream-Bzr",
-    "Vcs-Upstream-Cvs",
-    "Vcs-Upstream-Darcs",
-    "Vcs-Upstream-Git",
-    "Vcs-Upstream-Hg",
-    "Vcs-Upstream-Mtn",
-    "Vcs-Upstream-Svn",
-    "Version",
-];
 
-pub fn set_field_source(key: &str, val: &str, builder: &mut unparsed_source::Builder) -> Result<()> {
+pub fn set_field_source(key: &str, val: &str, builder: &mut unparsed_source::Builder) -> Result<bool> {
     match key {
         "Autobuild" => blank_to_null(val, |x| builder.set_autobuild(x)),
         "Build-Indep-Architecture" => blank_to_null(val, |x| builder.set_build_indep_architecture(x)),
@@ -115,44 +30,14 @@ pub fn set_field_source(key: &str, val: &str, builder: &mut unparsed_source::Bui
 
         // Typos
 
-        other => bail!("unrecognised source field: {}", other),
+        _ => return Ok(false),
     }
 
-    Ok(())
+    Ok(true)
 }
 
-pub const HANDLED_FIELDS_BINARY: [&'static str; 28] = [
-    "Architecture",
-    "Breaks",
-    "Build-Essential",
-    "Conflicts",
-    "Depends",
-    "Description",
-    "Description-en",
-    "Description-en_GB",
-    "Description-md5",
-    "Enhances",
-    "Essential",
-    "Filename",
-    "Installed-Size",
-    "MD5sum",
-    "Maintainer",
-    "Original-Maintainer",
-    "Package",
-    "Pre-Depends",
-    "Priority",
-    "Provides",
-    "Recommends",
-    "Replaces",
-    "SHA1",
-    "SHA256",
-    "SHA512",
-    "Size",
-    "Suggests",
-    "Version",
-];
 
-pub fn set_field_binary(key: &str, val: &str, builder: &mut unparsed_binary::Builder) -> Result<()> {
+pub fn set_field_binary(key: &str, val: &str, builder: &mut unparsed_binary::Builder) -> Result<bool> {
     match key {
         "Auto-Built-Package" => blank_to_null(val, |x| builder.set_auto_built_package(x)),
         "Bugs" => blank_to_null(val, |x| builder.set_bugs(x)),
@@ -216,8 +101,8 @@ pub fn set_field_binary(key: &str, val: &str, builder: &mut unparsed_binary::Bui
         // Typos
         "Package_Revision" => blank_to_null(val, |x| builder.set_package_revision(x)),
 
-        other => bail!("unrecognised binary field: {}", other),
+        _ => return Ok(false),
     }
 
-    Ok(())
+    Ok(true)
 }

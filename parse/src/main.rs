@@ -63,12 +63,30 @@ fn run() -> Result<()> {
 
                 let (name, version) = fill_package(&mut package, &mut map)?;
 
-                let style = package.init_style();
+                let (unrecognised, errors) = {
+                    let style = package.borrow().init_style();
 
-                match input.get_type()? {
-                    RawPackageType::Source => src::populate(style.init_source(), &mut map),
-                    RawPackageType::Binary => bin::populate(style.init_binary(), &mut map),
-                }.chain_err(|| format!("parsing package {:?} {:?}", name, version))?
+                    match input.get_type()? {
+                        RawPackageType::Source => src::populate(style.init_source(), &mut map),
+                        RawPackageType::Binary => bin::populate(style.init_binary(), &mut map),
+                    }.chain_err(|| format!("parsing package {:?} {:?}", name, version))?
+                };
+
+                if !errors.is_empty() {
+                    let mut builder = package.borrow().init_parse_errors(as_u32(errors.len()));
+                    for (i, field) in errors.into_iter().enumerate() {
+                        builder.set(as_u32(i), &field);
+                    }
+                }
+
+                if !unrecognised.is_empty() {
+                    let mut builder = package.borrow().init_unrecognised_fields(
+                        as_u32(unrecognised.len()),
+                    );
+                    for (i, field) in unrecognised.into_iter().enumerate() {
+                        builder.set(as_u32(i), field);
+                    }
+                }
             }
         };
 

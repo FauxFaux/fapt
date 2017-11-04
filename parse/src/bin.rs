@@ -7,7 +7,10 @@ use fields;
 use fill_dep;
 use yes_no;
 
-pub fn populate(mut output: binary::Builder, map: &mut HashMap<&str, &str>) -> Result<()> {
+pub fn populate<'a>(
+    mut output: binary::Builder,
+    map: &mut HashMap<&'a str, &str>,
+) -> Result<(Vec<&'a str>, Vec<String>)> {
     {
         let mut builder = output.borrow().init_file();
         if let Some(s) = map.remove("Filename") {
@@ -86,14 +89,14 @@ pub fn populate(mut output: binary::Builder, map: &mut HashMap<&str, &str>) -> R
 
     let mut unparsed = output.init_unparsed();
 
-    for (key, val) in map.into_iter() {
-        if fields::HANDLED_FIELDS_BINARY.contains(&key) {
-            continue;
+    let mut unrecognised_fields = Vec::new();
+    for (key, val) in map {
+        if fields::set_field_binary(key, val, &mut unparsed)
+            .chain_err(|| format!("setting extra field {}", key))?
+        {
+            unrecognised_fields.push(*key);
         }
-
-        fields::set_field_binary(key, val, &mut unparsed)
-            .chain_err(|| format!("setting extra field {}", key))?;
     }
 
-    Ok(())
+    Ok((unrecognised_fields, Vec::new()))
 }

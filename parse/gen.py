@@ -297,14 +297,8 @@ use blank_to_null;
 
 def gen_rust(rs, tag: str, fields_source: Iterable[str], format_string: str, handled_fields, aliases):
     rs.write("""
-pub const HANDLED_FIELDS_{}: [&'static str; {}] = [
-""".format(tag.upper(), len(handled_fields)))
 
-    for field in sorted(handled_fields):
-        rs.write('    "{}",\n'.format(field))
-    rs.write("""];
-
-pub fn set_field_{0}(key: &str, val: &str, builder: &mut unparsed_{0}::Builder) -> Result<()> {{
+pub fn set_field_{0}(key: &str, val: &str, builder: &mut unparsed_{0}::Builder) -> Result<bool> {{
     match key {{
 """.format(tag))
 
@@ -316,10 +310,10 @@ pub fn set_field_{0}(key: &str, val: &str, builder: &mut unparsed_{0}::Builder) 
         rs.write(format_string.format(key, to_rust(val)))
 
     rs.write("""
-        other => bail!("unrecognised {} field: {{}}", other),
+        _ => return Ok(false),
     }}
 
-    Ok(())
+    Ok(true)
 }}
 """.format(tag))
 
