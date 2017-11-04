@@ -25,6 +25,8 @@ use apt_capnp::package;
 use apt_capnp::RawPackageType;
 use apt_capnp::priority;
 
+use apt_capnp::dependency;
+use apt_capnp::single_dependency;
 use apt_capnp::identity;
 
 use errors::*;
@@ -159,6 +161,84 @@ fn fill_priority(mut into: priority::Builder, string: &str) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn fill_dep<'a, F>(map: &HashMap<&str, &str>, key: &str, init: F) -> Result<()>
+where
+    F: FnOnce(u32) -> capnp::struct_list::Builder<'a, dependency::Owned>,
+{
+    match map.get(key) {
+        Some(raw) => fill_dep_in(raw, init).chain_err(|| format!("parsing {}", key)),
+        None => Ok(()),
+    }
+}
+
+fn fill_dep_in<'a, F>(raw: &str, init: F) -> Result<()>
+where
+    F: FnOnce(u32) -> capnp::struct_list::Builder<'a, dependency::Owned>,
+{
+    let read = deps::read(raw)?;
+
+    if read.is_empty() {
+        return Ok(());
+    }
+
+    let mut builder = init(as_u32(read.len()));
+    for (i, alt) in read.into_iter().enumerate() {
+        let mut builder = builder.borrow().get(as_u32(i)).init_alternate(
+            as_u32(alt.alternate.len()),
+        );
+        for (i, single) in alt.alternate.into_iter().enumerate() {
+            let builder = builder.borrow().get(as_u32(i));
+            fill_single_dep(single, builder);
+        }
+    }
+
+    Ok(())
+}
+
+fn fill_single_dep(single: deps::SingleDep, mut builder: single_dependency::Builder) {
+    builder.set_package(&single.package);
+
+    if let Some(ref arch) = single.arch {
+        builder.set_arch(arch);
+    }
+
+    if !single.version_constraints.is_empty() {
+        let mut builder = builder.borrow().init_version_constraints(
+            as_u32(single.version_constraints.len()),
+        );
+        for (i, version) in single.version_constraints.into_iter().enumerate() {
+            let mut builder = builder.borrow().get(as_u32(i));
+            builder.set_version(&version.version);
+            use deps::Op;
+            match version.operator {
+                Op::Ge => builder.init_operator().set_ge(()),
+                Op::Eq => builder.init_operator().set_eq(()),
+                Op::Le => builder.init_operator().set_le(()),
+                Op::Gt => builder.init_operator().set_gt(()),
+                Op::Lt => builder.init_operator().set_lt(()),
+            }
+        }
+    }
+
+    if !single.arch_filter.is_empty() {
+        let mut builder = builder.borrow().init_arch_filter(
+            as_u32(single.arch_filter.len()),
+        );
+        for (i, arch) in single.arch_filter.into_iter().enumerate() {
+            builder.set(as_u32(i), &arch);
+        }
+    }
+
+    if !single.stage_filter.is_empty() {
+        let mut builder = builder.borrow().init_stage_filter(
+            as_u32(single.stage_filter.len()),
+        );
+        for (i, stage) in single.stage_filter.into_iter().enumerate() {
+            builder.set(as_u32(i), &stage);
+        }
+    }
 }
 
 
