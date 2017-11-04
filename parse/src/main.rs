@@ -51,7 +51,10 @@ fn run() -> Result<()> {
             match input.which()? {
                 item::End(()) => return Ok(()),
                 item::Package(_) => bail!("unexpected item type in stream: already processed?"),
-                item::Index(_) => unimplemented!(),
+                item::Index(_) => {
+                    // TODO
+                    continue;
+                },
                 item::Raw(input) => {
                     let input = input?;
 
@@ -73,7 +76,7 @@ fn run() -> Result<()> {
     }
 }
 
-fn fill_package<'a>(output: &mut package::Builder, map: &HashMap<String, String>) -> Result<()> {
+fn fill_package<'a>(output: &mut package::Builder, map: &HashMap<&str, &str>) -> Result<()> {
     if let Some(name) = map.get("Package") {
         output.set_name(name);
     }
@@ -108,20 +111,18 @@ fn fill_package<'a>(output: &mut package::Builder, map: &HashMap<String, String>
     Ok(())
 }
 
-fn to_map(reader: capnp::struct_list::Reader<entry::Owned>) -> Result<HashMap<String, String>> {
+fn to_map<'a>(reader: capnp::struct_list::Reader<entry::Owned>) -> Result<HashMap<&str, &str>> {
     let mut ret = HashMap::with_capacity(reader.len() as usize);
 
     for i in 0..reader.len() {
-        let reader = reader.borrow().get(i);
-        let key = reader.get_key()?;
-
-        ret.insert(key.to_string(), reader.get_value()?.to_string());
+        let reader = reader.get(i);
+        ret.insert(reader.get_key()?, reader.get_value()?);
     }
 
     Ok(ret)
 }
 
-fn fill_identity<'a, F>(value: Option<&String>, into: F) -> Result<()>
+fn fill_identity<'a, F>(value: Option<&&str>, into: F) -> Result<()>
 where
     F: FnOnce(u32) -> capnp::struct_list::Builder<'a, identity::Owned>,
 {

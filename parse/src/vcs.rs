@@ -43,7 +43,7 @@ impl Entry {
 }
 
 pub fn extract(
-    vals: &HashMap<String, String>,
+    vals: &HashMap<&str, &str>,
     builder: &mut apt_capnp::source::Builder,
 ) -> Result<()> {
     let mut found = Vec::with_capacity(4);
@@ -64,7 +64,7 @@ pub fn extract(
     {
 
         // Simplest form: Vcs-Git
-        if let Some(x) = vals.get(&format!("Vcs-{}", vcs_token)) {
+        if let Some(x) = vals.get(format!("Vcs-{}", vcs_token).as_str()) {
             found.push(Entry::new(x, vcs, &Tag::Vcs));
         }
 
@@ -77,11 +77,11 @@ pub fn extract(
             ].into_iter()
         {
             // Common form: Debian-Vcs-Git, Orig-Vcs-Browser, Original-Vcs-Bzr, Upstream-Vcs-Bzr
-            if let Some(x) = vals.get(&format!("{}-Vcs-{}", tag_token, vcs_token)) {
+            if let Some(x) = vals.get(format!("{}-Vcs-{}", tag_token, vcs_token).as_str()) {
                 found.push(Entry::new(x, vcs, tag));
             }
             // Vcs-Upstream-Bzr seen in the wild
-            else if let Some(x) = vals.get(&format!("Vcs-{}-{}", tag_token, vcs_token)) {
+            else if let Some(x) = vals.get(format!("Vcs-{}-{}", tag_token, vcs_token).as_str()) {
                 found.push(Entry::new(x, vcs, tag));
             }
         }

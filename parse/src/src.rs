@@ -16,7 +16,7 @@ use as_u32;
 use fill_identity;
 use fill_priority;
 
-pub fn populate(mut output: source::Builder, map: HashMap<String, String>) -> Result<()> {
+pub fn populate(mut output: source::Builder, map: HashMap<&str, &str>) -> Result<()> {
 
     output.set_format(parse_format(&map["Format"])?);
 
@@ -90,7 +90,7 @@ pub fn populate(mut output: source::Builder, map: HashMap<String, String>) -> Re
     let mut unparsed = output.init_unparsed();
 
     for (key, val) in map.into_iter() {
-        if fields::HANDLED_FIELDS_SOURCE.contains(&key.as_str()) {
+        if fields::HANDLED_FIELDS_SOURCE.contains(&key) {
             continue;
         }
 
@@ -101,7 +101,7 @@ pub fn populate(mut output: source::Builder, map: HashMap<String, String>) -> Re
     Ok(())
 }
 
-fn fill_build_dep<'a, F>(raw: Option<&String>, init: F) -> Result<()>
+fn fill_build_dep<'a, F>(raw: Option<&&str>, init: F) -> Result<()>
 where
     F: FnOnce(u32) -> capnp::struct_list::Builder<'a, dependency::Owned>,
 {
