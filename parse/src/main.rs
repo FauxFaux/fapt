@@ -76,7 +76,10 @@ fn run() -> Result<()> {
     }
 }
 
-fn fill_package<'a, 'b>(output: &mut package::Builder, map: &HashMap<&str, &'b str>) -> Result<(&'b str, &'b str)> {
+fn fill_package<'a, 'b>(
+    output: &mut package::Builder,
+    map: &HashMap<&str, &'b str>,
+) -> Result<(&'b str, &'b str)> {
     let package_name = if let Some(name) = map.get("Package") {
         output.set_name(name);
         name
@@ -249,6 +252,13 @@ fn fill_single_dep(single: deps::SingleDep, mut builder: single_dependency::Buil
     }
 }
 
+fn yes_no(value: &str) -> Result<bool> {
+    match value {
+        "yes" => Ok(true),
+        "no" => Ok(false),
+        other => bail!("invalid value for yes/no: {:?}", other),
+    }
+}
 
 fn blank_to_null<F>(value: &str, into: F)
 where

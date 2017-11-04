@@ -5,6 +5,7 @@ use errors::*;
 use fields;
 
 use fill_dep;
+use yes_no;
 
 pub fn populate(mut output: binary::Builder, map: HashMap<&str, &str>) -> Result<()> {
     {
@@ -35,11 +36,11 @@ pub fn populate(mut output: binary::Builder, map: HashMap<&str, &str>) -> Result
     }
 
     if let Some(s) = map.get("Essential") {
-        output.set_essential(s.parse()?);
+        output.set_essential(yes_no(s)?);
     }
 
     if let Some(s) = map.get("Build-Essential") {
-        output.set_build_essential(s.parse()?);
+        output.set_build_essential((yes_no(s)?));
     }
 
     if let Some(s) = map.get("Installed-Size") {
