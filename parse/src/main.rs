@@ -25,7 +25,7 @@ use apt_capnp::entry;
 use apt_capnp::package;
 
 use apt_capnp::RawPackageType;
-use apt_capnp::priority;
+use apt_capnp::Priority;
 
 use apt_capnp::dependency;
 use apt_capnp::single_dependency;
@@ -95,8 +95,8 @@ fn fill_package<'a, 'b>(
     };
 
     if let Some(priority) = map.get("Priority") {
-        fill_priority(output.borrow().init_priority(), priority)
-            .chain_err(|| "top-level priority")?;
+        output.set_priority(parse_priority(priority)
+            .chain_err(|| "top-level priority")?);
     }
 
     {
@@ -159,19 +159,17 @@ where
     Ok(())
 }
 
-fn fill_priority(mut into: priority::Builder, string: &str) -> Result<()> {
-    match string {
-        "required" => into.set_required(()),
-        "important" => into.set_important(()),
-        "standard" => into.set_standard(()),
-        "optional" => into.set_optional(()),
-        "extra" => into.set_extra(()),
-        "source" => into.set_source(()),
-        "unknown" => into.set_unknown(()),
+fn parse_priority(string: &str) -> Result<Priority> {
+    Ok(match string {
+        "required" => Priority::Required,
+        "important" => Priority::Important,
+        "standard" => Priority::Standard,
+        "optional" => Priority::Optional,
+        "extra" => Priority::Extra,
+        "source" => Priority::Source,
+        "unknown" => Priority::Unknown,
         other => bail!("unsupported priority: '{}'", other),
-    }
-
-    Ok(())
+    })
 }
 
 fn fill_dep<'a, F>(map: &HashMap<&str, &str>, key: &str, init: F) -> Result<()>

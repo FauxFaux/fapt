@@ -9,7 +9,7 @@ use vcs;
 
 use as_u32;
 use fill_identity;
-use fill_priority;
+use parse_priority;
 use fill_dep;
 
 pub fn populate(mut output: source::Builder, map: HashMap<&str, &str>) -> Result<()> {
@@ -25,8 +25,8 @@ pub fn populate(mut output: source::Builder, map: HashMap<&str, &str>) -> Result
             builder.set_name(parts[0]);
             builder.set_style(parts[1]);
             builder.set_section(parts[2]);
-            fill_priority(builder.borrow().init_priority(), parts[3])
-                .chain_err(|| "priority inside package list")?;
+            builder.set_priority(parse_priority(parts[3])
+                .chain_err(|| "priority inside package list")?);
 
             if parts.len() > 4 {
                 let mut builder = builder.init_extras(as_u32(parts.len() - 4));

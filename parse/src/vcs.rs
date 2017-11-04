@@ -4,6 +4,9 @@ use apt_capnp;
 use as_u32;
 use errors::*;
 
+use apt_capnp::VcsTag;
+use apt_capnp::VcsType;
+
 #[derive(Copy, Clone, Debug)]
 enum Vcs {
     Arch,
@@ -89,24 +92,24 @@ pub fn extract(vals: &HashMap<&str, &str>, builder: &mut apt_capnp::source::Buil
     for (i, entry) in found.into_iter().enumerate() {
         let mut builder = builder.borrow().get(as_u32(i));
         builder.set_description(&entry.description);
-        match entry.vcs {
-            Vcs::Browser => builder.borrow().init_type().set_browser(()),
-            Vcs::Arch => builder.borrow().init_type().set_arch(()),
-            Vcs::Bzr => builder.borrow().init_type().set_bzr(()),
-            Vcs::Cvs => builder.borrow().init_type().set_cvs(()),
-            Vcs::Darcs => builder.borrow().init_type().set_darcs(()),
-            Vcs::Git => builder.borrow().init_type().set_git(()),
-            Vcs::Hg => builder.borrow().init_type().set_hg(()),
-            Vcs::Mtn => builder.borrow().init_type().set_mtn(()),
-            Vcs::Svn => builder.borrow().init_type().set_svn(()),
-        }
+        builder.set_type(match entry.vcs {
+            Vcs::Browser => VcsType::Browser,
+            Vcs::Arch => VcsType::Arch,
+            Vcs::Bzr => VcsType::Bzr,
+            Vcs::Cvs => VcsType::Cvs,
+            Vcs::Darcs => VcsType::Darcs,
+            Vcs::Git => VcsType::Git,
+            Vcs::Hg => VcsType::Hg,
+            Vcs::Mtn => VcsType::Mtn,
+            Vcs::Svn => VcsType::Svn,
+        });
 
-        match entry.tag {
-            Tag::Vcs => builder.borrow().init_tag().set_vcs(()),
-            Tag::Orig => builder.borrow().init_tag().set_orig(()),
-            Tag::Debian => builder.borrow().init_tag().set_debian(()),
-            Tag::Upstream => builder.borrow().init_tag().set_upstream(()),
-        }
+        builder.set_tag(match entry.tag {
+            Tag::Vcs => VcsTag::Vcs,
+            Tag::Orig => VcsTag::Orig,
+            Tag::Debian => VcsTag::Debian,
+            Tag::Upstream => VcsTag::Upstream,
+        });
     }
 
     Ok(())

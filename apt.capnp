@@ -144,25 +144,27 @@ struct File {
 
 struct Vcs {
     description @0 :Text;
+    type        @1 :VcsType;
+    tag         @2:VcsTag;
+}
 
-    type :union {
-        browser @1 :Void;
-        arch    @2 :Void;
-        bzr     @3 :Void;
-        cvs     @4 :Void;
-        darcs   @5 :Void;
-        git     @6 :Void;
-        hg      @7 :Void;
-        mtn     @8 :Void;
-        svn     @9 :Void;
-    }
+enum VcsType {
+    browser @0;
+    arch    @1;
+    bzr     @2;
+    cvs     @3;
+    darcs   @4;
+    git     @5;
+    hg      @6;
+    mtn     @7;
+    svn     @8;
+}
 
-    tag :union {
-        vcs      @10 :Void;
-        orig     @11 :Void;
-        debian   @12 :Void;
-        upstream @13 :Void;
-    }
+enum VcsTag {
+    vcs      @0;
+    orig     @1;
+    debian   @2;
+    upstream @3;
 }
 
 struct SourceBinary {
@@ -175,16 +177,14 @@ struct SourceBinary {
 }
 
 # https://www.debian.org/doc/debian-policy/#priorities
-struct Priority {
-    union {
-        unknown   @0 :Void;
-        required  @1 :Void;
-        important @2 :Void;
-        standard  @3 :Void;
-        optional  @4 :Void;
-        extra     @5 :Void;
-        source    @6 :Void;
-    }
+enum Priority {
+    unknown   @0;
+    required  @1;
+    important @2;
+    standard  @3;
+    optional  @4;
+    extra     @5;
+    source    @6;
 }
 
 struct Description {
