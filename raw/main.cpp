@@ -25,28 +25,48 @@ struct IndexFileData {
 static void render_index(const IndexFileData &index_file);
 static void render_whole_file(const char *name, bool src);
 static void render_end();
-
 static void render_src(const pkgSourceList *apt_sources_list);
 static void render_bin(pkgCache *pkg_cache);
 
 static std::vector<std::string> keys_in_section(pkgTagSection &sect);
 
+static void usage(char *argv0) {
+    fprintf(stderr, "usage: %s [sources|binaries]\n", argv0);
+}
 
 int main(int argc, char *argv[]) {
-    if (2 != argc || 0 != strcmp(argv[1], "raw-sources")) {
-        fprintf(stderr, "usage: %s raw-sources\n", argv[0]);
+    if (argc > 2) {
+        usage(argv[0]);
         return 2;
+    }
+
+    bool src = true;
+    bool bin = true;
+
+    if (2 == argc) {
+        if (argv[1] == std::string("sources")) {
+            bin = false;
+        } else if (argv[1] == std::string("binaries")) {
+            src = false;
+        } else {
+            usage(argv[0]);
+            return 3;
+        }
     }
 
     pkgInitConfig(*_config);
     pkgInitSystem(*_config, _system);
     auto *cache_file = new pkgCacheFile();
 
-    pkgSourceList *apt_sources_list = cache_file->GetSourceList();
-    render_src(apt_sources_list);
+    if (src) {
+        pkgSourceList *apt_sources_list = cache_file->GetSourceList();
+        render_src(apt_sources_list);
+    }
 
-    auto pkg_cache = cache_file->GetPkgCache();
-    render_bin(pkg_cache);
+    if (bin) {
+        auto pkg_cache = cache_file->GetPkgCache();
+        render_bin(pkg_cache);
+    }
 
     render_end();
 
@@ -56,7 +76,8 @@ int main(int argc, char *argv[]) {
 
 }
 
-static void render_src(const pkgSourceList *apt_sources_list) {// like "pkgSrcRecords::pkgSrcRecords(pkgSourceList &List) {"
+static void render_src(const pkgSourceList *apt_sources_list) {
+    // like "pkgSrcRecords::pkgSrcRecords(pkgSourceList &List) {"
     // apt_source_list_entry is something like "all the lines for a url and distribution (sid)";
     // e.g. "deb http://foo sid main lol; deb-src http://foo sid main lol"
     // .. which appears to be what a Release file contains. Right.
@@ -146,7 +167,7 @@ void render_whole_file(const char *name, bool src) {
 
         auto keys = keys_in_section(sect);
         assert(keys.size() < std::numeric_limits<unsigned int>::max());
-        auto builder = root.initEntries(keys.size());
+        auto builder = root.initEntries(static_cast<unsigned int>(keys.size()));
 
         uint pos = 0;
         for (const string &key : keys) {
