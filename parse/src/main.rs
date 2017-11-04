@@ -46,7 +46,7 @@ fn run() -> Result<()> {
         let mut message = capnp::message::Builder::new_default();
 
         {
-            let mut root = message.init_root::<item::Builder>();
+            let mut package = message.init_root::<item::Builder>().init_package();
 
             match input.which()? {
                 item::End(()) => return Ok(()),
@@ -56,13 +56,13 @@ fn run() -> Result<()> {
                 item::RawSource(input) => {
                     let input = input?;
                     let handled = get_handled_entries(input.get_entries()?, &fields::HANDLED_FIELDS_SOURCE)?;
-                    let package = init_package(&mut root, parse_index(input.get_index()?)?, &handled)?;
+                    fill_package(&mut package, parse_index(input.get_index()?)?, &handled)?;
                     src::populate(input, package.init_style().init_source(), handled)?;
                 },
                 item::RawBinary(input) => {
                     let input = input?;
                     let handled = get_handled_entries(input.get_entries()?, &fields::HANDLED_FIELDS_BINARY)?;
-                    let package = init_package(&mut root, input.get_index()?, &handled)?;
+                    fill_package(&mut package, input.get_index()?, &handled)?;
                     bin::populate(input, package.init_style().init_binary(), handled)?;
                 }
             };
@@ -72,8 +72,7 @@ fn run() -> Result<()> {
     }
 }
 
-fn init_package<'a>(root: &mut item::Builder<'a>, index: index_file::Reader, handled_entries: &HashMap<String, String>) -> Result<package::Builder<'a>> {
-    let mut output = root.borrow().init_package();
+fn fill_package(output: &mut package::Builder, index: index_file::Reader, handled_entries: &HashMap<String, String>) -> Result<()> {
 
     if let Some(name) = handled_entries.get("Package") {
         output.set_name(name);
@@ -111,7 +110,7 @@ fn init_package<'a>(root: &mut item::Builder<'a>, index: index_file::Reader, han
         output.borrow().init_original_maintainer(len)
     }).chain_err(|| "parsing Original-Maintainer")?;
 
-    Ok(output)
+    Ok(())
 }
 
 fn parse_index(index: &str) -> Result<index_file::Reader> {
