@@ -61,9 +61,25 @@ fn run() -> Result<()> {
 
                 let mut map = to_map(input.get_entries()?)?;
 
-                let (name, version) = fill_package(&mut package, &mut map)?;
+                let name = if let Some(name) = map.remove("Package") {
+                    package.set_name(name);
+                    name
+                } else {
+                    "[not available]"
+                };
 
-                let (unrecognised, errors) = {
+                let version = if let Some(version) = map.remove("Version") {
+                    package.set_version(version);
+                    version
+                } else {
+                    "[not available]"
+                };
+
+                let initial_errors = fill_package(&mut package, &mut map).chain_err(|| {
+                    format!("filling basic information for {:?} {:?}", name, version)
+                })?;
+
+                let (unrecognised, mut errors) = {
                     let style = package.borrow().init_style();
 
                     match input.get_type()? {
@@ -71,6 +87,8 @@ fn run() -> Result<()> {
                         RawPackageType::Binary => bin::populate(style.init_binary(), &mut map),
                     }.chain_err(|| format!("parsing package {:?} {:?}", name, version))?
                 };
+
+                errors.extend(initial_errors);
 
                 if !errors.is_empty() {
                     let mut builder = package.borrow().init_parse_errors(as_u32(errors.len()));
@@ -94,23 +112,12 @@ fn run() -> Result<()> {
     }
 }
 
-fn fill_package<'a, 'b>(
+fn fill_package(
     output: &mut package::Builder,
-    map: &mut HashMap<&str, &'b str>,
-) -> Result<(&'b str, &'b str)> {
-    let package_name = if let Some(name) = map.remove("Package") {
-        output.set_name(name);
-        name
-    } else {
-        ""
-    };
+    map: &mut HashMap<&str, &str>,
+) -> Result<Vec<String>> {
 
-    let package_version = if let Some(version) = map.remove("Version") {
-        output.set_version(version);
-        version
-    } else {
-        ""
-    };
+    let mut allowed_parse_errors = Vec::new();
 
     if let Some(priority) = map.remove("Priority") {
         output.set_priority(parse_priority(priority).chain_err(|| "top-level priority")?);
@@ -126,15 +133,21 @@ fn fill_package<'a, 'b>(
         }
     }
 
-    fill_identity(map.remove("Maintainer"), |len| {
+    if let Err(e) = fill_identity(map.remove("Maintainer"), |len| {
         output.borrow().init_maintainer(len)
-    }).chain_err(|| "parsing Maintainer")?;
+    })
+    {
+        allowed_parse_errors.push(format!("Couldn't parse Maintainer: {:?}", e))
+    }
 
-    fill_identity(map.remove("Original-Maintainer"), |len| {
+    if let Err(e) = fill_identity(map.remove("Original-Maintainer"), |len| {
         output.borrow().init_original_maintainer(len)
-    }).chain_err(|| "parsing Original-Maintainer")?;
+    })
+    {
+        allowed_parse_errors.push(format!("Couldn't parse Original-Maintainer: {:?}", e));
+    }
 
-    Ok((package_name, package_version))
+    Ok(allowed_parse_errors)
 }
 
 fn to_map<'a>(reader: capnp::struct_list::Reader<entry::Owned>) -> Result<HashMap<&str, &str>> {
@@ -156,9 +169,7 @@ where
         return Ok(());
     }
 
-    let idents = ident::read(value.unwrap()).chain_err(|| {
-        format!("parsing {}", value.unwrap())
-    })?;
+    let idents = ident::read(value.unwrap())?;
 
     let mut builder = into(as_u32(idents.len()));
 
