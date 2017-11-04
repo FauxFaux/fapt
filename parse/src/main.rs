@@ -86,7 +86,7 @@ fn fill_package(
         output.set_version(version);
     }
 
-    output.set_index(index);
+    output.set_index(index)?;
 
     if let Some(priority) = handled_entries.get("Priority") {
         fill_priority(output.borrow().init_priority(), priority)

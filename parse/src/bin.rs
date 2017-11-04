@@ -7,20 +7,8 @@ use fields;
 
 use as_u32;
 use blank_to_null;
-use get_handled_entries;
-use fill_identity;
 
 pub fn populate(
-    input: raw_binary::Reader,
-    output: binary::Builder,
-    handled_entries: HashMap<String, String>,
-) -> Result<()> {
-    populate_message(input, output, handled_entries)?;
-
-    Ok(())
-}
-
-fn populate_message(
     input: raw_binary::Reader,
     output: binary::Builder,
     handled_entries: HashMap<String, String>,

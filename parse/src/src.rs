@@ -3,8 +3,6 @@ use capnp;
 use std::collections::HashMap;
 
 use apt_capnp::dependency;
-use apt_capnp::item;
-use apt_capnp::priority;
 use apt_capnp::raw_source;
 use apt_capnp::single_dependency;
 use apt_capnp::source;
@@ -17,21 +15,10 @@ use vcs;
 
 use as_u32;
 use blank_to_null;
-use get_handled_entries;
 use fill_identity;
 use fill_priority;
 
 pub fn populate(
-    input: raw_source::Reader,
-    output: source::Builder,
-    handled_entries: HashMap<String, String>,
-) -> Result<()> {
-    populate_message(input, output, handled_entries)?;
-
-    Ok(())
-}
-
-fn populate_message(
     input: raw_source::Reader,
     mut output: source::Builder,
     handled_entries: HashMap<String, String>,
