@@ -143,8 +143,6 @@ HANDLED_FIELDS_BINARY = {
 
     # folded into Description
     'Description',
-    'Description-en',
-    'Description-en_GB',
     'Description-md5',
 
     # parsed as Identities

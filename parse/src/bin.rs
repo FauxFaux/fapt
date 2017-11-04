@@ -46,7 +46,16 @@ pub fn populate(mut output: binary::Builder, map: HashMap<&str, &str>) -> Result
         output.set_installed_size(s.parse()?);
     }
 
-    // TODO: description
+    if let Some(text) = map.get("Description") {
+        if let Some(expected_md5) = map.get("Description-md5") {
+            ensure!(
+                *expected_md5 == format!("{:032x}", ::md5::compute(text.as_bytes())).as_str(),
+                "Invalid md5 ({:?}) on Description",
+                expected_md5
+            );
+        }
+        output.set_description(text);
+    }
 
     fill_dep(&map, "Depends", |len| output.borrow().init_depends(len))?;
 

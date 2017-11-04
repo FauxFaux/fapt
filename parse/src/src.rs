@@ -81,7 +81,7 @@ pub fn populate(mut output: source::Builder, map: HashMap<&str, &str>) -> Result
         output.borrow().init_build_conflict_indep(len)
     })?;
 
-    fill_identity(map.gegt("Uploaders"), |len| {
+    fill_identity(map.get("Uploaders"), |len| {
         output.borrow().init_uploaders(len)
     })?;
 

@@ -2,6 +2,8 @@ extern crate capnp;
 #[macro_use]
 extern crate error_chain;
 
+extern crate md5;
+
 #[macro_use]
 extern crate nom;
 
@@ -59,14 +61,14 @@ fn run() -> Result<()> {
 
                 let map = to_map(input.get_entries()?)?;
 
-                fill_package(&mut package, &map)?;
+                let (name, version) = fill_package(&mut package, &map)?;
 
                 let style = package.init_style();
 
                 match input.get_type()? {
-                    RawPackageType::Source => src::populate(style.init_source(), map)?,
-                    RawPackageType::Binary => bin::populate(style.init_binary(), map)?,
-                }
+                    RawPackageType::Source => src::populate(style.init_source(), map),
+                    RawPackageType::Binary => bin::populate(style.init_binary(), map),
+                }.chain_err(|| format!("parsing package {:?} {:?}", name, version))?
             }
         };
 
@@ -74,14 +76,20 @@ fn run() -> Result<()> {
     }
 }
 
-fn fill_package<'a>(output: &mut package::Builder, map: &HashMap<&str, &str>) -> Result<()> {
-    if let Some(name) = map.get("Package") {
+fn fill_package<'a, 'b>(output: &mut package::Builder, map: &HashMap<&str, &'b str>) -> Result<(&'b str, &'b str)> {
+    let package_name = if let Some(name) = map.get("Package") {
         output.set_name(name);
-    }
+        name
+    } else {
+        ""
+    };
 
-    if let Some(version) = map.get("Version") {
+    let package_version = if let Some(version) = map.get("Version") {
         output.set_version(version);
-    }
+        version
+    } else {
+        ""
+    };
 
     if let Some(priority) = map.get("Priority") {
         fill_priority(output.borrow().init_priority(), priority)
@@ -106,7 +114,7 @@ fn fill_package<'a>(output: &mut package::Builder, map: &HashMap<&str, &str>) ->
         output.borrow().init_original_maintainer(len)
     }).chain_err(|| "parsing Original-Maintainer")?;
 
-    Ok(())
+    Ok((package_name, package_version))
 }
 
 fn to_map<'a>(reader: capnp::struct_list::Reader<entry::Owned>) -> Result<HashMap<&str, &str>> {

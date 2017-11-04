@@ -89,7 +89,7 @@ struct Binary {
 
     installedSize  @3 :UInt64;
 
-    description    @4 :List(Description);
+    description    @4 :Text;
 
     depends     @5 :List(Dependency);
     recommends  @6 :List(Dependency);
