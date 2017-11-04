@@ -1,11 +1,15 @@
 use capnp;
 
+use std::collections::HashMap;
+
 use apt_capnp::dependency;
 use apt_capnp::item;
 use apt_capnp::priority;
 use apt_capnp::raw_source;
 use apt_capnp::single_dependency;
 use apt_capnp::source;
+use apt_capnp::SourceFormat;
+
 use deps;
 use errors::*;
 use fields;
@@ -15,53 +19,17 @@ use as_u32;
 use blank_to_null;
 use get_handled_entries;
 use fill_identity;
+use fill_priority;
 
-pub fn populate(input: raw_source::Reader, root: &mut item::Builder) -> Result<()> {
-    let name = input.get_package().chain_err(
-        || "early parse error: package name",
-    )?;
-
-    let version = input.get_version().chain_err(|| {
-        format!("early parse error: version for '{}'", name)
-    })?;
-
-    let mut output = root.borrow().init_source();
-
-    output.set_package(name);
-    output.set_version(version);
-
-    populate_message(input, output).chain_err(|| {
-        format!("parsing / generating '{}' '{}'", name, version)
-    })?;
+pub fn populate(input: raw_source::Reader, output: source::Builder, handled_entries: HashMap<String, String>) -> Result<()> {
+    populate_message(input, output, handled_entries)?;
 
     Ok(())
 }
 
-fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> Result<()> {
-    output.set_index(input.get_index()?);
+fn populate_message(input: raw_source::Reader, mut output: source::Builder, handled_entries: HashMap<String, String>) -> Result<()> {
 
-    let handled_entries =
-        get_handled_entries(input.get_entries()?, &fields::HANDLED_FIELDS_SOURCE)?;
-
-    if let Some(priority) = handled_entries.get("Priority") {
-        set_priority(output.borrow().init_priority(), priority)
-            .chain_err(|| "top-level priority")?;
-    }
-
-    {
-        let mut parts: Vec<&str> = handled_entries["Architecture"]
-            .split(' ')
-            .map(|x| x.trim())
-            .collect();
-        parts.sort();
-
-        let mut builder = output.borrow().init_arch(as_u32(parts.len()));
-        for (i, part) in parts.into_iter().enumerate() {
-            builder.set(as_u32(i), part);
-        }
-    }
-
-    set_format(output.borrow().init_format(), &handled_entries["Format"])?;
+    output.set_format(parse_format(&handled_entries["Format"])?);
 
     if let Some(list) = handled_entries.get("Package-List") {
         let lines: Vec<&str> = list.split('\n').map(|x| x.trim()).collect();
@@ -72,7 +40,7 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
             builder.set_name(parts[0]);
             builder.set_style(parts[1]);
             builder.set_section(parts[2]);
-            set_priority(builder.borrow().init_priority(), parts[3])
+            fill_priority(builder.borrow().init_priority(), parts[3])
                 .chain_err(|| "priority inside package list")?;
 
             if parts.len() > 4 {
@@ -124,14 +92,6 @@ fn populate_message(input: raw_source::Reader, mut output: source::Builder) -> R
     fill_build_dep(handled_entries.get("Build-Conflicts-Indep"), |len| {
         output.borrow().init_build_conflict_indep(len)
     }).chain_err(|| "parsing Build-Conflicts-Indep")?;
-
-    fill_identity(handled_entries.get("Maintainer"), |len| {
-        output.borrow().init_maintainer(len)
-    })?;
-
-    fill_identity(handled_entries.get("Original-Maintainer"), |len| {
-        output.borrow().init_original_maintainer(len)
-    })?;
 
     fill_identity(handled_entries.get("Uploaders"), |len| {
         output.borrow().init_uploaders(len)
@@ -230,29 +190,12 @@ fn fill_single_dep(single: deps::SingleDep, mut builder: single_dependency::Buil
     }
 }
 
-fn set_priority(mut into: priority::Builder, string: &str) -> Result<()> {
-    match string {
-        "required" => into.set_required(()),
-        "important" => into.set_important(()),
-        "standard" => into.set_standard(()),
-        "optional" => into.set_optional(()),
-        "extra" => into.set_extra(()),
-        "source" => into.set_source(()),
-        "unknown" => into.set_unknown(()),
-        other => bail!("unsupported priority: '{}'", other),
-    }
-
-    Ok(())
-}
-
-fn set_format(mut into: source::format::Builder, string: &str) -> Result<()> {
-    match string {
-        "3.0 (quilt)" => into.set_quilt3dot0(()),
-        "1.0" => into.set_original(()),
-        "3.0 (git)" => into.set_git3dot0(()),
-        "3.0 (native)" => into.set_native3dot0(()),
+fn parse_format(string: &str) -> Result<SourceFormat> {
+    Ok(match string {
+        "3.0 (quilt)" => SourceFormat::Quilt3dot0,
+        "1.0" => SourceFormat::Original,
+        "3.0 (git)" => SourceFormat::Git3dot0,
+        "3.0 (native)" => SourceFormat::Native3dot0,
         other => bail!("unsupported source format: '{}'", other),
-    }
-
-    Ok(())
+    })
 }

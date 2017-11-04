@@ -20,6 +20,10 @@ mod vcs;
 
 use apt_capnp::item;
 use apt_capnp::entry;
+use apt_capnp::package;
+
+use apt_capnp::index_file;
+use apt_capnp::priority;
 
 use apt_capnp::identity;
 
@@ -46,16 +50,72 @@ fn run() -> Result<()> {
 
             match input.which()? {
                 item::End(()) => return Ok(()),
-                item::Source(_) | item::Binary(_) => {
+                item::Package(_) => {
                     bail!("unexpected item type in stream: already processed?")
                 }
-                item::RawSource(e) => src::populate(e?, &mut root)?,
-                item::RawBinary(e) => bin::populate(e?, &mut root)?,
+                item::RawSource(input) => {
+                    let input = input?;
+                    let handled = get_handled_entries(input.get_entries()?, &fields::HANDLED_FIELDS_SOURCE)?;
+                    let package = init_package(&mut root, parse_index(input.get_index()?)?, &handled)?;
+                    src::populate(input, package.init_style().init_source(), handled)?;
+                },
+                item::RawBinary(input) => {
+                    let input = input?;
+                    let handled = get_handled_entries(input.get_entries()?, &fields::HANDLED_FIELDS_BINARY)?;
+                    let package = init_package(&mut root, input.get_index()?, &handled)?;
+                    bin::populate(input, package.init_style().init_binary(), handled)?;
+                }
             };
         }
 
         serialize::write_message(&mut stdout, &message)?;
     }
+}
+
+fn init_package<'a>(root: &mut item::Builder<'a>, index: index_file::Reader, handled_entries: &HashMap<String, String>) -> Result<package::Builder<'a>> {
+    let mut output = root.borrow().init_package();
+
+    if let Some(name) = handled_entries.get("Package") {
+        output.set_name(name);
+    }
+
+    if let Some(version) = handled_entries.get("Version") {
+        output.set_version(version);
+    }
+
+    output.set_index(index);
+
+    if let Some(priority) = handled_entries.get("Priority") {
+        fill_priority(output.borrow().init_priority(), priority)
+            .chain_err(|| "top-level priority")?;
+    }
+
+    {
+        let mut parts: Vec<&str> = handled_entries["Architecture"]
+            .split(' ')
+            .map(|x| x.trim())
+            .collect();
+        parts.sort();
+
+        let mut builder = output.borrow().init_arch(as_u32(parts.len()));
+        for (i, part) in parts.into_iter().enumerate() {
+            builder.set(as_u32(i), part);
+        }
+    }
+
+    fill_identity(handled_entries.get("Maintainer"), |len| {
+        output.borrow().init_maintainer(len)
+    }).chain_err(|| "parsing Maintainer")?;
+
+    fill_identity(handled_entries.get("Original-Maintainer"), |len| {
+        output.borrow().init_original_maintainer(len)
+    }).chain_err(|| "parsing Original-Maintainer")?;
+
+    Ok(output)
+}
+
+fn parse_index(index: &str) -> Result<index_file::Reader> {
+    unimplemented!()
 }
 
 fn get_handled_entries(
@@ -103,6 +163,22 @@ where
 
     Ok(())
 }
+
+fn fill_priority(mut into: priority::Builder, string: &str) -> Result<()> {
+    match string {
+        "required" => into.set_required(()),
+        "important" => into.set_important(()),
+        "standard" => into.set_standard(()),
+        "optional" => into.set_optional(()),
+        "extra" => into.set_extra(()),
+        "source" => into.set_source(()),
+        "unknown" => into.set_unknown(()),
+        other => bail!("unsupported priority: '{}'", other),
+    }
+
+    Ok(())
+}
+
 
 fn blank_to_null<F>(value: &str, into: F)
 where
