@@ -158,7 +158,7 @@ void render_whole_file(const char *name, bool src) {
     pkgTagFile tagFile(&fd);
     pkgTagSection sect;
     while (tagFile.Step(sect)) {
-        capnp::MallocMessageBuilder message;
+        capnp::MallocMessageBuilder message(capnp::SUGGESTED_FIRST_SEGMENT_WORDS * 16);
         auto item = message.initRoot<Item>();
         auto root = item.initRaw();
 
