@@ -22,7 +22,7 @@ use apt_capnp::item;
 use apt_capnp::entry;
 use apt_capnp::package;
 
-use apt_capnp::index_file;
+use apt_capnp::RawPackageType;
 use apt_capnp::priority;
 
 use apt_capnp::identity;
@@ -51,19 +51,20 @@ fn run() -> Result<()> {
             match input.which()? {
                 item::End(()) => return Ok(()),
                 item::Package(_) => bail!("unexpected item type in stream: already processed?"),
-                item::RawSource(input) => {
+                item::Index(_) => unimplemented!(),
+                item::Raw(input) => {
                     let input = input?;
-                    let handled =
-                        get_handled_entries(input.get_entries()?, &fields::HANDLED_FIELDS_SOURCE)?;
-                    fill_package(&mut package, parse_index(input.get_index()?)?, &handled)?;
-                    src::populate(input, package.init_style().init_source(), handled)?;
-                }
-                item::RawBinary(input) => {
-                    let input = input?;
-                    let handled =
-                        get_handled_entries(input.get_entries()?, &fields::HANDLED_FIELDS_BINARY)?;
-                    fill_package(&mut package, Index::Provided(input.get_index()?), &handled)?;
-                    bin::populate(input, package.init_style().init_binary(), handled)?;
+
+                    let map = to_map(input.get_entries()?)?;
+
+                    fill_package(&mut package, &map)?;
+
+                    let style = package.init_style();
+
+                    match input.get_type()? {
+                        RawPackageType::Source => src::populate(style.init_source(), map)?,
+                        RawPackageType::Binary => bin::populate(style.init_binary(), map)?,
+                    }
                 }
             };
         }
@@ -72,39 +73,22 @@ fn run() -> Result<()> {
     }
 }
 
-fn fill_package<'a>(
-    output: &mut package::Builder,
-    index: Index<'a>,
-    handled_entries: &HashMap<String, String>,
-) -> Result<()> {
-
-    if let Some(name) = handled_entries.get("Package") {
+fn fill_package<'a>(output: &mut package::Builder, map: &HashMap<String, String>) -> Result<()> {
+    if let Some(name) = map.get("Package") {
         output.set_name(name);
     }
 
-    if let Some(version) = handled_entries.get("Version") {
+    if let Some(version) = map.get("Version") {
         output.set_version(version);
     }
 
-    match index {
-        Index::Provided(index) => output.set_index(index)?,
-        Index::Parsed { } => {
-            let mut builder = output.borrow().init_index();
-
-        }
-    }
-
-
-    if let Some(priority) = handled_entries.get("Priority") {
+    if let Some(priority) = map.get("Priority") {
         fill_priority(output.borrow().init_priority(), priority)
             .chain_err(|| "top-level priority")?;
     }
 
     {
-        let mut parts: Vec<&str> = handled_entries["Architecture"]
-            .split(' ')
-            .map(|x| x.trim())
-            .collect();
+        let mut parts: Vec<&str> = map["Architecture"].split(' ').map(|x| x.trim()).collect();
         parts.sort();
 
         let mut builder = output.borrow().init_arch(as_u32(parts.len()));
@@ -113,44 +97,23 @@ fn fill_package<'a>(
         }
     }
 
-    fill_identity(handled_entries.get("Maintainer"), |len| {
+    fill_identity(map.get("Maintainer"), |len| {
         output.borrow().init_maintainer(len)
     }).chain_err(|| "parsing Maintainer")?;
 
-    fill_identity(handled_entries.get("Original-Maintainer"), |len| {
+    fill_identity(map.get("Original-Maintainer"), |len| {
         output.borrow().init_original_maintainer(len)
     }).chain_err(|| "parsing Original-Maintainer")?;
 
     Ok(())
 }
 
-enum Index<'a> {
-    Provided(index_file::Reader<'a>),
-    Parsed {
-
-    }
-}
-
-fn parse_index(index: &str) -> Result<Index> {
-    let parts = index.split(' ').collect();
-    ensure!(3 == parts.len(), "wrong number of tokens in index string: {}", index)
-    Ok(Index::Parsed {
-
-    })
-}
-
-fn get_handled_entries(
-    reader: capnp::struct_list::Reader<entry::Owned>,
-    handled: &[&str],
-) -> Result<HashMap<String, String>> {
-    let mut ret = HashMap::with_capacity(handled.len());
+fn to_map(reader: capnp::struct_list::Reader<entry::Owned>) -> Result<HashMap<String, String>> {
+    let mut ret = HashMap::with_capacity(reader.len() as usize);
 
     for i in 0..reader.len() {
         let reader = reader.borrow().get(i);
         let key = reader.get_key()?;
-        if !handled.contains(&key) {
-            continue;
-        }
 
         ret.insert(key.to_string(), reader.get_value()?.to_string());
     }

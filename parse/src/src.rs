@@ -3,7 +3,6 @@ use capnp;
 use std::collections::HashMap;
 
 use apt_capnp::dependency;
-use apt_capnp::raw_source;
 use apt_capnp::single_dependency;
 use apt_capnp::source;
 use apt_capnp::SourceFormat;
@@ -14,19 +13,14 @@ use fields;
 use vcs;
 
 use as_u32;
-use blank_to_null;
 use fill_identity;
 use fill_priority;
 
-pub fn populate(
-    input: raw_source::Reader,
-    mut output: source::Builder,
-    handled_entries: HashMap<String, String>,
-) -> Result<()> {
+pub fn populate(mut output: source::Builder, map: HashMap<String, String>) -> Result<()> {
 
-    output.set_format(parse_format(&handled_entries["Format"])?);
+    output.set_format(parse_format(&map["Format"])?);
 
-    if let Some(list) = handled_entries.get("Package-List") {
+    if let Some(list) = map.get("Package-List") {
         let lines: Vec<&str> = list.split('\n').map(|x| x.trim()).collect();
         let mut builder = output.borrow().init_binaries(as_u32(lines.len()));
         for (i, line) in lines.into_iter().enumerate() {
@@ -47,6 +41,7 @@ pub fn populate(
         }
     }
 
+    #[cfg(todo)]
     {
         let reader = input.get_files()?;
         let mut builder = output.borrow().init_files(reader.len());
@@ -62,50 +57,44 @@ pub fn populate(
         }
     }
 
-    vcs::extract(&handled_entries, &mut output.borrow())?;
+    vcs::extract(&map, &mut output.borrow())?;
 
-    fill_build_dep(handled_entries.get("Build-Depends"), |len| {
+    fill_build_dep(map.get("Build-Depends"), |len| {
         output.borrow().init_build_dep(len)
     }).chain_err(|| "parsing Build-Depends")?;
 
-    fill_build_dep(handled_entries.get("Build-Depends-Arch"), |len| {
+    fill_build_dep(map.get("Build-Depends-Arch"), |len| {
         output.borrow().init_build_dep_arch(len)
     }).chain_err(|| "parsing Build-Depends-Arch")?;
 
-    fill_build_dep(handled_entries.get("Build-Depends-Indep"), |len| {
+    fill_build_dep(map.get("Build-Depends-Indep"), |len| {
         output.borrow().init_build_dep_indep(len)
     }).chain_err(|| "parsing Build-Depends-Indep")?;
 
-    fill_build_dep(handled_entries.get("Build-Conflicts"), |len| {
+    fill_build_dep(map.get("Build-Conflicts"), |len| {
         output.borrow().init_build_conflict(len)
     }).chain_err(|| "parsing Build-Conflicts")?;
 
-    fill_build_dep(handled_entries.get("Build-Conflicts-Arch"), |len| {
+    fill_build_dep(map.get("Build-Conflicts-Arch"), |len| {
         output.borrow().init_build_conflict_arch(len)
     }).chain_err(|| "parsing Build-Conflicts-Arch")?;
 
-    fill_build_dep(handled_entries.get("Build-Conflicts-Indep"), |len| {
+    fill_build_dep(map.get("Build-Conflicts-Indep"), |len| {
         output.borrow().init_build_conflict_indep(len)
     }).chain_err(|| "parsing Build-Conflicts-Indep")?;
 
-    fill_identity(handled_entries.get("Uploaders"), |len| {
+    fill_identity(map.get("Uploaders"), |len| {
         output.borrow().init_uploaders(len)
     })?;
 
     let mut unparsed = output.init_unparsed();
 
-    let reader = input.get_entries()?;
-    for i in 0..reader.len() {
-        let reader = reader.borrow().get(i);
-        let key = reader.get_key()?;
-
-        if fields::HANDLED_FIELDS_SOURCE.contains(&key) {
+    for (key, val) in map.into_iter() {
+        if fields::HANDLED_FIELDS_SOURCE.contains(&key.as_str()) {
             continue;
         }
 
-        let val = reader.get_value()?;
-
-        fields::set_field_source(key, val, &mut unparsed)
+        fields::set_field_source(&key, &val, &mut unparsed)
             .chain_err(|| format!("setting extra field {}", key))?;
     }
 
