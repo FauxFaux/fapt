@@ -286,5 +286,4 @@ struct UnparsedBinary {
     tag                    @54 :Text;
     triggersAwaited        @55 :Text;
     triggersPending        @56 :Text;
-    origMaintainer         @57 :Text;
 }

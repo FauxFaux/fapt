@@ -66,9 +66,7 @@ for vcs in [
     HANDLED_FIELDS_SOURCE.add('Upstream-Vcs-' + vcs)
     HANDLED_FIELDS_SOURCE.add('Vcs-Upstream-' + vcs)
 
-# TODO: this alias needs to be at handled time, not here
 ALIASES_SOURCE = {
-    # 'Orig-Maintainer': 'Original-Maintainer'
 }
 
 HANDLED_FIELDS_SOURCE.update(ALIASES_SOURCE.keys())

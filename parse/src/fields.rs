@@ -69,7 +69,6 @@ pub fn set_field_binary(key: &str, val: &str, builder: &mut unparsed_binary::Bui
         "Npp-Mimetype" => blank_to_null(val, |x| builder.set_npp_mimetype(x)),
         "Npp-Name" => blank_to_null(val, |x| builder.set_npp_name(x)),
         "Optional" => blank_to_null(val, |x| builder.set_optional(x)),
-        "Orig-Maintainer" => blank_to_null(val, |x| builder.set_orig_maintainer(x)),
         "Origin" => blank_to_null(val, |x| builder.set_origin(x)),
         "Package-Revision" => blank_to_null(val, |x| builder.set_package_revision(x)),
         "Package-Type" => blank_to_null(val, |x| builder.set_package_type(x)),
