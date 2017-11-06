@@ -6,3 +6,5 @@ extern crate nom;
 
 pub mod classic_sources_list;
 mod errors;
+
+pub use errors::*;

@@ -3,5 +3,9 @@ authors = ["Chris West (Faux) <git@goeswhere.com>"]
 name = "fapt"
 version = "0.1.0"
 
+[dependencies]
+clap = "2.27"
+error-chain = "0.11"
+
 [dependencies.fapt-pkg]
 path = "../fapt-pkg"
