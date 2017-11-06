@@ -3,6 +3,8 @@ extern crate error_chain;
 
 extern crate gpgme;
 
+extern crate mailparse;
+
 #[macro_use]
 extern crate nom;
 

@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
+use std::time;
 
 use reqwest;
 use reqwest::Url;
@@ -16,6 +17,28 @@ pub struct RequestedRelease {
     /// This can also be called "suite" in some places,
     /// e.g. "unstable" (suite) == "sid" (codename)
     codename: String,
+}
+
+pub struct ReleaseFile {
+    origin: String,
+    label: String,
+    suite: String,
+    codename: String,
+    changelogs: String,
+    date: time::Instant,
+    valid_until: time::Instant,
+    acquire_by_hash: bool,
+    architectures: Vec<String>,
+    components: Vec<String>,
+    description: String,
+    contents: Vec<ReleaseContent>,
+}
+
+pub struct ReleaseContent {
+    len: u64,
+    name: String,
+    md5: [u8; 20],
+    sha256: [u8; 32],
 }
 
 impl RequestedRelease {
@@ -91,4 +114,12 @@ pub fn download_releases<P: AsRef<Path>>(
         ret.push(verified);
     }
     Ok(ret)
+}
+
+fn parse_release(release: &[u8]) -> Result<ReleaseFile> {
+    use mailparse;
+    let (fields, _) = mailparse::parse_headers(release)?;
+    for field in fields {
+
+    }
 }
