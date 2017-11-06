@@ -1,11 +1,17 @@
 use errors::*;
 
+use std::fs;
+use std::io;
+use std::path;
+
+use std::io::BufRead;
+
 #[derive(Debug, PartialEq, Eq)]
-pub struct Entry<'s> {
+pub struct Entry {
     src: bool,
-    url: &'s str,
-    dist: &'s str,
-    components: Vec<&'s str>,
+    url: String,
+    dist: String,
+    components: Vec<String>,
 }
 
 fn line_space(c: char) -> bool {
@@ -32,36 +38,55 @@ named!(single_line<&str, Entry>, do_parse!(
     spaces >>
     dist: word >>
     components: many1!(preceded!(spaces, word)) >>
-    ( Entry { src, url, dist, components })
+    ( Entry {
+        src,
+        url: url.to_string(),
+        dist: dist.to_string(),
+        components: components.into_iter().map(|x| x.to_string()).collect()
+     } )
 ));
 
-pub fn read(from: &str) -> Result<Vec<Entry>> {
-    let mut ret = Vec::with_capacity(10);
+fn read_single_line(line: &str) -> Option<Result<Entry>> {
+    let line = match line.find('#') {
+        Some(comment) => &line[..comment],
+        None => line,
+    }.trim();
 
-    for (computer_no, line) in from.lines().enumerate() {
-        let no = computer_no + 1;
-
-        let line = match line.find('#') {
-            Some(comment) => &line[..comment],
-            None => line,
-        }.trim();
-
-        if line.is_empty() {
-            continue;
-        }
-
-        use nom::IResult::*;
-        match single_line(line) {
-            Done("", en) => ret.push(en),
-            Done(trailing, _) => bail!("trailing garbage on line {}: {:?}", no, trailing),
-            other => bail!("parse error on line {}: {:?}", no, other),
-        }
+    if line.is_empty() {
+        return None;
     }
 
-    Ok(ret)
+    use nom::IResult::*;
+    Some(match single_line(line) {
+        Done("", en) => Ok(en),
+        Done(trailing, _) => Err(format!("trailing garbage: {:?}", trailing).into()),
+        other => Err(format!("other error: {:?}", other).into()),
+    })
 }
 
-//pub fn load<P: AsRef<Path>>(path: P) -> Vec<Entry> {}
+fn read_single_line_number(line: &str, no: usize) -> Option<Result<Entry>> {
+    read_single_line(line).map(|r| r.chain_err(|| format!("parsing line {}", no + 1)))
+}
+
+pub fn read(from: &str) -> Result<Vec<Entry>> {
+    from.lines()
+        .enumerate()
+        .flat_map(|(no, line)| read_single_line_number(line, no))
+        .collect()
+}
+
+pub fn load<P: AsRef<path::Path>>(path: P) -> Result<Vec<Entry>> {
+    io::BufReader::new(fs::File::open(path)?)
+        .lines()
+        .enumerate()
+        .flat_map(|(no, line)| match line {
+            Ok(line) => read_single_line_number(&line, no),
+            Err(e) => Some(Err(
+                Error::with_chain(e, format!("reading around line {}", no)),
+            )),
+        })
+        .collect()
+}
 
 #[cfg(test)]
 mod tests {
@@ -74,15 +99,15 @@ mod tests {
             vec![
                 Entry {
                     src: false,
-                    url: "http://foo",
-                    dist: "bar",
-                    components: vec!["bar", "quux"],
+                    url: "http://foo".to_string(),
+                    dist: "bar".to_string(),
+                    components: vec!["bar".to_string(), "quux".to_string()],
                 },
                 Entry {
                     src: true,
-                    url: "http://foo",
-                    dist: "bar",
-                    components: vec!["bar", "quux"],
+                    url: "http://foo".to_string(),
+                    dist: "bar".to_string(),
+                    components: vec!["bar".to_string(), "quux".to_string()],
                 },
             ],
 
