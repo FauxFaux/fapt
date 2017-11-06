@@ -1,7 +1,8 @@
 use std::collections::HashSet;
+use std::collections::HashMap;
+
 use std::path::Path;
 use std::path::PathBuf;
-use std::time;
 
 use reqwest;
 use reqwest::Url;
@@ -9,6 +10,7 @@ use reqwest::Url;
 use errors::*;
 use fetch::fetch;
 use fetch::Download;
+use rfc822;
 use signing::GpgClient;
 
 #[derive(PartialOrd, Ord, Hash, PartialEq, Eq, Debug)]
@@ -25,8 +27,8 @@ pub struct ReleaseFile {
     suite: String,
     codename: String,
     changelogs: String,
-    date: time::Instant,
-    valid_until: time::Instant,
+    date: i64,
+    valid_until: i64,
     acquire_by_hash: bool,
     architectures: Vec<String>,
     components: Vec<String>,
@@ -116,10 +118,28 @@ pub fn download_releases<P: AsRef<Path>>(
     Ok(ret)
 }
 
-fn parse_release(release: &[u8]) -> Result<ReleaseFile> {
-    use mailparse;
-    let (fields, _) = mailparse::parse_headers(release)?;
-    for field in fields {
+fn mandatory_single_line(data: &HashMap<&str, Vec<&str>>, key: &str) -> Result<String> {
+    Ok(data.get(key).ok_or_else(|| format!("{} is mandatory", key))?.join(" "))
+}
 
-    }
+fn parse_release(release: &str) -> Result<ReleaseFile> {
+    let data = rfc822::map(release)?;
+    Ok(ReleaseFile {
+        origin: mandatory_single_line(&data, "Origin")?,
+        label: mandatory_single_line(&data, "Label")?,
+        suite: mandatory_single_line(&data, "Suite")?,
+        codename: mandatory_single_line(&data, "Codename")?,
+        changelogs: mandatory_single_line(&data, "Changelogs")?,
+        date: rfc822::parse_date(&mandatory_single_line(&data, "Date")?)?,
+        valid_until: rfc822::parse_date(&mandatory_single_line(&data, "Valid-Until")?)?,
+        acquire_by_hash: true, // TODO
+        architectures: Vec::new(), // TODO
+        components: Vec::new(), // TODO
+        description: String::new(), // TODO
+        contents: load_contents(&data)?,
+    })
+}
+
+fn load_contents(data: &HashMap<&str, Vec<&str>>) -> Result<Vec<ReleaseContent>> {
+    unimplemented!()
 }

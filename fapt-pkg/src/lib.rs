@@ -18,6 +18,7 @@ pub mod commands;
 mod errors;
 mod fetch;
 mod lists;
+mod rfc822;
 mod signing;
 
 pub use errors::*;

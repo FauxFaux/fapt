@@ -99,13 +99,13 @@ mod tests {
             vec![
                 Entry {
                     src: false,
-                    url: "http://foo".to_string(),
+                    url: "http://foo/".to_string(),
                     suite_codename: "bar".to_string(),
                     components: vec!["baz".to_string(), "quux".to_string()],
                 },
                 Entry {
                     src: true,
-                    url: "http://foo".to_string(),
+                    url: "http://foo/".to_string(),
                     suite_codename: "bar".to_string(),
                     components: vec!["baz".to_string(), "quux".to_string()],
                 },
