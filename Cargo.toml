@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "fapt-pkg",
+    "fapt",
+]
+
+[profile.release]
+#lto = true
+#debug = true

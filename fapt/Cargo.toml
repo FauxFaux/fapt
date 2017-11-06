@@ -1,0 +1,7 @@
+[package]
+authors = ["Chris West (Faux) <git@goeswhere.com>"]
+name = "fapt"
+version = "0.1.0"
+
+[dependencies.fapt-pkg]
+path = "../fapt-pkg"
