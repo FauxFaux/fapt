@@ -26,7 +26,7 @@ impl Download {
     }
 }
 
-pub fn fetch(client: reqwest::Client, downloads: &[Download]) -> Result<()> {
+pub fn fetch(client: &reqwest::Client, downloads: &[Download]) -> Result<()> {
     // TODO: reqwest parallel API, when it's stable
 
     for download in downloads {
