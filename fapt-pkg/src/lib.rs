@@ -8,6 +8,7 @@ extern crate nom;
 
 extern crate reqwest;
 
+extern crate tempdir;
 extern crate tempfile_fast;
 
 pub mod classic_sources_list;

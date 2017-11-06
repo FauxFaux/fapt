@@ -8,9 +8,9 @@ use reqwest::Url;
 use errors::*;
 use fetch::fetch;
 use fetch::Download;
-use signing::verify_clearsigned;
+use signing::GpgClient;
 
-#[derive(PartialOrd, Ord, Hash, PartialEq, Eq)]
+#[derive(PartialOrd, Ord, Hash, PartialEq, Eq, Debug)]
 pub struct RequestedRelease {
     mirror: Url,
     /// This can also be called "suite" in some places,
@@ -46,8 +46,8 @@ pub fn releases(sources_list: &[::classic_sources_list::Entry]) -> Result<Vec<Re
     let mut ret = HashSet::with_capacity(sources_list.len() / 2);
 
     for entry in sources_list {
+        ensure!(entry.url.ends_with('/'), "urls must end with a '/'");
         ret.insert(RequestedRelease {
-            // TODO: urls without trailing slashes?
             mirror: Url::parse(&entry.url)?,
             codename: entry.suite_codename.to_string(),
         });
@@ -59,6 +59,7 @@ pub fn releases(sources_list: &[::classic_sources_list::Entry]) -> Result<Vec<Re
 pub fn download_releases<P: AsRef<Path>>(
     lists_dir: P,
     releases: &[RequestedRelease],
+    keyring_paths: &[&str],
 ) -> Result<Vec<PathBuf>> {
     let lists_dir = lists_dir.as_ref();
 
@@ -71,14 +72,22 @@ pub fn download_releases<P: AsRef<Path>>(
     }
 
     let client = reqwest::Client::new();
-    fetch(&client, &downloads)?;
+    fetch(&client, &downloads).chain_err(
+        || "downloading releases",
+    )?;
 
     let mut ret = Vec::with_capacity(releases.len());
+
+    let mut gpg = GpgClient::new(keyring_paths)?;
 
     for release in releases {
         let downloaded = lists_dir.join(format!("{}_InRelease", release.filesystem_safe()));
         let verified = lists_dir.join(format!("{}_Verified", release.filesystem_safe()));
-        verify_clearsigned(downloaded, &verified)?;
+        gpg.verify_clearsigned(downloaded, &verified).chain_err(
+            || {
+                format!("verifying {:?}", release)
+            },
+        )?;
         ret.push(verified);
     }
     Ok(ret)

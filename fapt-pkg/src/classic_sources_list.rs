@@ -40,7 +40,7 @@ named!(single_line<&str, Entry>, do_parse!(
     components: many1!(preceded!(spaces, word)) >>
     ( Entry {
         src,
-        url: url.to_string(),
+        url: if url.ends_with('/') { url.to_string() } else { format!("{}/", url) },
         suite_codename: suite.to_string(),
         components: components.into_iter().map(|x| x.to_string()).collect()
      } )
