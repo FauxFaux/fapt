@@ -6,6 +6,7 @@ version = "0.1.0"
 [dependencies]
 error-chain = "0.11"
 gpgme = "0.6"
+inflate = "0.3.3"
 nom = "3.2"
 reqwest = "0.8"
 tempfile-fast = "0.1"

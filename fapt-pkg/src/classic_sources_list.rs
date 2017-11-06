@@ -8,10 +8,10 @@ use std::io::BufRead;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Entry {
-    src: bool,
-    url: String,
-    dist: String,
-    components: Vec<String>,
+    pub src: bool,
+    pub url: String,
+    pub suite_codename: String,
+    pub components: Vec<String>,
 }
 
 fn line_space(c: char) -> bool {
@@ -36,12 +36,12 @@ named!(single_line<&str, Entry>, do_parse!(
     spaces >>
     url: url >>
     spaces >>
-    dist: word >>
+    suite: word >>
     components: many1!(preceded!(spaces, word)) >>
     ( Entry {
         src,
         url: url.to_string(),
-        dist: dist.to_string(),
+        suite_codename: suite.to_string(),
         components: components.into_iter().map(|x| x.to_string()).collect()
      } )
 ));
@@ -100,14 +100,14 @@ mod tests {
                 Entry {
                     src: false,
                     url: "http://foo".to_string(),
-                    dist: "bar".to_string(),
-                    components: vec!["bar".to_string(), "quux".to_string()],
+                    suite_codename: "bar".to_string(),
+                    components: vec!["baz".to_string(), "quux".to_string()],
                 },
                 Entry {
                     src: true,
                     url: "http://foo".to_string(),
-                    dist: "bar".to_string(),
-                    components: vec!["bar".to_string(), "quux".to_string()],
+                    suite_codename: "bar".to_string(),
+                    components: vec!["baz".to_string(), "quux".to_string()],
                 },
             ],
 
