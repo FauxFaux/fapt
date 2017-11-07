@@ -1,7 +1,9 @@
 use std::fs;
 use std::io;
+use std::io::Read;
 use std::io::Seek;
 use std::io::SeekFrom;
+use std::io::Write;
 use std::path::Path;
 
 use flate2::bufread::GzDecoder;
@@ -49,10 +51,12 @@ impl List {
     }
 }
 
-pub fn download_files<P: AsRef<Path>>(client: &Client, lists_dir: P, releases: &[Release]) -> Result<()> {
-    let lists = find_files(&releases).chain_err(
-        || "filtering releases",
-    )?;
+pub fn download_files<P: AsRef<Path>>(
+    client: &Client,
+    lists_dir: P,
+    releases: &[Release],
+) -> Result<()> {
+    let lists = find_files(&releases).chain_err(|| "filtering releases")?;
 
     let temp_dir = TempDir::new_in(&lists_dir, ".fapt-lists").chain_err(
         || "creating temporary directory",
@@ -78,39 +82,64 @@ pub fn download_files<P: AsRef<Path>>(client: &Client, lists_dir: P, releases: &
     )?;
 
     for list in lists {
-        let local_name = list.local_name();
-        let destination_path = lists_dir.as_ref().join(&local_name);
-        if destination_path.exists() {
-            continue;
-        }
+        store_list_item(list, &temp_dir, &lists_dir)?;
+    }
 
-        let temp_path = temp_dir.as_ref().join(&local_name);
-        let mut temp = fs::File::open(&temp_path).chain_err(
-            || "opening a temp file we just downloaded",
-        )?;
+    Ok(())
+}
 
-        checksum::validate(&mut temp, list.compressed_hashes)
-            .chain_err(|| format!("validating downloaded file: {:?}", temp_path))?;
+fn store_list_item<P: AsRef<Path>, Q: AsRef<Path>>(list: List, temp_dir: P, lists_dir: Q) -> Result<()> {
+    let local_name = list.local_name();
+    let destination_path = lists_dir.as_ref().join(&local_name);
+    if destination_path.exists() {
+        return Ok(());
+    }
 
-        match list.codec {
-            Compression::None => fs::rename(temp_path, destination_path)?,
-            Compression::Gz => {
-                let mut uncompressed_temp = persistable_tempfile_in(&lists_dir)?;
-                temp.seek(SeekFrom::Start(0))?;
+    let temp_path = temp_dir.as_ref().join(&local_name);
+    let mut temp = fs::File::open(&temp_path).chain_err(
+        || "opening a temp file we just downloaded",
+    )?;
 
-                io::copy(
-                    &mut GzDecoder::new(io::BufReader::new(&mut temp))?,
-                    uncompressed_temp.as_mut(),
-                ).chain_err(|| format!("decomressing {:?}", temp_path))?;
-                uncompressed_temp.as_mut().seek(SeekFrom::Start(0))?;
-                checksum::validate(uncompressed_temp.as_mut(), list.decompressed_hashes)
-                    .chain_err(|| "validating decompressed file")?;
-                uncompressed_temp
-                    .persist_noclobber(destination_path)
-                    .chain_err(|| "storing decompressed file")?;
-            }
+    checksum::validate(&mut temp, list.compressed_hashes)
+        .chain_err(|| format!("validating downloaded file: {:?}", temp_path))?;
+
+    match list.codec {
+        Compression::None => fs::rename(temp_path, destination_path)?,
+        Compression::Gz => {
+            temp.seek(SeekFrom::Start(0))?;
+            let mut uncompressed_temp = persistable_tempfile_in(&lists_dir).chain_err(|| {
+                format!("making temporary file in {:?}", lists_dir.as_ref())
+            })?;
+
+            decompress_gz(temp, uncompressed_temp.as_mut(), list.decompressed_hashes)
+                .chain_err(|| format!("decomressing {:?}", temp_path))?;
+
+            uncompressed_temp
+                .persist_noclobber(destination_path)
+                .chain_err(|| "storing decompressed file")?;
         }
     }
+
+    Ok(())
+}
+
+fn decompress_gz<R: Read, F: Read + Write + Seek>(
+    mut compressed: R,
+    mut uncompressed: F,
+    decompressed_hashes: Hashes,
+) -> Result<()> {
+
+    io::copy(
+        &mut GzDecoder::new(io::BufReader::new(&mut compressed))?,
+        &mut uncompressed,
+    ).chain_err(|| "decomressing")?;
+
+    uncompressed.seek(SeekFrom::Start(0)).chain_err(
+        || "rewinding",
+    )?;
+
+    checksum::validate(&mut uncompressed, decompressed_hashes)
+        .chain_err(|| "validating decompressed file")?;
 
     Ok(())
 }
