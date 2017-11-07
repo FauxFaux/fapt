@@ -24,17 +24,23 @@ pub fn update<P: AsRef<Path>, Q: AsRef<Path>>(sources_list_path: P, cache: Q) ->
     let client = reqwest::Client::new();
     let lists_dir = cache.as_ref().join("lists");
 
-    let sources_entries = classic_sources_list::load(&sources_list_path)
-        .chain_err(|| format!("loading sources.list: {:?}", sources_list_path.as_ref()))?;
+    let sources_entries = classic_sources_list::load(&sources_list_path).chain_err(
+        || {
+            format!("loading sources.list: {:?}", sources_list_path.as_ref())
+        },
+    )?;
 
-    let releases = release::load(&sources_entries, &lists_dir)
-        .chain_err(|| "loading releases")?;
+    let releases = release::load(&sources_entries, &lists_dir).chain_err(
+        || "loading releases",
+    )?;
 
-    let lists = lists::find_files(&releases)
-        .chain_err(|| "filtering releases")?;
+    let lists = lists::find_files(&releases).chain_err(
+        || "filtering releases",
+    )?;
 
-    let temp_dir = TempDir::new_in(&lists_dir, ".fapt-lists")
-        .chain_err(|| "creating temporary directory")?;
+    let temp_dir = TempDir::new_in(&lists_dir, ".fapt-lists").chain_err(
+        || "creating temporary directory",
+    )?;
 
     let downloads: Vec<fetch::Download> = lists
         .iter()
@@ -51,7 +57,9 @@ pub fn update<P: AsRef<Path>, Q: AsRef<Path>>(sources_list_path: P, cache: Q) ->
         })
         .collect();
 
-    fetch::fetch(&client, &downloads)?;
+    fetch::fetch(&client, &downloads).chain_err(
+        || "downloading listed files",
+    )?;
 
     for list in lists {
         let local_name = list.local_name();
@@ -61,19 +69,31 @@ pub fn update<P: AsRef<Path>, Q: AsRef<Path>>(sources_list_path: P, cache: Q) ->
         }
 
         let temp_path = temp_dir.as_ref().join(&local_name);
-        let mut temp = fs::File::open(&temp_path)?;
+        let mut temp = fs::File::open(&temp_path).chain_err(
+            || "opening a temp file we just downloaded",
+        )?;
 
-        checksum::validate(&mut temp, list.compressed_hashes)?;
+        checksum::validate(&mut temp, list.compressed_hashes)
+            .chain_err(|| format!("validating downloaded file: {:?}", temp_path))?;
+
+        use std::io::Read;
+        io::stdin().read_to_end(&mut vec![])?;
 
         match list.codec {
             lists::Compression::None => fs::rename(temp_path, destination_path)?,
             lists::Compression::Gz => {
                 let mut uncompressed_temp = persistable_tempfile_in(&lists_dir)?;
                 temp.seek(SeekFrom::Start(0))?;
-                io::copy(&mut inflate::DeflateDecoder::new(&mut temp), uncompressed_temp.as_mut())?;
+                io::copy(
+                    &mut inflate::DeflateDecoder::from_zlib(&mut temp),
+                    uncompressed_temp.as_mut(),
+                ).chain_err(|| format!("decomressing {:?}", temp_path))?;
                 uncompressed_temp.as_mut().seek(SeekFrom::Start(0))?;
-                checksum::validate(uncompressed_temp.as_mut(), list.decompressed_hashes)?;
-                uncompressed_temp.persist_noclobber(destination_path)?;
+                checksum::validate(uncompressed_temp.as_mut(), list.decompressed_hashes)
+                    .chain_err(|| "validating decompressed file")?;
+                uncompressed_temp
+                    .persist_noclobber(destination_path)
+                    .chain_err(|| "storing decompressed file")?;
             }
         }
     }

@@ -128,8 +128,8 @@ pub fn download_releases<P: AsRef<Path>>(
 
     for release in releases {
         let url = release.dists()?.join("InRelease")?;
-        let dest = format!("{}_InRelease", release.filesystem_safe());
-        downloads.push(Download::from_to(url, lists_dir.join(dest)));
+        let dest = lists_dir.join(format!("{}_InRelease", release.filesystem_safe()));
+        downloads.push(Download::from_to(url, dest));
     }
 
     let client = reqwest::Client::new();
@@ -144,9 +144,9 @@ pub fn download_releases<P: AsRef<Path>>(
     for release in releases {
         let downloaded = lists_dir.join(format!("{}_InRelease", release.filesystem_safe()));
         let verified = lists_dir.join(format!("{}_Verified", release.filesystem_safe()));
-        gpg.verify_clearsigned(downloaded, &verified).chain_err(
+        gpg.verify_clearsigned(&downloaded, &verified).chain_err(
             || {
-                format!("verifying {:?}", release)
+                format!("verifying {:?} at {:?}", release, downloaded)
             },
         )?;
         ret.push(parse_release_file(verified)?);
@@ -243,6 +243,8 @@ fn load_contents(data: &HashMap<&str, Vec<&str>>) -> Result<Vec<ReleaseContent>>
 
         {
             let v = Vec::from_hex(hash)?;
+            use hex::ToHex;
+            println!("{:?}: {:?} -> {}", key, hash, v.to_hex());
             ensure!(
                 32 == v.len(),
                 "a sha256 checksum isn't the right length? {}",
