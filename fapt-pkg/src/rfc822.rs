@@ -65,7 +65,7 @@ pub fn parse_date(date: &str) -> Result<i64> {
 
 #[cfg(test)]
 mod tests {
-//    use super::scan;
+    //    use super::scan;
     use nom::IResult::*;
 
     #[test]

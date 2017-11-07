@@ -1,15 +1,12 @@
 #[macro_use]
 extern crate error_chain;
-
 extern crate gpgme;
-
+extern crate hex;
 extern crate mailparse;
 
 #[macro_use]
 extern crate nom;
-
 extern crate reqwest;
-
 extern crate tempdir;
 extern crate tempfile_fast;
 

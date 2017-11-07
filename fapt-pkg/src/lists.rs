@@ -1,8 +1,14 @@
 use std::collections::HashSet;
 use std::collections::HashMap;
 
+use std::fs;
+use std::io;
+use std::io::Read;
+
 use std::path::Path;
 use std::path::PathBuf;
+
+use hex::FromHex;
 
 use reqwest;
 use reqwest::Url;
@@ -21,6 +27,7 @@ pub struct RequestedRelease {
     codename: String,
 }
 
+#[derive(Debug)]
 pub struct ReleaseFile {
     origin: String,
     label: String,
@@ -36,10 +43,11 @@ pub struct ReleaseFile {
     contents: Vec<ReleaseContent>,
 }
 
+#[derive(Debug)]
 pub struct ReleaseContent {
     len: u64,
     name: String,
-    md5: [u8; 20],
+    md5: [u8; 16],
     sha256: [u8; 32],
 }
 
@@ -119,7 +127,19 @@ pub fn download_releases<P: AsRef<Path>>(
 }
 
 fn mandatory_single_line(data: &HashMap<&str, Vec<&str>>, key: &str) -> Result<String> {
-    Ok(data.get(key).ok_or_else(|| format!("{} is mandatory", key))?.join(" "))
+    Ok(
+        data.get(key)
+            .ok_or_else(|| format!("{} is mandatory", key))?
+            .join(" "),
+    )
+}
+
+pub fn parse_release_file<P: AsRef<Path>>(path: P) -> Result<ReleaseFile> {
+    let mut file = String::with_capacity(100 * 1024);
+    io::BufReader::new(fs::File::open(path)?).read_to_string(
+        &mut file,
+    )?;
+    parse_release(&file)
 }
 
 fn parse_release(release: &str) -> Result<ReleaseFile> {
@@ -135,11 +155,76 @@ fn parse_release(release: &str) -> Result<ReleaseFile> {
         acquire_by_hash: true, // TODO
         architectures: Vec::new(), // TODO
         components: Vec::new(), // TODO
-        description: String::new(), // TODO
+        description: mandatory_single_line(&data, "Description")?,
         contents: load_contents(&data)?,
     })
 }
 
 fn load_contents(data: &HashMap<&str, Vec<&str>>) -> Result<Vec<ReleaseContent>> {
-    unimplemented!()
+    let md5s = take_checksums(data, "MD5Sum")?;
+    let sha256s = take_checksums(data, "SHA256")?.ok_or(
+        "sha256sums missing from release file; refusing to process",
+    )?;
+
+    let mut ret = Vec::with_capacity(sha256s.len());
+
+    for (key, hash) in sha256s {
+        let (name, len) = key;
+
+        let mut md5 = [0u8; 16];
+        let mut sha256 = [0u8; 32];
+
+        if let Some(md5s) = md5s.as_ref() {
+            if let Some(hash) = md5s.get(&key) {
+                let v = Vec::from_hex(hash)?;
+                ensure!(
+                    16 == v.len(),
+                    "a md5 checksum isn't the right length? {}",
+                    hash
+                );
+                md5.copy_from_slice(&v);
+            }
+        }
+
+        {
+            let v = Vec::from_hex(hash)?;
+            ensure!(
+                32 == v.len(),
+                "a sha256 checksum isn't the right length? {}",
+                hash
+            );
+
+            sha256.copy_from_slice(&v);
+        }
+
+        ret.push(ReleaseContent {
+            len,
+            name: name.to_string(),
+            md5,
+            sha256,
+        })
+    }
+
+    Ok(ret)
+}
+
+fn take_checksums<'a>(
+    data: &HashMap<&str, Vec<&'a str>>,
+    key: &str,
+) -> Result<Option<HashMap<(&'a str, u64), &'a str>>> {
+    Ok(match data.get(key) {
+        Some(s) => Some(parse_checksums(s)?),
+        None => None,
+    })
+}
+
+fn parse_checksums<'s>(lines: &[&'s str]) -> Result<HashMap<(&'s str, u64), &'s str>> {
+    let mut ret = HashMap::new();
+    for line in lines {
+        let parts: Vec<&str> = line.trim().split_whitespace().collect();
+        ensure!(3 == parts.len(), "invalid checksums line: {:?}", line);
+        ret.insert((parts[2], parts[1].parse()?), parts[0]);
+    }
+
+    Ok(ret)
 }
