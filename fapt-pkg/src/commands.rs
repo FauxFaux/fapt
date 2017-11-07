@@ -18,10 +18,11 @@ pub fn update<P: AsRef<Path>, Q: AsRef<Path>>(sources_list_path: P, cache: Q) ->
         &["/usr/share/keyrings/debian-archive-keyring.gpg"],
     )?;
 
-    let parsed_files = release_files
-        .iter()
-        .map(release::parse_release_file)
-        .collect::<Result<Vec<release::ReleaseFile>>>()?;
+    let parsed_files: Vec<release::ReleaseFile> =
+        release_files
+            .iter()
+            .map(release::parse_release_file)
+            .collect::<Result<Vec<release::ReleaseFile>>>()?;
 
     for file in parsed_files {
         println!("\n\n{:?}", file);

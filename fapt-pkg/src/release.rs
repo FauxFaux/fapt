@@ -20,6 +20,8 @@ use fetch::Download;
 use rfc822;
 use signing::GpgClient;
 
+use Hashes;
+
 #[derive(PartialOrd, Ord, Hash, PartialEq, Eq, Debug)]
 pub struct RequestedRelease {
     mirror: Url,
@@ -45,22 +47,19 @@ pub struct ReleaseFile {
 }
 
 pub struct ReleaseContent {
-    len: u64,
-    name: String,
-    md5: [u8; 16],
-    sha256: [u8; 32],
+    pub len: u64,
+    pub name: String,
+    pub hashes: Hashes,
 }
 
 impl fmt::Debug for ReleaseContent {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use hex::ToHex;
         write!(
             f,
-            "RC {{ {:?} ({}) md5:{} sha256:{} }}",
+            "RC {{ {:?} ({}) {:?} }}",
             self.name,
             self.len,
-            self.md5.to_hex(),
-            self.sha256.to_hex()
+            self.hashes,
         )
     }
 }
@@ -214,8 +213,10 @@ fn load_contents(data: &HashMap<&str, Vec<&str>>) -> Result<Vec<ReleaseContent>>
         ret.push(ReleaseContent {
             len,
             name: name.to_string(),
-            md5,
-            sha256,
+            hashes: Hashes {
+                md5,
+                sha256,
+            },
         })
     }
 
