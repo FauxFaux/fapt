@@ -1,0 +1,17 @@
+[package]
+authors = ["Chris West (Faux) <git@goeswhere.com>"]
+name = "apt-dump-parse"
+version = "0.1.0"
+
+[build-dependencies]
+capnpc = "0.8.7"
+
+[dependencies]
+capnp = "0.8.12"
+error-chain = "0.11.0"
+md5 = "0.3.5"
+nom = "3.2.1"
+
+[profile.release]
+#lto = true
+#debug = true
