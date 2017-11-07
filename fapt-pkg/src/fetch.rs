@@ -29,7 +29,9 @@ pub fn fetch(client: &reqwest::Client, downloads: &[Download]) -> Result<()> {
     // TODO: reqwest parallel API, when it's stable
 
     for download in downloads {
+        use std::io::Write;
         print!("Downloading: {} ... ", download.from);
+        io::stdout().flush()?;
         fetch_single(client, download).chain_err(|| {
             format!("downloading {} to {:?}", download.from, download.to)
         })?;

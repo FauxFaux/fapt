@@ -102,7 +102,11 @@ pub fn interpret(sources_list: &[Entry]) -> Result<Vec<(RequestedRelease, Vec<En
     let mut ret = HashMap::with_capacity(sources_list.len() / 2);
 
     for entry in sources_list {
-        ensure!(entry.url.ends_with('/'), "urls must end with a '/'");
+        ensure!(
+            entry.url.ends_with('/'),
+            "urls must end with a '/': {:?}",
+            entry.url
+        );
         match ret.entry(RequestedRelease {
             mirror: Url::parse(&entry.url)?,
             codename: entry.suite_codename.to_string(),
@@ -155,7 +159,9 @@ pub fn download_releases<P: AsRef<Path>>(
 }
 
 pub fn load<P: AsRef<Path>>(sources_list: &[Entry], lists_dir: P) -> Result<Vec<Release>> {
-    let req_releases = interpret(&sources_list)?;
+    let req_releases = interpret(&sources_list).chain_err(
+        || "interpreting sources list",
+    )?;
 
     let release_files = download_releases(
         lists_dir,

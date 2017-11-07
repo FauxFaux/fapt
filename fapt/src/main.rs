@@ -6,6 +6,7 @@ extern crate fapt_pkg;
 use std::path::PathBuf;
 
 use clap::{Arg, App, SubCommand, AppSettings};
+use fapt_pkg::classic_sources_list;
 
 mod errors;
 use errors::*;
@@ -15,11 +16,28 @@ quick_main!(run);
 fn run() -> Result<()> {
     let matches = App::new("Faux' apt")
         .setting(AppSettings::SubcommandRequired)
+        .arg(Arg::with_name("root-dir").value_name("DIRECTORY").help(
+            "a chroot-like place to read/write files",
+        ))
+        .arg(Arg::with_name("sources-list").value_name("PREFIX").help(
+            "explicitly set the sources.list search path",
+        ))
         .arg(
-            Arg::with_name("root-dir")
-                .long("root-dir")
+            Arg::with_name("cache-dir")
+                .short("c")
                 .value_name("DIRECTORY")
-                .required(true),
+                .help("explicitly set the cache directory"),
+        )
+        .arg(
+            Arg::with_name("release-url")
+                .short("r")
+                .value_name("URL")
+                .multiple(true)
+                .number_of_values(1)
+                .help("a url-format sources.list entry")
+                .long_help(
+                    "e.g. http://deb.debian.org/debian#sid,main,contrib,non-free",
+                ),
         )
         .subcommand(SubCommand::with_name("update"))
         .subcommand(
@@ -29,21 +47,79 @@ fn run() -> Result<()> {
         )
         .get_matches();
 
-    let root = PathBuf::from(matches.value_of("root-dir").expect("required"));
+    let mut cache_dir = None;
+    let mut sources_list_prefix = None;
+
+    if let Some(root) = matches.value_of("root-dir") {
+        let root = PathBuf::from(root);
+        sources_list_prefix = Some(root.join("etc/apt/sources.list"));
+        cache_dir = Some(root.join("var/cache/fapt"));
+    }
+
+    if let Some(prefix) = matches.value_of("sources-list") {
+        sources_list_prefix = Some(PathBuf::from(prefix));
+    }
+
+    if let Some(cache) = matches.value_of("cache-dir") {
+        cache_dir = Some(PathBuf::from(cache));
+    }
+
+    let cache_dir = cache_dir.ok_or(
+        "A --cache-dir is required, please set it explicitly, or provide a --root-dir",
+    )?;
+
+    let mut sources_entries = Vec::new();
+    if let Some(prefix) = sources_list_prefix {
+        // TODO: sources.list.d
+        sources_entries.extend(classic_sources_list::load(&prefix).chain_err(|| {
+            format!("loading sources.list: {:?}", prefix)
+        })?);
+    }
+
+    if let Some(urls) = matches.values_of("release-url") {
+        for url in urls {
+            let octothorpe = url.find('#').ok_or_else(|| {
+                format!("url must contain octothorpe: {:?}", url)
+            })?;
+            let (url, extras) = url.split_at(octothorpe);
+            let mut parts: Vec<&str> = extras[1..].split(',').collect();
+
+            ensure!(
+                parts.len() > 1,
+                "at least one component must be specified: {:?}",
+                url
+            );
+
+            let suite_codename = parts.remove(0);
+
+            for src in &[false, true] {
+                sources_entries.push(classic_sources_list::Entry {
+                    src: *src,
+                    url: url.to_string(),
+                    suite_codename: suite_codename.to_string(),
+                    components: parts.iter().map(|x| x.to_string()).collect(),
+                });
+            }
+        }
+    }
+
+    if sources_entries.is_empty() {
+        bail!(concat!(
+            "No sources-list entries; either specify a non-empty",
+            "--sources-list, or provide some --release-urls"
+        ));
+    }
 
     match matches.subcommand() {
         ("update", Some(_)) => {
-            fapt_pkg::commands::update(
-                root.join("etc/apt/sources.list"),
-                root.join("var/cache/fapt"),
-            )?;
+            fapt_pkg::commands::update(&sources_entries, cache_dir)?;
         }
         ("yaml", Some(matches)) => {
             match matches.subcommand() {
                 ("mirrors", _) => {
                     println!(
                         "{:?}",
-                        fapt_pkg::classic_sources_list::load("/etc/apt/sources.list")?
+                        sources_entries,
                     );
                 }
                 _ => unreachable!(),
