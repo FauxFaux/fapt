@@ -1,6 +1,7 @@
+use std::fs;
+use std::io;
 use std::path::Path;
 use std::path::PathBuf;
-use std::io;
 
 use reqwest;
 use reqwest::header;
@@ -56,8 +57,15 @@ fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<()> {
             status
         );
     }
-    let mut tmp = persistable_tempfile_in(download.to.parent().ok_or("path must have parent")?)
-        .chain_err(|| "couldn't create temporary file")?;
+    let parent = download.to.parent().ok_or("path must have parent")?;
+
+    fs::create_dir_all(parent).chain_err(|| {
+        format!("creating directories: {:?}", parent)
+    })?;
+
+    let mut tmp = persistable_tempfile_in(parent).chain_err(
+        || "couldn't create temporary file",
+    )?;
 
     if let Some(len) = resp.headers().get::<header::ContentLength>() {
         tmp.set_len(**len).chain_err(

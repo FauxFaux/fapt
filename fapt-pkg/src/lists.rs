@@ -27,6 +27,13 @@ pub struct List {
     decompressed_hashes: Hashes,
 }
 
+impl List {
+    pub fn local_name(&self) -> String {
+        use ::hex::ToHex;
+        self.decompressed_hashes.sha256.to_hex()
+    }
+}
+
 pub fn find_file(contents: &[ReleaseContent], base: &str) -> Result<List> {
 
     let gz_name = format!("{}{}", base, Compression::Gz.suffix());

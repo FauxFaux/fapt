@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use reqwest;
+use tempdir::TempDir;
 
 use classic_sources_list;
 use fetch;
@@ -19,7 +20,7 @@ pub fn update<P: AsRef<Path>, Q: AsRef<Path>>(sources_list_path: P, cache: Q) ->
 
     let lists_dir = cache.as_ref().join("lists");
     let release_files = release::download_releases(
-        lists_dir,
+        &lists_dir,
         &known_releases,
         &["/usr/share/keyrings/debian-archive-keyring.gpg"],
     )?;
@@ -33,6 +34,8 @@ pub fn update<P: AsRef<Path>, Q: AsRef<Path>>(sources_list_path: P, cache: Q) ->
     let client = reqwest::Client::new();
 
     let mut downloads = Vec::new();
+    let mut lists = Vec::new();
+    let temp_dir = TempDir::new("fapt-lists")?;
 
     for (file, req) in parsed_files.into_iter().zip(known_releases) {
         let req: &release::RequestedRelease = req;
@@ -54,7 +57,15 @@ pub fn update<P: AsRef<Path>, Q: AsRef<Path>>(sources_list_path: P, cache: Q) ->
                     },
                 )?;
 
-                downloads.push(fetch::Download::from_to(dists.join(&list.path)?, list.path));
+                if !lists_dir.join(list.local_name()).exists() {
+                    downloads.push(fetch::Download::from_to(
+                        dists.join(&list.path)?,
+                        temp_dir.as_ref().join(list.path),
+                    ));
+                }
+
+                lists.push(list);
+
             }
         }
     }
