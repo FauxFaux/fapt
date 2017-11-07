@@ -1,5 +1,6 @@
 use std::fs;
 use std::io;
+use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -29,9 +30,8 @@ pub fn fetch(client: &reqwest::Client, downloads: &[Download]) -> Result<()> {
     // TODO: reqwest parallel API, when it's stable
 
     for download in downloads {
-        use std::io::Write;
-        print!("Downloading: {} ... ", download.from);
-        io::stdout().flush()?;
+        write!(io::stderr(), "Downloading: {} ... ", download.from);
+        io::stderr().flush()?;
         fetch_single(client, download).chain_err(|| {
             format!("downloading {} to {:?}", download.from, download.to)
         })?;
@@ -52,7 +52,7 @@ fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<()> {
 
     let status = resp.status();
     if reqwest::StatusCode::NotModified == status {
-        println!("already up to date.");
+        writeln!(io::stderr(), "already up to date.");
         return Ok(());
     } else if !status.is_success() {
         bail!(
@@ -93,7 +93,7 @@ fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<()> {
 
     // TODO: move the modification time back to the actual server claimed time
 
-    println!("complete.");
+    writeln!(io::stderr(), "complete.");
 
     Ok(())
 }

@@ -7,46 +7,38 @@ use mailparse::dateparse;
 
 use errors::*;
 
-fn label_char(c: char) -> bool {
-    c.is_alphanumeric() || '-' == c
-}
-
-named!(label<&str, &str>,
-    take_while1!(label_char)
-);
-
-// vec.len() (number of lines) always == 1
-named!(single_line_value<&str, Vec<&str>>, do_parse!(
-    tag!(" ") >>
-    line: take_until1!("\n") >>
-    ( vec![line] )
-));
-
-named!(multi_line_tailing<&str, Vec<&str>>,
-    many1!(preceded!(
-        complete!(tag!("\n ")),
-        take_until1!("\n"))
-    )
-);
-
-named!(header<&str, (&str, Vec<&str>)>, do_parse!(
-    label: label >>
-    tag!(":") >>
-    value: alt!(single_line_value | multi_line_tailing) >>
-    tag!("\n") >>
-    ((label, value))
-));
-
-named!(headers<&str, Vec<(&str, Vec<&str>)>>, many1!(header));
-
 pub fn scan(block: &str) -> Result<Vec<(&str, Vec<&str>)>> {
-    ensure!(block.ends_with('\n'), "tailing new line please!");
-    use nom::IResult::*;
-    match headers(block) {
-        Done("", v) => Ok(v),
-        Done(tailing, _) => bail!("trailing garbage in block: {:?}", tailing),
-        other => bail!("other parse error: {:?}", other),
+    let mut it = block.lines().peekable();
+    let mut ret = Vec::new();
+    loop {
+        let line = match it.next() {
+            Some(line) => line,
+            None => break,
+        };
+
+        let colon = line.find(':').ok_or_else(|| format!("expected a key: in {:?}", line))?;
+        let (key, first_val) = line.split_at(colon);
+        let first_val = first_val[1..].trim();
+        let mut sub = Vec::new();
+        if !first_val.is_empty() {
+            sub.push(first_val);
+        }
+
+        loop {
+            match it.peek() {
+                Some(line) if line.starts_with(' ') => {
+                    sub.push(line.trim());
+                }
+                Some(_) | None => break,
+            }
+
+            it.next().expect("just peeked");
+        }
+
+        ret.push((key, sub));
     }
+
+    Ok(ret)
 }
 
 pub fn map(block: &str) -> Result<HashMap<&str, Vec<&str>>> {
@@ -103,25 +95,21 @@ impl<R: Read> Iterator for Section<R> {
 
 #[cfg(test)]
 mod tests {
-    //    use super::scan;
-    use nom::IResult::*;
+    use super::scan;
 
     #[test]
     fn single_line_header() {
-        use super::header;
-        assert_eq!(Done("", ("Foo", vec!["bar"])), header("Foo: bar\n"));
+        assert_eq!(vec![("Foo", vec!["bar"])], scan("Foo: bar\n").unwrap());
     }
 
     #[test]
     fn multi_line_header() {
-        use super::header;
-        assert_eq!(Done("", ("Foo", vec!["bar", "baz"])), header("Foo:\n bar\n baz\n"));
+        assert_eq!(vec![("Foo", vec!["bar", "baz"])], scan("Foo:\n bar\n baz\n").unwrap());
     }
 
     #[test]
     fn multi_line_joined() {
-        use super::header;
-        assert_eq!(Done("", ("Foo", vec!["bar", "baz", "quux"])), header("Foo: bar\n bar\n quux\n"));
+        assert_eq!(vec![("Foo", vec!["bar", "baz", "quux"])], scan("Foo: bar\n baz\n quux\n").unwrap());
     }
 
     #[test]
