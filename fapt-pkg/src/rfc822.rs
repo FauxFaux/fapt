@@ -1,4 +1,7 @@
 use std::collections::HashMap;
+use std::io;
+use std::io::Read;
+use std::io::BufRead;
 
 use mailparse::dateparse;
 
@@ -62,6 +65,41 @@ pub fn parse_date(date: &str) -> Result<i64> {
     Ok(dateparse(date)?)
 }
 
+struct Section<R: Read> {
+    from: io::BufReader<R>,
+}
+
+impl<R: Read> Section<R> {
+    pub fn new(from: R) -> Self {
+        Section { from: io::BufReader::new(from) }
+    }
+}
+
+impl<R: Read> Iterator for Section<R> {
+    type Item = Result<Vec<u8>>;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut buf = Vec::with_capacity(8 * 1024);
+
+        // while can read non-blank lines, stuff them in the buf
+        while match self.from.read_until(b'\n', &mut buf) {
+            Ok(size) => size,
+            Err(e) => return Some(Err(e.into())),
+        } > 1
+        {}
+
+        if buf.is_empty() {
+            None
+        } else {
+            // double new-line on the end, from a normal parse
+            if b'\n' == buf[buf.len() - 2] {
+                buf.pop();
+            }
+            Some(Ok(buf))
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -78,5 +116,19 @@ mod tests {
     fn multi_line_header() {
         use super::header;
         assert_eq!(Done("", ("Foo", vec!["bar", "baz"])), header("Foo:\n bar\n baz\n"));
+    }
+
+    #[test]
+    fn walkies() {
+        use std::io;
+        use super::Section;
+        use errors::*;
+
+        let parts: Result<Vec<Vec<u8>>> = Section::new(io::Cursor::new(b"foo\nbar\n\nbaz\n"))
+            .collect();
+        assert_eq!(vec![
+            b"foo\nbar\n".to_vec(),
+            b"baz\n".to_vec()
+        ], parts.unwrap());
     }
 }
