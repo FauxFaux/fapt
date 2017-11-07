@@ -17,23 +17,23 @@ named!(label<&str, &str>,
 
 // vec.len() (number of lines) always == 1
 named!(single_line_value<&str, Vec<&str>>, do_parse!(
-    line: preceded!(tag!(" "), take_until_and_consume!("\n")) >>
+    tag!(" ") >>
+    line: take_until1!("\n") >>
     ( vec![line] )
 ));
 
-named!(multi_line_value<&str, Vec<&str>>,
-    terminated!(
-        many1!(preceded!(
-            complete!(tag!("\n ")),
-            take_until1!("\n"))
-        ),
-    tag!("\n"))
+named!(multi_line_tailing<&str, Vec<&str>>,
+    many1!(preceded!(
+        complete!(tag!("\n ")),
+        take_until1!("\n"))
+    )
 );
 
 named!(header<&str, (&str, Vec<&str>)>, do_parse!(
     label: label >>
     tag!(":") >>
-    value: alt!(single_line_value | multi_line_value) >>
+    value: alt!(single_line_value | multi_line_tailing) >>
+    tag!("\n") >>
     ((label, value))
 ));
 
@@ -116,6 +116,12 @@ mod tests {
     fn multi_line_header() {
         use super::header;
         assert_eq!(Done("", ("Foo", vec!["bar", "baz"])), header("Foo:\n bar\n baz\n"));
+    }
+
+    #[test]
+    fn multi_line_joined() {
+        use super::header;
+        assert_eq!(Done("", ("Foo", vec!["bar", "baz", "quux"])), header("Foo: bar\n bar\n quux\n"));
     }
 
     #[test]
