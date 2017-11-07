@@ -5,6 +5,8 @@ use std::path::PathBuf;
 
 use reqwest;
 use reqwest::header;
+use reqwest::header::IfModifiedSince;
+
 use tempfile_fast::persistable_tempfile_in;
 
 use errors::*;
@@ -27,7 +29,7 @@ pub fn fetch(client: &reqwest::Client, downloads: &[Download]) -> Result<()> {
     // TODO: reqwest parallel API, when it's stable
 
     for download in downloads {
-        println!("Downloading: {}", download.from);
+        print!("Downloading: {} ... ", download.from);
         fetch_single(client, download).chain_err(|| {
             format!("downloading {} to {:?}", download.from, download.to)
         })?;
@@ -37,17 +39,20 @@ pub fn fetch(client: &reqwest::Client, downloads: &[Download]) -> Result<()> {
 }
 
 fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<()> {
+
+    let mut req = client.get(download.from.as_ref());
+
     if download.to.exists() {
-        // TODO: send If-Modified-Since
-        return Ok(());
+        req.header(IfModifiedSince(download.to.metadata()?.modified()?.into()));
     }
 
-    let mut resp = client.get(download.from.as_ref()).send().chain_err(
-        || "initiating request",
-    )?;
+    let mut resp = req.send().chain_err(|| "initiating request")?;
 
     let status = resp.status();
-    if !status.is_success() {
+    if reqwest::StatusCode::NotModified == status {
+        println!("already up to date.");
+        return Ok(());
+    } else if !status.is_success() {
         bail!(
             "couldn't download {}: server responded with {:?}",
             download.from,
@@ -74,7 +79,19 @@ fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<()> {
         || "copying data",
     )?;
 
+    if download.to.exists() {
+        fs::remove_file(&download.to).chain_err(
+            || "removing destination for overwriting",
+        )?;
+    }
+
     tmp.persist_noclobber(&download.to).chain_err(
         || "persisting result",
-    )
+    )?;
+
+    // TODO: move the modification time back to the actual server claimed time
+
+    println!("complete.");
+
+    Ok(())
 }
