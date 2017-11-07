@@ -15,10 +15,6 @@ pub struct Download {
 }
 
 impl Download {
-    pub fn from_str_to<P: AsRef<Path>>(from: &str, to: P) -> Result<Self> {
-        Ok(Self::from_to(reqwest::Url::parse(from)?, to))
-    }
-
     pub fn from_to<P: AsRef<Path>>(from: reqwest::Url, to: P) -> Self {
         Download {
             from,

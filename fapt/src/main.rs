@@ -32,7 +32,7 @@ fn run() -> Result<()> {
     let root = PathBuf::from(matches.value_of("root-dir").expect("required"));
 
     match matches.subcommand() {
-        ("update", Some(matches)) => {
+        ("update", Some(_)) => {
             fapt_pkg::commands::update(
                 root.join("etc/apt/sources.list"),
                 root.join("var/cache/fapt"),
