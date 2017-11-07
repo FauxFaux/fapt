@@ -23,7 +23,9 @@ pub fn update<P: AsRef<Path>, Q: AsRef<Path>>(sources_list_path: P, cache: Q) ->
         .map(lists::parse_release_file)
         .collect::<Result<Vec<lists::ReleaseFile>>>()?;
 
-    println!("{:?}", parsed_files);
+    for file in parsed_files {
+        println!("\n\n{:?}", file);
+    }
 
     Ok(())
 }

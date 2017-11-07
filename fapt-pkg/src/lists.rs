@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::collections::HashMap;
 
+use std::fmt;
 use std::fs;
 use std::io;
 use std::io::Read;
@@ -43,12 +44,25 @@ pub struct ReleaseFile {
     contents: Vec<ReleaseContent>,
 }
 
-#[derive(Debug)]
 pub struct ReleaseContent {
     len: u64,
     name: String,
     md5: [u8; 16],
     sha256: [u8; 32],
+}
+
+impl fmt::Debug for ReleaseContent {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use hex::ToHex;
+        write!(
+            f,
+            "RC {{ {:?} ({}) md5:{} sha256:{} }}",
+            self.name,
+            self.len,
+            self.md5.to_hex(),
+            self.sha256.to_hex()
+        )
+    }
 }
 
 impl RequestedRelease {
