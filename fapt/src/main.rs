@@ -3,6 +3,7 @@ extern crate clap;
 extern crate error_chain;
 extern crate fapt_pkg;
 
+use std::fs;
 use std::path::PathBuf;
 
 use clap::{Arg, App, SubCommand, AppSettings};
@@ -40,6 +41,9 @@ fn run() -> Result<()> {
                 ),
         )
         .subcommand(SubCommand::with_name("update"))
+        .subcommand(SubCommand::with_name("export").arg(
+            Arg::with_name("format").short("f").value_name("FORMAT"),
+        ))
         .subcommand(
             SubCommand::with_name("yaml")
                 .setting(AppSettings::SubcommandRequired)
@@ -110,9 +114,18 @@ fn run() -> Result<()> {
         ));
     }
 
+    let lists_dir = cache_dir.join("lists");
+    fs::create_dir_all(&lists_dir).chain_err(|| {
+        format!("creating cache directory: {:?}", lists_dir)
+    })?;
+
     match matches.subcommand() {
-        ("update", Some(_)) => {
-            fapt_pkg::commands::update(&sources_entries, cache_dir)?;
+        ("export", Some(matches)) => {
+            fapt_pkg::commands::export(&sources_entries, lists_dir)?;
+
+        }
+        ("update", _) => {
+            fapt_pkg::commands::update(&sources_entries, lists_dir)?;
         }
         ("yaml", Some(matches)) => {
             match matches.subcommand() {

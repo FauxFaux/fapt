@@ -44,7 +44,7 @@ pub fn scan(block: &str) -> Result<Vec<(&str, Vec<&str>)>> {
     use nom::IResult::*;
     match headers(block) {
         Done("", v) => Ok(v),
-        Done(tailing, _) => bail!("trailing garbage: {:?}", tailing),
+        Done(tailing, _) => bail!("trailing garbage in block: {:?}", tailing),
         other => bail!("other parse error: {:?}", other),
     }
 }
@@ -65,7 +65,7 @@ pub fn parse_date(date: &str) -> Result<i64> {
     Ok(dateparse(date)?)
 }
 
-struct Section<R: Read> {
+pub struct Section<R: Read> {
     from: io::BufReader<R>,
 }
 

@@ -21,7 +21,7 @@ pub mod commands;
 mod errors;
 mod fetch;
 mod lists;
-mod release;
+pub mod release;
 mod rfc822;
 mod signing;
 
