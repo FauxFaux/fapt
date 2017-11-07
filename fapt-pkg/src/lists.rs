@@ -88,7 +88,11 @@ pub fn download_files<P: AsRef<Path>>(
     Ok(())
 }
 
-fn store_list_item<P: AsRef<Path>, Q: AsRef<Path>>(list: List, temp_dir: P, lists_dir: Q) -> Result<()> {
+fn store_list_item<P: AsRef<Path>, Q: AsRef<Path>>(
+    list: List,
+    temp_dir: P,
+    lists_dir: Q,
+) -> Result<()> {
     let local_name = list.local_name();
     let destination_path = lists_dir.as_ref().join(&local_name);
     if destination_path.exists() {
