@@ -14,7 +14,7 @@ pub mod classic_sources_list;
 pub mod commands;
 mod errors;
 mod fetch;
-mod lists;
+mod release;
 mod rfc822;
 mod signing;
 
