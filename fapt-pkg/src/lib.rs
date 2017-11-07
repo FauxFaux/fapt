@@ -2,7 +2,7 @@
 extern crate error_chain;
 extern crate gpgme;
 extern crate hex;
-extern crate inflate;
+extern crate flate2;
 extern crate mailparse;
 extern crate md_5;
 

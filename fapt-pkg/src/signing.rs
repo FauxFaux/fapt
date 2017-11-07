@@ -44,17 +44,18 @@ impl GpgClient {
         file: P,
         dest: Q,
     ) -> Result<()> {
-        let from = fs::File::open(file)
-            .chain_err(|| "opening input file")?;
+        let from = fs::File::open(file).chain_err(|| "opening input file")?;
         let to = persistable_tempfile_in(dest.as_ref().parent().ok_or("full path please")?)
             .chain_err(|| "creating temporary file")?;
 
-        let result = self.ctx.verify_opaque(
-            from,
-            Data::from_seekable_stream(to.as_ref()).map_err(
-                |e| e.error(),
-            ).chain_err(|| "creating output stream")?,
-        ).chain_err(|| "verifying")?;
+        let result = self.ctx
+            .verify_opaque(
+                from,
+                Data::from_seekable_stream(to.as_ref())
+                    .map_err(|e| e.error())
+                    .chain_err(|| "creating output stream")?,
+            )
+            .chain_err(|| "verifying")?;
 
         ensure!(
             result.signatures().next().is_some(),
@@ -69,12 +70,14 @@ impl GpgClient {
 
         // Slightly racy, but not unsafe.
         if dest.as_ref().exists() {
-            fs::remove_file(dest.as_ref())
-                .chain_err(|| "removing output file")?;
+            fs::remove_file(dest.as_ref()).chain_err(
+                || "removing output file",
+            )?;
         }
 
-        to.persist_noclobber(dest)
-            .chain_err(|| "persisting output file")?;
+        to.persist_noclobber(dest).chain_err(
+            || "persisting output file",
+        )?;
 
         Ok(())
     }

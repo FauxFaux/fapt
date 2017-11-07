@@ -243,8 +243,6 @@ fn load_contents(data: &HashMap<&str, Vec<&str>>) -> Result<Vec<ReleaseContent>>
 
         {
             let v = Vec::from_hex(hash)?;
-            use hex::ToHex;
-            println!("{:?}: {:?} -> {}", key, hash, v.to_hex());
             ensure!(
                 32 == v.len(),
                 "a sha256 checksum isn't the right length? {}",

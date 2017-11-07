@@ -4,7 +4,7 @@ use std::io::Seek;
 use std::io::SeekFrom;
 use std::path::Path;
 
-use inflate;
+use flate2;
 use reqwest;
 use tempdir::TempDir;
 use tempfile_fast::persistable_tempfile_in;
@@ -76,16 +76,14 @@ pub fn update<P: AsRef<Path>, Q: AsRef<Path>>(sources_list_path: P, cache: Q) ->
         checksum::validate(&mut temp, list.compressed_hashes)
             .chain_err(|| format!("validating downloaded file: {:?}", temp_path))?;
 
-        use std::io::Read;
-        io::stdin().read_to_end(&mut vec![])?;
-
         match list.codec {
             lists::Compression::None => fs::rename(temp_path, destination_path)?,
             lists::Compression::Gz => {
                 let mut uncompressed_temp = persistable_tempfile_in(&lists_dir)?;
                 temp.seek(SeekFrom::Start(0))?;
+
                 io::copy(
-                    &mut inflate::DeflateDecoder::from_zlib(&mut temp),
+                    &mut flate2::bufread::GzDecoder::new(io::BufReader::new(&mut temp))?,
                     uncompressed_temp.as_mut(),
                 ).chain_err(|| format!("decomressing {:?}", temp_path))?;
                 uncompressed_temp.as_mut().seek(SeekFrom::Start(0))?;
