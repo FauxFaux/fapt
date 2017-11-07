@@ -3,6 +3,7 @@ use Hashes;
 
 use errors::*;
 
+#[derive(Debug)]
 enum Compression {
     None,
     Gz,
@@ -18,8 +19,9 @@ impl Compression {
     }
 }
 
+#[derive(Debug)]
 pub struct List {
-    path: String,
+    pub path: String,
     codec: Compression,
     compressed_hashes: Hashes,
     decompressed_hashes: Hashes,
@@ -54,7 +56,6 @@ pub fn find_file(contents: &[ReleaseContent], base: &str) -> Result<List> {
             codec: Compression::None,
             compressed_hashes: raw_hashes,
             decompressed_hashes: raw_hashes,
-        }
+        },
     })
 }
-

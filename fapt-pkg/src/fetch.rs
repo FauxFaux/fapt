@@ -30,31 +30,46 @@ pub fn fetch(client: &reqwest::Client, downloads: &[Download]) -> Result<()> {
     // TODO: reqwest parallel API, when it's stable
 
     for download in downloads {
-        if download.to.exists() {
-            // TODO: send If-Modified-Since
-            continue;
-        }
-
-        let mut resp = client.get(download.from.as_ref()).send()?;
-        let status = resp.status();
-        if !status.is_success() {
-            bail!(
-                "couldn't download {}: server responded with {:?}",
-                download.from,
-                status
-            );
-        }
-        let mut tmp =
-            persistable_tempfile_in(download.to.parent().ok_or("path must have parent")?)?;
-
-        if let Some(len) = resp.headers().get::<header::ContentLength>() {
-            tmp.set_len(**len)?;
-        }
-
-        io::copy(&mut resp, tmp.as_mut())?;
-
-        tmp.persist_noclobber(&download.to)?;
+        fetch_single(client, download).chain_err(|| {
+            format!("downloading {} to {:?}", download.from, download.to)
+        })?;
     }
 
     Ok(())
+}
+
+fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<()> {
+    if download.to.exists() {
+        // TODO: send If-Modified-Since
+        return Ok(());
+    }
+
+    let mut resp = client.get(download.from.as_ref()).send().chain_err(
+        || "initiating request",
+    )?;
+
+    let status = resp.status();
+    if !status.is_success() {
+        bail!(
+            "couldn't download {}: server responded with {:?}",
+            download.from,
+            status
+        );
+    }
+    let mut tmp = persistable_tempfile_in(download.to.parent().ok_or("path must have parent")?)
+        .chain_err(|| "couldn't create temporary file")?;
+
+    if let Some(len) = resp.headers().get::<header::ContentLength>() {
+        tmp.set_len(**len).chain_err(
+            || "pretending to allocate space",
+        )?;
+    }
+
+    io::copy(&mut resp, tmp.as_mut()).chain_err(
+        || "copying data",
+    )?;
+
+    tmp.persist_noclobber(&download.to).chain_err(
+        || "persisting result",
+    )
 }

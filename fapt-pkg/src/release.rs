@@ -44,7 +44,7 @@ pub struct ReleaseFile {
     architectures: Vec<String>,
     components: Vec<String>,
     description: String,
-    contents: Vec<ReleaseContent>,
+    pub contents: Vec<ReleaseContent>,
 }
 
 pub struct ReleaseContent {
@@ -102,7 +102,9 @@ pub fn interpret(sources_list: &[Entry]) -> Result<HashMap<RequestedRelease, Vec
             mirror: Url::parse(&entry.url)?,
             codename: entry.suite_codename.to_string(),
         }) {
-            hash_map::Entry::Vacant(vacancy) => { vacancy.insert(vec![entry.clone()]); },
+            hash_map::Entry::Vacant(vacancy) => {
+                vacancy.insert(vec![entry.clone()]);
+            }
             hash_map::Entry::Occupied(mut existing) => existing.get_mut().push(entry.clone()),
         }
     }
@@ -221,10 +223,7 @@ fn load_contents(data: &HashMap<&str, Vec<&str>>) -> Result<Vec<ReleaseContent>>
         ret.push(ReleaseContent {
             len,
             name: name.to_string(),
-            hashes: Hashes {
-                md5,
-                sha256,
-            },
+            hashes: Hashes { md5, sha256 },
         })
     }
 

@@ -1,7 +1,11 @@
 use std::path::Path;
 
+use reqwest;
+
 use classic_sources_list;
+use fetch;
 use release;
+use lists;
 
 use errors::*;
 
@@ -26,9 +30,36 @@ pub fn update<P: AsRef<Path>, Q: AsRef<Path>>(sources_list_path: P, cache: Q) ->
             .map(release::parse_release_file)
             .collect::<Result<Vec<release::ReleaseFile>>>()?;
 
-    for file in parsed_files {
-        println!("\n\n{:?}", file);
+    let client = reqwest::Client::new();
+
+    let mut downloads = Vec::new();
+
+    for (file, req) in parsed_files.into_iter().zip(known_releases) {
+        let req: &release::RequestedRelease = req;
+        let dists = req.dists()?;
+
+        let entries = req_releases.get(req).expect(
+            "everything should still line up",
+        );
+
+        for entry in entries {
+            for component in &entry.components {
+                let list = lists::find_file(
+                    &file.contents,
+                    &if entry.src {
+                        format!("{}/source/Sources", component)
+                    } else {
+                        // TODO: arch
+                        format!("{}/binary-amd64/Packages", component)
+                    },
+                )?;
+
+                downloads.push(fetch::Download::from_to(dists.join(&list.path)?, list.path));
+            }
+        }
     }
+
+    fetch::fetch(&client, &downloads)?;
 
     Ok(())
 }
