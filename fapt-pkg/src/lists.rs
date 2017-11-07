@@ -1,7 +1,5 @@
 use reqwest::Url;
 
-use classic_sources_list::Entry;
-
 use release::ReleaseContent;
 use release::Release;
 use Hashes;
@@ -9,7 +7,7 @@ use Hashes;
 use errors::*;
 
 #[derive(Debug)]
-enum Compression {
+pub enum Compression {
     None,
     Gz,
 }
@@ -27,9 +25,9 @@ impl Compression {
 #[derive(Debug)]
 pub struct List {
     pub url: Url,
-    codec: Compression,
-    compressed_hashes: Hashes,
-    decompressed_hashes: Hashes,
+    pub codec: Compression,
+    pub compressed_hashes: Hashes,
+    pub decompressed_hashes: Hashes,
 }
 
 impl List {

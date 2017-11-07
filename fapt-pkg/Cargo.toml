@@ -9,7 +9,13 @@ gpgme = "0.6"
 hex = "0.2"
 inflate = "0.3"
 mailparse = "0.6"
+md-5 = "0.5"
 nom = "3.2"
 reqwest = "0.8"
+sha2 = "0.6"
 tempdir = "0.3"
 tempfile-fast = "0.1"
+
+[dependencies.digest]
+features = ["std"]
+version = "0.6"

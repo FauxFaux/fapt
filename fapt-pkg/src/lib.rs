@@ -2,16 +2,20 @@
 extern crate error_chain;
 extern crate gpgme;
 extern crate hex;
+extern crate inflate;
 extern crate mailparse;
+extern crate md_5;
 
 #[macro_use]
 extern crate nom;
 extern crate reqwest;
+extern crate sha2;
 extern crate tempdir;
 extern crate tempfile_fast;
 
 use std::fmt;
 
+mod checksum;
 pub mod classic_sources_list;
 pub mod commands;
 mod errors;

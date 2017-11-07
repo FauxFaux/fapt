@@ -7,7 +7,6 @@ use std::io;
 use std::io::Read;
 
 use std::path::Path;
-use std::path::PathBuf;
 
 use hex::FromHex;
 
