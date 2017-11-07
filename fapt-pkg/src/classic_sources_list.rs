@@ -6,7 +6,7 @@ use std::path;
 
 use std::io::BufRead;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Entry {
     pub src: bool,
     pub url: String,

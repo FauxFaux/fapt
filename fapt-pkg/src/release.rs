@@ -1,5 +1,5 @@
-use std::collections::HashSet;
 use std::collections::HashMap;
+use std::collections::hash_map;
 
 use std::fmt;
 use std::fs;
@@ -14,6 +14,7 @@ use hex::FromHex;
 use reqwest;
 use reqwest::Url;
 
+use classic_sources_list::Entry;
 use errors::*;
 use fetch::fetch;
 use fetch::Download;
@@ -88,23 +89,30 @@ impl RequestedRelease {
     }
 }
 
-pub fn releases(sources_list: &[::classic_sources_list::Entry]) -> Result<Vec<RequestedRelease>> {
-    let mut ret = HashSet::with_capacity(sources_list.len() / 2);
+/// A sources list, in entirety, suggests:
+///  * fetching some "Release" (e.g. `deb.debian.org/debian sid`) files,
+///  * whitelisting some of its "components" (`main`, `contrib`, `non-free`),
+///  * and specifying the types of thing to pick from it (`deb`, `deb-src`).
+pub fn interpret(sources_list: &[Entry]) -> Result<HashMap<RequestedRelease, Vec<Entry>>> {
+    let mut ret = HashMap::with_capacity(sources_list.len() / 2);
 
     for entry in sources_list {
         ensure!(entry.url.ends_with('/'), "urls must end with a '/'");
-        ret.insert(RequestedRelease {
+        match ret.entry(RequestedRelease {
             mirror: Url::parse(&entry.url)?,
             codename: entry.suite_codename.to_string(),
-        });
+        }) {
+            hash_map::Entry::Vacant(vacancy) => { vacancy.insert(vec![entry.clone()]); },
+            hash_map::Entry::Occupied(mut existing) => existing.get_mut().push(entry.clone()),
+        }
     }
 
-    Ok(ret.into_iter().collect())
+    Ok(ret)
 }
 
 pub fn download_releases<P: AsRef<Path>>(
     lists_dir: P,
-    releases: &[RequestedRelease],
+    releases: &[&RequestedRelease],
     keyring_paths: &[&str],
 ) -> Result<Vec<PathBuf>> {
     let lists_dir = lists_dir.as_ref();

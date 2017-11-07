@@ -9,12 +9,14 @@ pub fn update<P: AsRef<Path>, Q: AsRef<Path>>(sources_list_path: P, cache: Q) ->
     // TODO: sources.list.d
     // TODO: keyring paths
     let sources_entries = classic_sources_list::load(sources_list_path)?;
-    let req_releases = release::releases(&sources_entries)?;
+    let req_releases = release::interpret(&sources_entries)?;
+
+    let known_releases: Vec<&release::RequestedRelease> = req_releases.keys().collect();
 
     let lists_dir = cache.as_ref().join("lists");
     let release_files = release::download_releases(
         lists_dir,
-        &req_releases,
+        &known_releases,
         &["/usr/share/keyrings/debian-archive-keyring.gpg"],
     )?;
 
