@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "fapt-parse",
     "fapt-pkg",
     "fapt",
 ]
