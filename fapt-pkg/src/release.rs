@@ -53,6 +53,12 @@ pub struct ReleaseContent {
     pub hashes: Hashes,
 }
 
+pub struct Release {
+    pub req: RequestedRelease,
+    pub sources_entries: Vec<Entry>,
+    pub file: ReleaseFile,
+}
+
 impl fmt::Debug for ReleaseContent {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -93,7 +99,7 @@ impl RequestedRelease {
 ///  * fetching some "Release" (e.g. `deb.debian.org/debian sid`) files,
 ///  * whitelisting some of its "components" (`main`, `contrib`, `non-free`),
 ///  * and specifying the types of thing to pick from it (`deb`, `deb-src`).
-pub fn interpret(sources_list: &[Entry]) -> Result<HashMap<RequestedRelease, Vec<Entry>>> {
+pub fn interpret(sources_list: &[Entry]) -> Result<Vec<(RequestedRelease, Vec<Entry>)>> {
     let mut ret = HashMap::with_capacity(sources_list.len() / 2);
 
     for entry in sources_list {
@@ -109,14 +115,14 @@ pub fn interpret(sources_list: &[Entry]) -> Result<HashMap<RequestedRelease, Vec
         }
     }
 
-    Ok(ret)
+    Ok(ret.into_iter().collect())
 }
 
 pub fn download_releases<P: AsRef<Path>>(
     lists_dir: P,
     releases: &[&RequestedRelease],
     keyring_paths: &[&str],
-) -> Result<Vec<PathBuf>> {
+) -> Result<Vec<ReleaseFile>> {
     let lists_dir = lists_dir.as_ref();
 
     let mut downloads = Vec::with_capacity(releases.len());
@@ -144,9 +150,36 @@ pub fn download_releases<P: AsRef<Path>>(
                 format!("verifying {:?}", release)
             },
         )?;
-        ret.push(verified);
+        ret.push(parse_release_file(verified)?);
     }
     Ok(ret)
+}
+
+pub fn load<P: AsRef<Path>>(sources_list: &[Entry], lists_dir: P) -> Result<Vec<Release>> {
+    let req_releases = interpret(&sources_list)?;
+
+    let release_files = download_releases(
+        lists_dir,
+        &req_releases
+            .iter()
+            .map(|x| &x.0)
+            .collect::<Vec<&RequestedRelease>>(),
+        &["/usr/share/keyrings/debian-archive-keyring.gpg"],
+    )?;
+
+    Ok(
+        release_files
+            .into_iter()
+            .zip(req_releases)
+            .map(|(file, (req, sources_entries))| {
+                Release {
+                    req,
+                    file,
+                    sources_entries,
+                }
+            })
+            .collect(),
+    )
 }
 
 fn mandatory_single_line(data: &HashMap<&str, Vec<&str>>, key: &str) -> Result<String> {

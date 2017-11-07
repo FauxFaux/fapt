@@ -13,62 +13,36 @@ use errors::*;
 pub fn update<P: AsRef<Path>, Q: AsRef<Path>>(sources_list_path: P, cache: Q) -> Result<()> {
     // TODO: sources.list.d
     // TODO: keyring paths
-    let sources_entries = classic_sources_list::load(sources_list_path)?;
-    let req_releases = release::interpret(&sources_entries)?;
-
-    let known_releases: Vec<&release::RequestedRelease> = req_releases.keys().collect();
-
-    let lists_dir = cache.as_ref().join("lists");
-    let release_files = release::download_releases(
-        &lists_dir,
-        &known_releases,
-        &["/usr/share/keyrings/debian-archive-keyring.gpg"],
-    )?;
-
-    let parsed_files: Vec<release::ReleaseFile> =
-        release_files
-            .iter()
-            .map(release::parse_release_file)
-            .collect::<Result<Vec<release::ReleaseFile>>>()?;
 
     let client = reqwest::Client::new();
+    let lists_dir = cache.as_ref().join("lists");
 
-    let mut downloads = Vec::new();
-    let mut lists = Vec::new();
-    let temp_dir = TempDir::new("fapt-lists")?;
+    let sources_entries = classic_sources_list::load(&sources_list_path)
+        .chain_err(|| format!("loading sources.list: {:?}", sources_list_path.as_ref()))?;
 
-    for (file, req) in parsed_files.into_iter().zip(known_releases) {
-        let req: &release::RequestedRelease = req;
-        let dists = req.dists()?;
+    let releases = release::load(&sources_entries, &lists_dir)
+        .chain_err(|| "loading releases")?;
 
-        let entries = req_releases.get(req).expect(
-            "everything should still line up",
-        );
+    let files = lists::find_files(&releases)
+        .chain_err(|| "filtering releases")?;
 
-        for entry in entries {
-            for component in &entry.components {
-                let list = lists::find_file(
-                    &file.contents,
-                    &if entry.src {
-                        format!("{}/source/Sources", component)
-                    } else {
-                        // TODO: arch
-                        format!("{}/binary-amd64/Packages", component)
-                    },
-                )?;
+    let temp_dir = TempDir::new("fapt-lists")
+        .chain_err(|| "creating temporary directory")?;
 
-                if !lists_dir.join(list.local_name()).exists() {
-                    downloads.push(fetch::Download::from_to(
-                        dists.join(&list.path)?,
-                        temp_dir.as_ref().join(list.path),
-                    ));
-                }
+    let downloads: Vec<fetch::Download> = files
+        .iter()
+        .filter_map(|list| {
+            let local_name = list.local_name();
 
-                lists.push(list);
-
+            match lists_dir.join(&local_name).exists() {
+                true => None,
+                false => Some(fetch::Download::from_to(
+                    list.url.clone(),
+                    temp_dir.as_ref().join(local_name),
+                )),
             }
-        }
-    }
+        })
+        .collect();
 
     fetch::fetch(&client, &downloads)?;
 
