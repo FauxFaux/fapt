@@ -7,5 +7,6 @@ error_chain!{
         ParseHexError(::hex::FromHexError);
         ParseIntError(::std::num::ParseIntError);
         ParseUtf8Error(::std::string::FromUtf8Error);
+        Serde(::serde_json::Error);
     }
 }

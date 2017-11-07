@@ -1,7 +1,9 @@
 use std::fs;
+use std::io;
 use std::path::Path;
 
 use reqwest;
+use serde_json;
 
 use classic_sources_list::Entry;
 use release;
@@ -29,6 +31,10 @@ pub fn export<P: AsRef<Path>>(sources_entries: &[Entry], lists_dir: P) -> Result
         || "loading releases",
     )?;
 
+    let client = reqwest::Client::new();
+
+    lists::download_files(&client, &lists_dir, &releases)?;
+
     let lists = lists::find_files(&releases)?;
     for list in lists {
         let file = fs::File::open(lists_dir.as_ref().join(list.local_name()))?;
@@ -37,7 +43,7 @@ pub fn export<P: AsRef<Path>>(sources_entries: &[Entry], lists_dir: P) -> Result
             let map = rfc822::map(&section).chain_err(|| {
                 format!("scanning {:?}", list.local_name())
             })?;
-            println!("{:?}", map);
+            serde_json::to_writer(io::stdout(), &map)?;
         }
     }
 

@@ -9,6 +9,7 @@ extern crate md_5;
 #[macro_use]
 extern crate nom;
 extern crate reqwest;
+extern crate serde_json;
 extern crate sha2;
 extern crate tempdir;
 extern crate tempfile_fast;
