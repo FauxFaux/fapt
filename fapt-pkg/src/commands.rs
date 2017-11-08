@@ -44,6 +44,7 @@ pub fn export<P: AsRef<Path>>(sources_entries: &[Entry], lists_dir: P) -> Result
                 format!("scanning {:?}", list.local_name())
             })?;
             serde_json::to_writer(io::stdout(), &map)?;
+            println!();
         }
     }
 

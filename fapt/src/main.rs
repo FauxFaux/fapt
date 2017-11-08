@@ -17,35 +17,48 @@ quick_main!(run);
 fn run() -> Result<()> {
     let matches = App::new("Faux' apt")
         .setting(AppSettings::SubcommandRequired)
-        .arg(Arg::with_name("root-dir").value_name("DIRECTORY").help(
-            "a chroot-like place to read/write files",
-        ))
-        .arg(Arg::with_name("sources-list").value_name("PREFIX").help(
-            "explicitly set the sources.list search path",
-        ))
+        .arg(
+            Arg::with_name("root-dir")
+                .long("root-dir")
+                .value_name("DIRECTORY")
+                .help("a chroot-like place to read/write files"),
+        )
+        .arg(
+            Arg::with_name("sources-list")
+                .long("sources-list")
+                .value_name("PREFIX")
+                .help("explicitly set the sources.list search path"),
+        )
         .arg(
             Arg::with_name("cache-dir")
+                .long("cache-dir")
                 .short("c")
                 .value_name("DIRECTORY")
                 .help("explicitly set the cache directory"),
         )
         .arg(
             Arg::with_name("release-url")
+                .long("release-url")
                 .short("r")
                 .value_name("URL")
                 .multiple(true)
                 .number_of_values(1)
-                .help("a url-format sources.list entry")
-                .long_help(
-                    "e.g. http://deb.debian.org/debian#sid,main,contrib,non-free",
-                ),
+                .help(concat!(
+                    "a url-format sources.list entry",
+                    " e.g. http://deb.debian.org/debian#sid,main,contrib,non-free"
+                )),
         )
-        .subcommand(SubCommand::with_name("update"))
-        .subcommand(SubCommand::with_name("export").arg(
-            Arg::with_name("format").short("f").value_name("FORMAT"),
+        .subcommand(SubCommand::with_name("update").help(
+            "just fetch necessary data for specified sources",
         ))
         .subcommand(
+            SubCommand::with_name("export")
+                .help("dump out all packages as json")
+                .arg(Arg::with_name("format").short("f").value_name("FORMAT")),
+        )
+        .subcommand(
             SubCommand::with_name("yaml")
+                .help("who knows what this could be")
                 .setting(AppSettings::SubcommandRequired)
                 .subcommand(SubCommand::with_name("mirrors")),
         )

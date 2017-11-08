@@ -16,7 +16,9 @@ pub fn scan(block: &str) -> Result<Vec<(&str, Vec<&str>)>> {
             None => break,
         };
 
-        let colon = line.find(':').ok_or_else(|| format!("expected a key: in {:?}", line))?;
+        let colon = line.find(':').ok_or_else(
+            || format!("expected a key: in {:?}", line),
+        )?;
         let (key, first_val) = line.split_at(colon);
         let first_val = first_val[1..].trim();
         let mut sub = Vec::new();
@@ -104,12 +106,18 @@ mod tests {
 
     #[test]
     fn multi_line_header() {
-        assert_eq!(vec![("Foo", vec!["bar", "baz"])], scan("Foo:\n bar\n baz\n").unwrap());
+        assert_eq!(
+            vec![("Foo", vec!["bar", "baz"])],
+            scan("Foo:\n bar\n baz\n").unwrap()
+        );
     }
 
     #[test]
     fn multi_line_joined() {
-        assert_eq!(vec![("Foo", vec!["bar", "baz", "quux"])], scan("Foo: bar\n baz\n quux\n").unwrap());
+        assert_eq!(
+            vec![("Foo", vec!["bar", "baz", "quux"])],
+            scan("Foo: bar\n baz\n quux\n").unwrap()
+        );
     }
 
     #[test]
@@ -120,9 +128,9 @@ mod tests {
 
         let parts: Result<Vec<Vec<u8>>> = Section::new(io::Cursor::new(b"foo\nbar\n\nbaz\n"))
             .collect();
-        assert_eq!(vec![
-            b"foo\nbar\n".to_vec(),
-            b"baz\n".to_vec()
-        ], parts.unwrap());
+        assert_eq!(
+            vec![b"foo\nbar\n".to_vec(), b"baz\n".to_vec()],
+            parts.unwrap()
+        );
     }
 }
