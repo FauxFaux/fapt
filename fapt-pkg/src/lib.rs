@@ -18,15 +18,16 @@ use std::fmt;
 
 mod checksum;
 pub mod classic_sources_list;
-pub mod commands;
+mod commands;
 mod errors;
 mod fetch;
 mod lists;
-pub mod release;
+mod release;
 mod rfc822;
 mod signing;
 
 pub use errors::*;
+pub use commands::System;
 
 #[derive(Copy, Clone)]
 pub struct Hashes {
