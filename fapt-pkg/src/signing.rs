@@ -4,6 +4,7 @@ use std::io::Write;
 use std::path::Path;
 
 use gpgme::context::Context;
+use gpgme::results::VerificationResult;
 use gpgme::Data;
 use gpgme::Protocol;
 
@@ -54,16 +55,7 @@ impl GpgClient {
             )
             .chain_err(|| "verifying")?;
 
-        ensure!(
-            result.signatures().next().is_some(),
-            "there are no signatures"
-        );
-
-        for (i, sig) in result.signatures().enumerate() {
-            if !sig.status().is_ok() {
-                bail!("signature {} is invalid: {:?}", i, sig.status());
-            }
-        }
+        validate_signature(&result)?;
 
         // Slightly racy, but not unsafe.
         if dest.as_ref().exists() {
@@ -73,6 +65,21 @@ impl GpgClient {
         to.persist_noclobber(dest)
             .chain_err(|| "persisting output file")?;
 
+        Ok(())
+    }
+
+    pub fn verify_detached<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path>>(
+        &mut self,
+        file: P,
+        signature: Q,
+        dest: R,
+    ) -> Result<()> {
+        let result = self.ctx.verify_detached(
+            fs::File::open(file.as_ref()).chain_err(|| "opening input file")?,
+            fs::File::open(signature).chain_err(|| "opening signature file")?,
+        )?;
+        validate_signature(&result)?;
+        fs::rename(file, dest)?;
         Ok(())
     }
 }
@@ -86,5 +93,20 @@ fn concatenate_keyrings_into<P: AsRef<Path>, W: Write>(
     for keyring in keyring_paths {
         io::copy(&mut fs::File::open(keyring)?, &mut pubring)?;
     }
+    Ok(())
+}
+
+fn validate_signature(result: &VerificationResult) -> Result<()> {
+    ensure!(
+        result.signatures().next().is_some(),
+        "there are no signatures"
+    );
+
+    for (i, sig) in result.signatures().enumerate() {
+        if !sig.status().is_ok() {
+            bail!("signature {} is invalid: {:?}", i, sig.status());
+        }
+    }
+
     Ok(())
 }

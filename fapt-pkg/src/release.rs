@@ -150,23 +150,38 @@ impl RequestedReleases {
     ) -> Result<()> {
         let lists_dir = lists_dir.as_ref();
 
-        let mut downloads = Vec::with_capacity(self.releases.len());
-
-        for &(ref release, _) in &self.releases {
-            let url = release.dists()?.join("InRelease")?;
-            let dest = release.download_path(lists_dir);
-            downloads.push(Download::from_to(url, dest));
-        }
-
-        fetch(&client, &downloads).chain_err(|| "downloading releases")?;
-
         let mut gpg = GpgClient::new(keyring_paths)?;
 
         for &(ref release, _) in &self.releases {
-            let downloaded = release.download_path(lists_dir);
+            let dest: PathBuf = release.download_path(lists_dir);
             let verified = release.verified_path(lists_dir);
-            gpg.verify_clearsigned(&downloaded, &verified)
-                .chain_err(|| format!("verifying {:?} at {:?}", release, downloaded))?;
+
+            match fetch(
+                &client,
+                &[
+                    Download::from_to(release.dists()?.join("InRelease")?, &dest),
+                ],
+            ) {
+                Ok(_) => gpg.verify_clearsigned(&dest, &verified),
+                Err(_) => {
+                    let mut detatched_signature = dest.clone();
+                    detatched_signature.set_extension("gpg");
+                    fetch(
+                        &client,
+                        &[Download::from_to(release.dists()?.join("Release")?, &dest)],
+                    )?;
+                    fetch(
+                        &client,
+                        &[
+                            Download::from_to(
+                                release.dists()?.join("Release.gpg")?,
+                                &detatched_signature,
+                            ),
+                        ],
+                    )?;
+                    gpg.verify_detached(&dest, detatched_signature, verified)
+                }
+            }.chain_err(|| format!("verifying {:?} at {:?}", release, dest))?;
         }
 
         Ok(())

@@ -167,11 +167,7 @@ pub fn find_files(releases: &[Release]) -> Result<Vec<(&Release, List)>> {
                     "binary-amd64"
                 };
 
-                let name = if entry.src {
-                    "Sources"
-                } else {
-                    "Packages"
-                };
+                let name = if entry.src { "Sources" } else { "Packages" };
 
                 lists.push((
                     rel,
