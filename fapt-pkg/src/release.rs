@@ -44,7 +44,7 @@ pub struct ReleaseFile {
     changelogs: String,
     date: i64,
     valid_until: i64,
-    acquire_by_hash: bool,
+    pub acquire_by_hash: bool,
     architectures: Vec<String>,
     components: Vec<String>,
     description: String,

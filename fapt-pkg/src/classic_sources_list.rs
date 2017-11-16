@@ -14,22 +14,6 @@ pub struct Entry {
     pub components: Vec<String>,
 }
 
-impl Entry {
-    pub fn file_names(&self) -> Vec<String> {
-        self.components
-            .iter()
-            .map(|component| {
-                if self.src {
-                    format!("{}/source/Sources", component)
-                } else {
-                    // TODO: arch
-                    format!("{}/binary-amd64/Packages", component)
-                }
-            })
-            .collect()
-    }
-}
-
 fn line_space(c: char) -> bool {
     ' ' == c || '\t' == c
 }

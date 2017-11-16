@@ -159,8 +159,31 @@ pub fn find_files(releases: &[Release]) -> Result<Vec<(&Release, List)>> {
         let dists = req.dists()?;
 
         for entry in sources_entries {
-            for name in entry.file_names() {
-                lists.push((rel, find_file(&dists, &file.contents, &name)?));
+            for component in &entry.components {
+                let directory = if entry.src {
+                    "source"
+                } else {
+                    // TODO: arch
+                    "binary-amd64"
+                };
+
+                let name = if entry.src {
+                    "Sources"
+                } else {
+                    "Packages"
+                };
+
+                lists.push((
+                    rel,
+                    find_file(
+                        &dists,
+                        &file.contents,
+                        file.acquire_by_hash,
+                        component,
+                        directory,
+                        &name,
+                    )?,
+                ));
             }
         }
     }
@@ -194,7 +217,15 @@ pub fn walk_all<'i, P: AsRef<Path> + 'i>(
     )))
 }
 
-pub fn find_file(base_url: &Url, contents: &[ReleaseContent], base: &str) -> Result<List> {
+pub fn find_file(
+    base_url: &Url,
+    contents: &[ReleaseContent],
+    acquire_by_hash: bool,
+    component: &str,
+    directory: &str,
+    name: &str,
+) -> Result<List> {
+    let base = format!("{}/{}/{}", component, directory, name);
     let gz_name = format!("{}{}", base, Compression::Gz.suffix());
 
     let mut gz_hashes = None;
@@ -210,18 +241,23 @@ pub fn find_file(base_url: &Url, contents: &[ReleaseContent], base: &str) -> Res
 
     let raw_hashes = raw_hashes.ok_or("file not found in release")?;
 
-    Ok(match gz_hashes {
-        Some(gz_hashes) => List {
-            url: base_url.join(&gz_name)?,
-            codec: Compression::Gz,
-            compressed_hashes: gz_hashes,
-            decompressed_hashes: raw_hashes,
-        },
-        None => List {
-            url: base_url.join(base)?,
-            codec: Compression::None,
-            compressed_hashes: raw_hashes,
-            decompressed_hashes: raw_hashes,
-        },
+    let url = base_url.join(&if acquire_by_hash {
+        format!(
+            "{}/{}/by-hash/SHA256/{}",
+            component,
+            directory,
+            hex::encode(gz_hashes.unwrap_or(raw_hashes).sha256)
+        )
+    } else {
+        gz_hashes.map(|_| gz_name).unwrap_or(base)
+    })?;
+
+    Ok(List {
+        url,
+        codec: gz_hashes
+            .map(|_| Compression::None)
+            .unwrap_or(Compression::Gz),
+        compressed_hashes: gz_hashes.unwrap_or(raw_hashes),
+        decompressed_hashes: raw_hashes,
     })
 }
