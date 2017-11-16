@@ -7,6 +7,7 @@ use std::io;
 use std::io::Read;
 
 use std::path::Path;
+use std::path::PathBuf;
 
 use hex::FromHex;
 
@@ -92,6 +93,14 @@ impl RequestedRelease {
             self.codename
         )
     }
+
+    pub fn download_path<P: AsRef<Path>>(&self, lists_dir: P) -> PathBuf {
+        lists_dir.as_ref().join(format!("{}_InRelease", self.filesystem_safe()))
+    }
+
+    pub fn verified_path<P: AsRef<Path>>(&self, lists_dir: P) -> PathBuf {
+        lists_dir.as_ref().join(format!("{}_Verified", self.filesystem_safe()))
+    }
 }
 
 /// A sources list, in entirety, suggests:
@@ -132,7 +141,7 @@ pub fn download_releases<P: AsRef<Path>>(
 
     for release in releases {
         let url = release.dists()?.join("InRelease")?;
-        let dest = lists_dir.join(format!("{}_InRelease", release.filesystem_safe()));
+        let dest = release.download_path(lists_dir);
         downloads.push(Download::from_to(url, dest));
     }
 
@@ -144,8 +153,8 @@ pub fn download_releases<P: AsRef<Path>>(
     let mut gpg = GpgClient::new(keyring_paths)?;
 
     for release in releases {
-        let downloaded = lists_dir.join(format!("{}_InRelease", release.filesystem_safe()));
-        let verified = lists_dir.join(format!("{}_Verified", release.filesystem_safe()));
+        let downloaded = release.download_path(lists_dir);
+        let verified = release.verified_path(lists_dir);
         gpg.verify_clearsigned(&downloaded, &verified)
             .chain_err(|| format!("verifying {:?} at {:?}", release, downloaded))?;
         ret.push(parse_release_file(verified)?);
