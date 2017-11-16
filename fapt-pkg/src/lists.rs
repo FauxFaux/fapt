@@ -253,8 +253,8 @@ pub fn find_file(
     Ok(List {
         url,
         codec: gz_hashes
-            .map(|_| Compression::None)
-            .unwrap_or(Compression::Gz),
+            .map(|_| Compression::Gz)
+            .unwrap_or(Compression::None),
         compressed_hashes: gz_hashes.unwrap_or(raw_hashes),
         decompressed_hashes: raw_hashes,
     })
