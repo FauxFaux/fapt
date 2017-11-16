@@ -3,7 +3,6 @@ extern crate clap;
 extern crate error_chain;
 extern crate fapt_pkg;
 
-use std::fs;
 use std::path::PathBuf;
 
 use clap::{App, AppSettings, Arg, SubCommand};

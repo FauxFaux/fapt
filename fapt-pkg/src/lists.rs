@@ -63,7 +63,7 @@ pub fn download_files<P: AsRef<Path>>(
 
     let downloads: Vec<fetch::Download> = lists
         .iter()
-        .filter_map(|list| {
+        .filter_map(|&(_, ref list)| {
             let local_name = list.local_name();
 
             match lists_dir.as_ref().join(&local_name).exists() {
@@ -78,7 +78,7 @@ pub fn download_files<P: AsRef<Path>>(
 
     fetch::fetch(&client, &downloads).chain_err(|| "downloading listed files")?;
 
-    for list in lists {
+    for (_, list) in lists {
         store_list_item(list, &temp_dir, &lists_dir)?;
     }
 
@@ -143,20 +143,21 @@ fn decompress_gz<R: Read, F: Read + Write + Seek>(
     Ok(())
 }
 
-pub fn find_files(releases: &[Release]) -> Result<Vec<List>> {
+pub fn find_files(releases: &[Release]) -> Result<Vec<(&Release, List)>> {
     let mut lists = Vec::new();
 
-    for &Release {
-        ref req,
-        ref file,
-        ref sources_entries,
-    } in releases
-    {
+    for rel in releases {
+        let &Release {
+            ref req,
+            ref file,
+            ref sources_entries,
+        } = rel;
+
         let dists = req.dists()?;
 
         for entry in sources_entries {
             for name in entry.file_names() {
-                lists.push(find_file(&dists, &file.contents, &name)?);
+                lists.push((rel, find_file(&dists, &file.contents, &name)?));
             }
         }
     }

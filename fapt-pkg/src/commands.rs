@@ -69,11 +69,9 @@ impl System {
             .parse(&self.lists_dir)
             .chain_err(|| "parsing releases")?;
 
-        lists::download_files(&self.client, &self.lists_dir, &releases)?;
-
         let lists = lists::find_files(&releases)?;
 
-        for list in lists {
+        for (_, list) in lists {
             let file = fs::File::open(self.lists_dir.join(list.local_name()))?;
 
             for section in rfc822::Section::new(file) {
