@@ -75,8 +75,8 @@ impl GpgClient {
         dest: R,
     ) -> Result<()> {
         let result = self.ctx.verify_detached(
-            fs::File::open(file.as_ref()).chain_err(|| "opening input file")?,
             fs::File::open(signature).chain_err(|| "opening signature file")?,
+            fs::File::open(file.as_ref()).chain_err(|| "opening input file")?,
         )?;
         validate_signature(&result)?;
         fs::rename(file, dest)?;

@@ -3,6 +3,8 @@ extern crate clap;
 extern crate error_chain;
 extern crate fapt_pkg;
 
+use std::fs;
+use std::path::Path;
 use std::path::PathBuf;
 
 use clap::{App, AppSettings, Arg, SubCommand};
@@ -27,6 +29,14 @@ fn run() -> Result<()> {
                 .long("sources-list")
                 .value_name("PREFIX")
                 .help("explicitly set the sources.list search path"),
+        )
+        .arg(
+            Arg::with_name("keyring")
+                .long("keyring")
+                .multiple(true)
+                .number_of_values(1)
+                .value_name("PREFIX")
+                .help("explicitly add a keyring search path"),
         )
         .arg(
             Arg::with_name("cache-dir")
@@ -125,7 +135,11 @@ fn run() -> Result<()> {
 
     let mut system = fapt_pkg::System::cache_dirs_only(cache_dir.join("lists"))?;
     system.add_sources_entries(sources_entries.clone().into_iter());
-    system.add_keyring_paths(["/usr/share/keyrings/debian-archive-keyring.gpg"].into_iter())?;
+    if let Some(keyrings) = matches.values_of_os("keyring") {
+        for keyring in keyrings {
+            system.add_keyring_paths(expand_dot_d(keyring)?.into_iter())?;
+        }
+    }
 
     match matches.subcommand() {
         ("export", Some(matches)) => {
@@ -144,4 +158,40 @@ fn run() -> Result<()> {
     }
 
     Ok(())
+}
+
+fn expand_dot_d<P: AsRef<Path>>(path: P) -> Result<Vec<PathBuf>> {
+    let mut ret = Vec::new();
+
+    let path = path.as_ref();
+
+    if path.is_dir() {
+        bail!("you must provide a file, not a directory");
+    }
+
+    if path.is_file() {
+        ret.push(path.to_path_buf());
+    }
+
+    let extension = path.extension();
+
+    let mut dot_d = path.as_os_str().to_owned();
+    dot_d.push(".d");
+
+    let dot_d: PathBuf = dot_d.into();
+
+    if dot_d.is_dir() {
+        for file in fs::read_dir(dot_d)? {
+            let file = file?.path();
+            if file.is_file() && file.extension() == extension {
+                ret.push(file);
+            }
+        }
+    }
+
+    if ret.is_empty() {
+        bail!("no .d matches for {:?}", path);
+    }
+
+    Ok(ret)
 }

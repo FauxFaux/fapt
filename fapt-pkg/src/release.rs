@@ -164,12 +164,14 @@ impl RequestedReleases {
             ) {
                 Ok(_) => gpg.verify_clearsigned(&dest, &verified),
                 Err(_) => {
-                    let mut detatched_signature = dest.clone();
-                    detatched_signature.set_extension("gpg");
+                    let mut detatched_signature = dest.as_os_str().to_os_string();
+                    detatched_signature.push(".gpg");
+
                     fetch(
                         &client,
                         &[Download::from_to(release.dists()?.join("Release")?, &dest)],
                     )?;
+
                     fetch(
                         &client,
                         &[
