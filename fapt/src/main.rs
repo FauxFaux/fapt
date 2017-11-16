@@ -128,12 +128,16 @@ fn run() -> Result<()> {
     fs::create_dir_all(&lists_dir)
         .chain_err(|| format!("creating cache directory: {:?}", lists_dir))?;
 
+    let mut system = fapt_pkg::commands::System::cache_dirs_only(lists_dir)?;
+    system.add_sources_entries(sources_entries.clone().into_iter());
+    system.add_keyring_paths(["/usr/share/keyrings/debian-archive-keyring.gpg"].into_iter())?;
+
     match matches.subcommand() {
         ("export", Some(matches)) => {
-            fapt_pkg::commands::export(&sources_entries, lists_dir)?;
+            system.export()?;
         }
         ("update", _) => {
-            fapt_pkg::commands::update(&sources_entries, lists_dir)?;
+            system.update()?;
         }
         ("yaml", Some(matches)) => match matches.subcommand() {
             ("mirrors", _) => {

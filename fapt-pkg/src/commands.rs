@@ -1,6 +1,7 @@
 use std::fs;
 use std::io;
 use std::path::Path;
+use std::path::PathBuf;
 
 use reqwest;
 use serde_json;
@@ -12,44 +13,79 @@ use lists;
 
 use errors::*;
 
-pub fn update<P: AsRef<Path>>(sources_entries: &[Entry], lists_dir: P) -> Result<()> {
-    // TODO: keyring paths
-
-    let client = reqwest::Client::new();
-
-    let requested = release::RequestedReleases::from_sources_lists(&sources_entries)?;
-    requested.download(
-        &lists_dir,
-        &["/usr/share/keyrings/debian-archive-keyring.gpg"],
-    )?;
-    let releases = requested.parse(&lists_dir)?;
-
-    lists::download_files(&client, &lists_dir, &releases)?;
-
-    Ok(())
+pub struct System {
+    lists_dir: PathBuf,
+    sources_entries: Vec<Entry>,
+    keyring_paths: Vec<PathBuf>,
+    client: reqwest::Client,
 }
 
-pub fn export<P: AsRef<Path>>(sources_entries: &[Entry], lists_dir: P) -> Result<()> {
-    let releases: Vec<release::Release> = release::RequestedReleases::from_sources_lists(
-        &sources_entries,
-    )?.parse(&lists_dir)
-        .chain_err(|| "loading releases")?;
+impl System {
+    pub fn cache_dirs_only<P: AsRef<Path>>(cache: P) -> Result<Self> {
+        let lists_dir = cache.as_ref().join("lists").to_path_buf();
+        fs::create_dir_all(&lists_dir)?;
 
-    let client = reqwest::Client::new();
-
-    lists::download_files(&client, &lists_dir, &releases)?;
-
-    let lists = lists::find_files(&releases)?;
-    for list in lists {
-        let file = fs::File::open(lists_dir.as_ref().join(list.local_name()))?;
-        for section in rfc822::Section::new(file) {
-            let section = String::from_utf8(section?)?;
-            let map =
-                rfc822::map(&section).chain_err(|| format!("scanning {:?}", list.local_name()))?;
-            serde_json::to_writer(io::stdout(), &map)?;
-            println!();
-        }
+        Ok(System {
+            lists_dir,
+            sources_entries: Vec::new(),
+            keyring_paths: Vec::new(),
+            client: reqwest::Client::new(),
+        })
     }
 
-    Ok(())
+    pub fn add_sources_entries<I: Iterator<Item = Entry>>(&mut self, entries: I) {
+        self.sources_entries.extend(entries);
+    }
+
+    pub fn add_keyring_paths<P: AsRef<Path>, I: Iterator<Item = P>>(
+        &mut self,
+        keyrings: I,
+    ) -> Result<()> {
+        self.keyring_paths
+            .extend(keyrings.map(|x| x.as_ref().to_path_buf()));
+        Ok(())
+    }
+
+    pub fn update(&self) -> Result<()> {
+        let requested = release::RequestedReleases::from_sources_lists(&self.sources_entries)
+            .chain_err(|| "parsing sources entries")?;
+
+        requested
+            .download(&self.lists_dir, &self.keyring_paths)
+            .chain_err(|| "downloading releases")?;
+
+        let releases = requested
+            .parse(&self.lists_dir)
+            .chain_err(|| "parsing releases")?;
+
+        lists::download_files(&self.client, &self.lists_dir, &releases)
+            .chain_err(|| "downloading release content")?;
+
+        Ok(())
+    }
+
+    pub fn export(&self) -> Result<()> {
+        let releases = release::RequestedReleases::from_sources_lists(&self.sources_entries)
+            .chain_err(|| "parsing sources entries")?
+            .parse(&self.lists_dir)
+            .chain_err(|| "parsing releases")?;
+
+        lists::download_files(&self.client, &self.lists_dir, &releases)?;
+
+        let lists = lists::find_files(&releases)?;
+
+        for list in lists {
+            let file = fs::File::open(self.lists_dir.join(list.local_name()))?;
+
+            for section in rfc822::Section::new(file) {
+                let section = String::from_utf8(section?)?;
+                let map = rfc822::map(&section)
+                    .chain_err(|| format!("scanning {:?}", list.local_name()))?;
+                serde_json::to_writer(io::stdout(), &map)?;
+                println!();
+            }
+        }
+
+        Ok(())
+    }
 }

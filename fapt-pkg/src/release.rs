@@ -141,7 +141,11 @@ impl RequestedReleases {
         })
     }
 
-    pub fn download<P: AsRef<Path>>(&self, lists_dir: P, keyring_paths: &[&str]) -> Result<()> {
+    pub fn download<P: AsRef<Path>, Q: AsRef<Path>>(
+        &self,
+        lists_dir: P,
+        keyring_paths: &[Q],
+    ) -> Result<()> {
         let lists_dir = lists_dir.as_ref();
 
         let mut downloads = Vec::with_capacity(self.releases.len());

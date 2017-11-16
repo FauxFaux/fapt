@@ -18,7 +18,7 @@ pub struct GpgClient {
 }
 
 impl GpgClient {
-    pub fn new(keyring_paths: &[&str]) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(keyring_paths: &[P]) -> Result<Self> {
         let dir = TempDir::new("fapt-gpgme").chain_err(|| "creating temporary directory")?;
         let pubring = fs::File::create(dir.as_ref().join("pubring.gpg"))
             .chain_err(|| "populating temporary directory")?;
@@ -79,7 +79,10 @@ impl GpgClient {
 
 /// Oh yes, you read that right. We literally cat the files together and pray.
 /// There's no error handling. Not at all. God be with you.
-fn concatenate_keyrings_into<W: Write>(keyring_paths: &[&str], mut pubring: W) -> Result<()> {
+fn concatenate_keyrings_into<P: AsRef<Path>, W: Write>(
+    keyring_paths: &[P],
+    mut pubring: W,
+) -> Result<()> {
     for keyring in keyring_paths {
         io::copy(&mut fs::File::open(keyring)?, &mut pubring)?;
     }
