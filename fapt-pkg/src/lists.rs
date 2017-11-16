@@ -194,13 +194,15 @@ pub fn walk_all<'i, P: AsRef<Path> + 'i>(
     Ok(Box::new(find_files(releases)?.into_iter().flat_map(
         move |(release, list)| {
             fs::File::open(lists_dir.as_ref().join(list.local_name()))
+                .chain_err(|| format!("opening {}", list.local_name()))
                 .map(|file| {
                     rfc822::Section::new(file).map(move |maybe_section| {
-                        maybe_section.and_then(|block_vec| {
+                        maybe_section
+                            .and_then(|block_vec| {
                             String::from_utf8(block_vec)
                                 .chain_err(|| format!("section not valid utf-8"))
                                 .map(|block| (release, block))
-                        })
+                        }).chain_err(|| format!("scanning section in {}", list.local_name()))
                     })
                 })
                 // We have a Result<Iterator<Result<T>>
