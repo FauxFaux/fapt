@@ -5,6 +5,8 @@ use std::io::Seek;
 use std::io::SeekFrom;
 use std::io::Write;
 use std::path::Path;
+use std::path::PathBuf;
+use std::vec;
 
 use flate2::bufread::GzDecoder;
 use hex;
@@ -17,6 +19,7 @@ use checksum;
 use fetch;
 use release::ReleaseContent;
 use release::Release;
+use rfc822;
 use Hashes;
 
 use errors::*;
@@ -163,6 +166,30 @@ pub fn find_files(releases: &[Release]) -> Result<Vec<(&Release, List)>> {
     }
 
     Ok(lists)
+}
+
+pub fn walk_all<P: AsRef<Path>>(releases: &[Release], lists_dir: P) -> Result<Walk> {
+    Ok(Walk {
+        lists: find_files(releases)?.into_iter(),
+        lists_dir: lists_dir.as_ref().to_path_buf(),
+    })
+}
+
+pub struct Walk<'a> {
+    lists: vec::IntoIter<(&'a Release, List)>,
+    lists_dir: PathBuf,
+}
+
+impl<'a> Iterator for Walk<'a> {
+    type Item = io::Result<(&'a Release, rfc822::Section<fs::File>)>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.lists.next().map(|(rel, ref list)| {
+            fs::File::open(self.lists_dir.join(list.local_name()))
+                .map(|file| rfc822::Section::new(file))
+                .map(|section| (rel, section))
+        })
+    }
 }
 
 pub fn find_file(base_url: &Url, contents: &[ReleaseContent], base: &str) -> Result<List> {

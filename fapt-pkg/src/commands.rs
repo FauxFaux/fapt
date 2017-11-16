@@ -69,15 +69,11 @@ impl System {
             .parse(&self.lists_dir)
             .chain_err(|| "parsing releases")?;
 
-        let lists = lists::find_files(&releases)?;
-
-        for (_, list) in lists {
-            let file = fs::File::open(self.lists_dir.join(list.local_name()))?;
-
-            for section in rfc822::Section::new(file) {
+        for result in lists::walk_all(&releases, &self.lists_dir)? {
+            let (release, sections) = result?;
+            for section in sections {
                 let section = String::from_utf8(section?)?;
-                let map = rfc822::map(&section)
-                    .chain_err(|| format!("scanning {:?}", list.local_name()))?;
+                let map = rfc822::map(&section).chain_err(|| format!("scanning {:?}", release))?;
                 serde_json::to_writer(io::stdout(), &map)?;
                 println!();
             }

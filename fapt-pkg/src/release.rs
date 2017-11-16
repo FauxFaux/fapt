@@ -57,6 +57,7 @@ pub struct ReleaseContent {
     pub hashes: Hashes,
 }
 
+#[derive(Debug)]
 pub struct Release {
     pub req: RequestedRelease,
     pub sources_entries: Vec<Entry>,
