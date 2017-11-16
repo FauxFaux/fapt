@@ -10,12 +10,7 @@ use errors::*;
 pub fn scan(block: &str) -> Result<Vec<(&str, Vec<&str>)>> {
     let mut it = block.lines().peekable();
     let mut ret = Vec::new();
-    loop {
-        let line = match it.next() {
-            Some(line) => line,
-            None => break,
-        };
-
+    while let Some(line) = it.next() {
         let colon = line.find(':')
             .ok_or_else(|| format!("expected a key: in {:?}", line))?;
         let (key, first_val) = line.split_at(colon);

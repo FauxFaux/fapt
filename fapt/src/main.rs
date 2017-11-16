@@ -144,7 +144,7 @@ fn run() -> Result<()> {
     }
 
     match matches.subcommand() {
-        ("export", Some(matches)) => {
+        ("export", Some(_)) => {
             system.export()?;
         }
         ("update", _) => {

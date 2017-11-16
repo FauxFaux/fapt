@@ -15,7 +15,7 @@ use errors::*;
 
 pub struct GpgClient {
     ctx: Context,
-    root: TempDir,
+    _root: TempDir,
 }
 
 impl GpgClient {
@@ -33,7 +33,7 @@ impl GpgClient {
             .ok_or("tmpdir must be valid utf-8 for no real reason")?)
             .chain_err(|| "informing gpg about our temporary directory")?;
 
-        Ok(GpgClient { ctx, root: dir })
+        Ok(GpgClient { ctx, _root: dir })
     }
 
 

@@ -5,8 +5,6 @@ use std::io::Seek;
 use std::io::SeekFrom;
 use std::io::Write;
 use std::path::Path;
-use std::path::PathBuf;
-use std::vec;
 
 use flate2::bufread::GzDecoder;
 use hex;
@@ -59,7 +57,7 @@ pub fn download_files<P: AsRef<Path>>(
     lists_dir: P,
     releases: &[Release],
 ) -> Result<()> {
-    let lists = find_files(&releases).chain_err(|| "filtering releases")?;
+    let lists = find_files(releases).chain_err(|| "filtering releases")?;
 
     let temp_dir =
         TempDir::new_in(&lists_dir, ".fapt-lists").chain_err(|| "creating temporary directory")?;
@@ -69,27 +67,28 @@ pub fn download_files<P: AsRef<Path>>(
         .filter_map(|&(_, ref list)| {
             let local_name = list.local_name();
 
-            match lists_dir.as_ref().join(&local_name).exists() {
-                true => None,
-                false => Some(fetch::Download::from_to(
+            if lists_dir.as_ref().join(&local_name).exists() {
+                None
+            } else {
+                Some(fetch::Download::from_to(
                     list.url.clone(),
                     temp_dir.as_ref().join(local_name),
-                )),
+                ))
             }
         })
         .collect();
 
-    fetch::fetch(&client, &downloads).chain_err(|| "downloading listed files")?;
+    fetch::fetch(client, &downloads).chain_err(|| "downloading listed files")?;
 
     for (_, list) in lists {
-        store_list_item(list, &temp_dir, &lists_dir)?;
+        store_list_item(&list, &temp_dir, &lists_dir)?;
     }
 
     Ok(())
 }
 
 fn store_list_item<P: AsRef<Path>, Q: AsRef<Path>>(
-    list: List,
+    list: &List,
     temp_dir: P,
     lists_dir: Q,
 ) -> Result<()> {
@@ -177,7 +176,7 @@ pub fn find_files(releases: &[Release]) -> Result<Vec<(&Release, List)>> {
                         file.acquire_by_hash,
                         component,
                         directory,
-                        &name,
+                        name,
                     )?,
                 ));
             }
@@ -200,7 +199,7 @@ pub fn walk_all<'i, P: AsRef<Path> + 'i>(
                         maybe_section
                             .and_then(|block_vec| {
                             String::from_utf8(block_vec)
-                                .chain_err(|| format!("section not valid utf-8"))
+                                .chain_err(|| "section not valid utf-8")
                                 .map(|block| (release, block))
                         }).chain_err(|| format!("scanning section in {}", list.local_name()))
                     })

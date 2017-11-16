@@ -87,7 +87,7 @@ impl RequestedRelease {
         let u = &self.mirror;
         let underscore_path = u.path_segments()
             .map(|parts| parts.collect::<Vec<&str>>().join("_"))
-            .unwrap_or_else(|| String::new());
+            .unwrap_or_else(String::new);
         format!(
             "{}_{}_{}_{}_{}_{}",
             u.scheme(),
@@ -157,7 +157,7 @@ impl RequestedReleases {
             let verified = release.verified_path(lists_dir);
 
             match fetch(
-                &client,
+                client,
                 &[
                     Download::from_to(release.dists()?.join("InRelease")?, &dest),
                 ],
@@ -168,12 +168,12 @@ impl RequestedReleases {
                     detatched_signature.push(".gpg");
 
                     fetch(
-                        &client,
+                        client,
                         &[Download::from_to(release.dists()?.join("Release")?, &dest)],
                     )?;
 
                     fetch(
-                        &client,
+                        client,
                         &[
                             Download::from_to(
                                 release.dists()?.join("Release.gpg")?,
