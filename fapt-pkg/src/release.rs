@@ -39,15 +39,15 @@ pub struct RequestedRelease {
 pub struct ReleaseFile {
     origin: String,
     label: String,
-    suite: String,
-    codename: String,
+    suite: Option<String>,
+    codename: Option<String>,
     changelogs: Option<String>,
     date: i64,
     valid_until: Option<i64>,
     pub acquire_by_hash: bool,
     architectures: Vec<String>,
     components: Vec<String>,
-    description: String,
+    description: Option<String>,
     pub contents: Vec<ReleaseContent>,
 }
 
@@ -224,8 +224,8 @@ fn mandatory_whitespace_list(data: &HashMap<&str, Vec<&str>>, key: &str) -> Resu
 
 pub fn parse_release_file<P: AsRef<Path>>(path: P) -> Result<ReleaseFile> {
     let mut file = String::with_capacity(100 * 1024);
-    io::BufReader::new(fs::File::open(path)?).read_to_string(&mut file)?;
-    parse_release(&file)
+    io::BufReader::new(fs::File::open(path.as_ref())?).read_to_string(&mut file)?;
+    parse_release(&file).chain_err(|| format!("parsing {:?}", path.as_ref()))
 }
 
 fn parse_release(release: &str) -> Result<ReleaseFile> {
@@ -233,8 +233,8 @@ fn parse_release(release: &str) -> Result<ReleaseFile> {
     Ok(ReleaseFile {
         origin: mandatory_single_line(&data, "Origin")?,
         label: mandatory_single_line(&data, "Label")?,
-        suite: mandatory_single_line(&data, "Suite")?,
-        codename: mandatory_single_line(&data, "Codename")?,
+        suite: mandatory_single_line(&data, "Suite").ok(),
+        codename: mandatory_single_line(&data, "Codename").ok(),
         changelogs: mandatory_single_line(&data, "Changelogs").ok(),
         date: rfc822::parse_date(&mandatory_single_line(&data, "Date")?)?,
         valid_until: mandatory_single_line(&data, "Valid-Until")
@@ -245,7 +245,7 @@ fn parse_release(release: &str) -> Result<ReleaseFile> {
             .unwrap_or(false),
         architectures: mandatory_whitespace_list(&data, "Architectures")?,
         components: mandatory_whitespace_list(&data, "Components")?,
-        description: mandatory_single_line(&data, "Description")?,
+        description: mandatory_single_line(&data, "Description").ok(),
         contents: load_contents(&data)?,
     })
 }
