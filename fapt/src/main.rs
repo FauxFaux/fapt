@@ -95,9 +95,10 @@ fn run() -> Result<()> {
 
     let mut sources_entries = Vec::new();
     if let Some(prefix) = sources_list_prefix {
-        // TODO: sources.list.d
-        sources_entries.extend(classic_sources_list::load(&prefix)
-            .chain_err(|| format!("loading sources.list: {:?}", prefix))?);
+        for prefix in expand_dot_d(prefix)? {
+            sources_entries.extend(classic_sources_list::load(&prefix)
+                .chain_err(|| format!("loading sources.list: {:?}", prefix))?);
+        }
     }
 
     if let Some(urls) = matches.values_of("release-url") {
