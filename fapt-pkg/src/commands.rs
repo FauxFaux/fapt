@@ -70,13 +70,10 @@ impl System {
             .chain_err(|| "parsing releases")?;
 
         for result in lists::walk_all(&releases, &self.lists_dir)? {
-            let (release, sections) = result?;
-            for section in sections {
-                let section = String::from_utf8(section?)?;
-                let map = rfc822::map(&section).chain_err(|| format!("scanning {:?}", release))?;
-                serde_json::to_writer(io::stdout(), &map)?;
-                println!();
-            }
+            let (release, section) = result?;
+            let map = rfc822::map(&section).chain_err(|| format!("scanning {:?}", release))?;
+            serde_json::to_writer(io::stdout(), &map)?;
+            println!();
         }
 
         Ok(())
