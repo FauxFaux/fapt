@@ -10,5 +10,4 @@ capnpc = "0.8"
 capnp = "0.8"
 error-chain = "0.11"
 md5 = "0.3"
-nom = "3.2"
-
+nom = "3"
