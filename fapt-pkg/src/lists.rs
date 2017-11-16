@@ -58,9 +58,8 @@ pub fn download_files<P: AsRef<Path>>(
 ) -> Result<()> {
     let lists = find_files(&releases).chain_err(|| "filtering releases")?;
 
-    let temp_dir = TempDir::new_in(&lists_dir, ".fapt-lists").chain_err(
-        || "creating temporary directory",
-    )?;
+    let temp_dir =
+        TempDir::new_in(&lists_dir, ".fapt-lists").chain_err(|| "creating temporary directory")?;
 
     let downloads: Vec<fetch::Download> = lists
         .iter()
@@ -77,9 +76,7 @@ pub fn download_files<P: AsRef<Path>>(
         })
         .collect();
 
-    fetch::fetch(&client, &downloads).chain_err(
-        || "downloading listed files",
-    )?;
+    fetch::fetch(&client, &downloads).chain_err(|| "downloading listed files")?;
 
     for list in lists {
         store_list_item(list, &temp_dir, &lists_dir)?;
@@ -100,9 +97,8 @@ fn store_list_item<P: AsRef<Path>, Q: AsRef<Path>>(
     }
 
     let temp_path = temp_dir.as_ref().join(&local_name);
-    let mut temp = fs::File::open(&temp_path).chain_err(
-        || "opening a temp file we just downloaded",
-    )?;
+    let mut temp =
+        fs::File::open(&temp_path).chain_err(|| "opening a temp file we just downloaded")?;
 
     checksum::validate(&mut temp, list.compressed_hashes)
         .chain_err(|| format!("validating downloaded file: {:?}", temp_path))?;
@@ -132,15 +128,14 @@ fn decompress_gz<R: Read, F: Read + Write + Seek>(
     mut uncompressed: F,
     decompressed_hashes: Hashes,
 ) -> Result<()> {
-
     io::copy(
         &mut GzDecoder::new(io::BufReader::new(&mut compressed))?,
         &mut uncompressed,
     ).chain_err(|| "decomressing")?;
 
-    uncompressed.seek(SeekFrom::Start(0)).chain_err(
-        || "rewinding",
-    )?;
+    uncompressed
+        .seek(SeekFrom::Start(0))
+        .chain_err(|| "rewinding")?;
 
     checksum::validate(&mut uncompressed, decompressed_hashes)
         .chain_err(|| "validating decompressed file")?;
@@ -170,7 +165,6 @@ pub fn find_files(releases: &[Release]) -> Result<Vec<List>> {
 }
 
 pub fn find_file(base_url: &Url, contents: &[ReleaseContent], base: &str) -> Result<List> {
-
     let gz_name = format!("{}{}", base, Compression::Gz.suffix());
 
     let mut gz_hashes = None;

@@ -17,9 +17,7 @@ pub fn update<P: AsRef<Path>>(sources_entries: &[Entry], lists_dir: P) -> Result
 
     let client = reqwest::Client::new();
 
-    let releases = release::load(&sources_entries, &lists_dir).chain_err(
-        || "loading releases",
-    )?;
+    let releases = release::load(&sources_entries, &lists_dir).chain_err(|| "loading releases")?;
 
     lists::download_files(&client, &lists_dir, &releases)?;
 
@@ -27,9 +25,8 @@ pub fn update<P: AsRef<Path>>(sources_entries: &[Entry], lists_dir: P) -> Result
 }
 
 pub fn export<P: AsRef<Path>>(sources_entries: &[Entry], lists_dir: P) -> Result<()> {
-    let releases: Vec<release::Release> = release::load(&sources_entries, &lists_dir).chain_err(
-        || "loading releases",
-    )?;
+    let releases: Vec<release::Release> =
+        release::load(&sources_entries, &lists_dir).chain_err(|| "loading releases")?;
 
     let client = reqwest::Client::new();
 
@@ -40,9 +37,8 @@ pub fn export<P: AsRef<Path>>(sources_entries: &[Entry], lists_dir: P) -> Result
         let file = fs::File::open(lists_dir.as_ref().join(list.local_name()))?;
         for section in rfc822::Section::new(file) {
             let section = String::from_utf8(section?)?;
-            let map = rfc822::map(&section).chain_err(|| {
-                format!("scanning {:?}", list.local_name())
-            })?;
+            let map =
+                rfc822::map(&section).chain_err(|| format!("scanning {:?}", list.local_name()))?;
             serde_json::to_writer(io::stdout(), &map)?;
             println!();
         }

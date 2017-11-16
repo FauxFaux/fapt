@@ -98,9 +98,9 @@ fn run() -> Result<()> {
                 }
 
                 if !unrecognised.is_empty() {
-                    let mut builder = package.borrow().init_unrecognised_fields(
-                        as_u32(unrecognised.len()),
-                    );
+                    let mut builder = package
+                        .borrow()
+                        .init_unrecognised_fields(as_u32(unrecognised.len()));
                     for (i, field) in unrecognised.into_iter().enumerate() {
                         builder.set(as_u32(i), field);
                     }
@@ -116,7 +116,6 @@ fn fill_package(
     output: &mut package::Builder,
     map: &mut HashMap<&str, &str>,
 ) -> Result<Vec<String>> {
-
     let mut allowed_parse_errors = Vec::new();
 
     if let Some(priority) = map.remove("Priority") {
@@ -135,15 +134,13 @@ fn fill_package(
 
     if let Err(e) = fill_identity(map.remove("Maintainer"), |len| {
         output.borrow().init_maintainer(len)
-    })
-    {
+    }) {
         allowed_parse_errors.push(format!("Couldn't parse Maintainer: {:?}", e))
     }
 
     if let Err(e) = fill_identity(map.remove("Original-Maintainer"), |len| {
         output.borrow().init_original_maintainer(len)
-    })
-    {
+    }) {
         allowed_parse_errors.push(format!("Couldn't parse Original-Maintainer: {:?}", e));
     }
 
@@ -163,7 +160,8 @@ fn to_map<'a>(reader: capnp::struct_list::Reader<entry::Owned>) -> Result<HashMa
 
 fn fill_identity<'a, F>(value: Option<&str>, into: F) -> Result<()>
 where
-    F: FnOnce(u32) -> capnp::struct_list::Builder<'a, identity::Owned>,
+    F: FnOnce(u32)
+        -> capnp::struct_list::Builder<'a, identity::Owned>,
 {
     if value.is_none() {
         return Ok(());
@@ -202,7 +200,8 @@ fn parse_priority(string: &str) -> Result<Priority> {
 
 fn fill_dep<'a, F>(map: &mut HashMap<&str, &str>, key: &str, init: F) -> Result<()>
 where
-    F: FnOnce(u32) -> capnp::struct_list::Builder<'a, dependency::Owned>,
+    F: FnOnce(u32)
+        -> capnp::struct_list::Builder<'a, dependency::Owned>,
 {
     match map.remove(key) {
         Some(raw) => fill_dep_in(raw, init).chain_err(|| format!("parsing {}", key)),
@@ -212,7 +211,8 @@ where
 
 fn fill_dep_in<'a, F>(raw: &str, init: F) -> Result<()>
 where
-    F: FnOnce(u32) -> capnp::struct_list::Builder<'a, dependency::Owned>,
+    F: FnOnce(u32)
+        -> capnp::struct_list::Builder<'a, dependency::Owned>,
 {
     let read = deps::read(raw)?;
 
@@ -222,9 +222,10 @@ where
 
     let mut builder = init(as_u32(read.len()));
     for (i, alt) in read.into_iter().enumerate() {
-        let mut builder = builder.borrow().get(as_u32(i)).init_alternate(
-            as_u32(alt.alternate.len()),
-        );
+        let mut builder = builder
+            .borrow()
+            .get(as_u32(i))
+            .init_alternate(as_u32(alt.alternate.len()));
         for (i, single) in alt.alternate.into_iter().enumerate() {
             let builder = builder.borrow().get(as_u32(i));
             fill_single_dep(single, builder);
@@ -242,9 +243,9 @@ fn fill_single_dep(single: deps::SingleDep, mut builder: single_dependency::Buil
     }
 
     if !single.version_constraints.is_empty() {
-        let mut builder = builder.borrow().init_version_constraints(
-            as_u32(single.version_constraints.len()),
-        );
+        let mut builder = builder
+            .borrow()
+            .init_version_constraints(as_u32(single.version_constraints.len()));
         for (i, version) in single.version_constraints.into_iter().enumerate() {
             let mut builder = builder.borrow().get(as_u32(i));
             builder.set_version(&version.version);
@@ -261,18 +262,18 @@ fn fill_single_dep(single: deps::SingleDep, mut builder: single_dependency::Buil
     }
 
     if !single.arch_filter.is_empty() {
-        let mut builder = builder.borrow().init_arch_filter(
-            as_u32(single.arch_filter.len()),
-        );
+        let mut builder = builder
+            .borrow()
+            .init_arch_filter(as_u32(single.arch_filter.len()));
         for (i, arch) in single.arch_filter.into_iter().enumerate() {
             builder.set(as_u32(i), &arch);
         }
     }
 
     if !single.stage_filter.is_empty() {
-        let mut builder = builder.borrow().init_stage_filter(
-            as_u32(single.stage_filter.len()),
-        );
+        let mut builder = builder
+            .borrow()
+            .init_stage_filter(as_u32(single.stage_filter.len()));
         for (i, stage) in single.stage_filter.into_iter().enumerate() {
             builder.set(as_u32(i), &stage);
         }

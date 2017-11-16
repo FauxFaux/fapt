@@ -16,9 +16,8 @@ pub fn scan(block: &str) -> Result<Vec<(&str, Vec<&str>)>> {
             None => break,
         };
 
-        let colon = line.find(':').ok_or_else(
-            || format!("expected a key: in {:?}", line),
-        )?;
+        let colon = line.find(':')
+            .ok_or_else(|| format!("expected a key: in {:?}", line))?;
         let (key, first_val) = line.split_at(colon);
         let first_val = first_val[1..].trim();
         let mut sub = Vec::new();
@@ -65,7 +64,9 @@ pub struct Section<R: Read> {
 
 impl<R: Read> Section<R> {
     pub fn new(from: R) -> Self {
-        Section { from: io::BufReader::new(from) }
+        Section {
+            from: io::BufReader::new(from),
+        }
     }
 }
 
@@ -126,8 +127,8 @@ mod tests {
         use super::Section;
         use errors::*;
 
-        let parts: Result<Vec<Vec<u8>>> = Section::new(io::Cursor::new(b"foo\nbar\n\nbaz\n"))
-            .collect();
+        let parts: Result<Vec<Vec<u8>>> =
+            Section::new(io::Cursor::new(b"foo\nbar\n\nbaz\n")).collect();
         assert_eq!(
             vec![b"foo\nbar\n".to_vec(), b"baz\n".to_vec()],
             parts.unwrap()

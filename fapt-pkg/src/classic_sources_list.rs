@@ -18,11 +18,13 @@ impl Entry {
     pub fn file_names(&self) -> Vec<String> {
         self.components
             .iter()
-            .map(|component| if self.src {
-                format!("{}/source/Sources", component)
-            } else {
-                // TODO: arch
-                format!("{}/binary-amd64/Packages", component)
+            .map(|component| {
+                if self.src {
+                    format!("{}/source/Sources", component)
+                } else {
+                    // TODO: arch
+                    format!("{}/binary-amd64/Packages", component)
+                }
             })
             .collect()
     }
@@ -124,7 +126,6 @@ mod tests {
                     components: vec!["baz".to_string(), "quux".to_string()],
                 },
             ],
-
             read(
                 r"
 deb     http://foo  bar  baz quux

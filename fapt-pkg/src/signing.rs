@@ -19,21 +19,18 @@ pub struct GpgClient {
 
 impl GpgClient {
     pub fn new(keyring_paths: &[&str]) -> Result<Self> {
-        let dir = TempDir::new("fapt-gpgme").chain_err(
-            || "creating temporary directory",
-        )?;
+        let dir = TempDir::new("fapt-gpgme").chain_err(|| "creating temporary directory")?;
         let pubring = fs::File::create(dir.as_ref().join("pubring.gpg"))
             .chain_err(|| "populating temporary directory")?;
         concatenate_keyrings_into(keyring_paths, pubring)
             .chain_err(|| "generating temporary keyring")?;
 
-        let mut ctx = Context::from_protocol(Protocol::OpenPgp).chain_err(
-            || "starting gpg",
-        )?;
+        let mut ctx = Context::from_protocol(Protocol::OpenPgp).chain_err(|| "starting gpg")?;
 
-        ctx.set_engine_home_dir(dir.as_ref().to_str().ok_or(
-            "tmpdir must be valid utf-8 for no real reason",
-        )?).chain_err(|| "informing gpg about our temporary directory")?;
+        ctx.set_engine_home_dir(dir.as_ref()
+            .to_str()
+            .ok_or("tmpdir must be valid utf-8 for no real reason")?)
+            .chain_err(|| "informing gpg about our temporary directory")?;
 
         Ok(GpgClient { ctx, root: dir })
     }
@@ -70,14 +67,11 @@ impl GpgClient {
 
         // Slightly racy, but not unsafe.
         if dest.as_ref().exists() {
-            fs::remove_file(dest.as_ref()).chain_err(
-                || "removing output file",
-            )?;
+            fs::remove_file(dest.as_ref()).chain_err(|| "removing output file")?;
         }
 
-        to.persist_noclobber(dest).chain_err(
-            || "persisting output file",
-        )?;
+        to.persist_noclobber(dest)
+            .chain_err(|| "persisting output file")?;
 
         Ok(())
     }

@@ -30,42 +30,37 @@ pub fn extract(
 ) -> Result<()> {
     let mut found = Vec::with_capacity(4);
 
-    for &(vcs_token, ref vcs) in
-        [
-            ("Arch", VcsType::Arch),
-            ("Browser", VcsType::Browser),
-            ("Browse", VcsType::Browser),
-            ("Bzr", VcsType::Bzr),
-            ("Cvs", VcsType::Cvs),
-            ("Darcs", VcsType::Darcs),
-            ("Git", VcsType::Git),
-            ("Hg", VcsType::Hg),
-            ("Mtn", VcsType::Mtn),
-            ("Svn", VcsType::Svn),
-        ].into_iter()
+    for &(vcs_token, ref vcs) in [
+        ("Arch", VcsType::Arch),
+        ("Browser", VcsType::Browser),
+        ("Browse", VcsType::Browser),
+        ("Bzr", VcsType::Bzr),
+        ("Cvs", VcsType::Cvs),
+        ("Darcs", VcsType::Darcs),
+        ("Git", VcsType::Git),
+        ("Hg", VcsType::Hg),
+        ("Mtn", VcsType::Mtn),
+        ("Svn", VcsType::Svn),
+    ].into_iter()
     {
-
         // Simplest form: Vcs-Git
         if let Some(x) = map.remove(format!("Vcs-{}", vcs_token).as_str()) {
             found.push(Entry::new(x, vcs, &VcsTag::Vcs));
         }
 
-        for &(tag_token, ref tag) in
-            [
-                ("Orig", VcsTag::Orig),
-                ("Original", VcsTag::Orig),
-                ("Debian", VcsTag::Debian),
-                ("Upstream", VcsTag::Upstream),
-            ].into_iter()
+        for &(tag_token, ref tag) in [
+            ("Orig", VcsTag::Orig),
+            ("Original", VcsTag::Orig),
+            ("Debian", VcsTag::Debian),
+            ("Upstream", VcsTag::Upstream),
+        ].into_iter()
         {
             // Common form: Debian-Vcs-Git, Orig-Vcs-Browser, Original-Vcs-Bzr, Upstream-Vcs-Bzr
             if let Some(x) = map.remove(format!("{}-Vcs-{}", tag_token, vcs_token).as_str()) {
                 found.push(Entry::new(x, vcs, tag));
             }
             // Vcs-Upstream-Bzr seen in the wild
-            else if let Some(x) = map.remove(
-                format!("Vcs-{}-{}", tag_token, vcs_token).as_str(),
-            )
+            else if let Some(x) = map.remove(format!("Vcs-{}-{}", tag_token, vcs_token).as_str())
             {
                 found.push(Entry::new(x, vcs, tag));
             }

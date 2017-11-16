@@ -36,9 +36,11 @@ named!(parse<&str, Vec<Result<Identity>>>,
 pub fn read(from: &str) -> Result<Vec<Identity>> {
     match parse(from) {
         IResult::Done("", vec) => vec.into_iter().collect::<Result<Vec<Identity>>>(),
-        IResult::Done(tailing, _) => {
-            bail!("parsing {:?} finished early, trailing garbage: {:?}", from, tailing)
-        }
+        IResult::Done(tailing, _) => bail!(
+            "parsing {:?} finished early, trailing garbage: {:?}",
+            from,
+            tailing
+        ),
         other => bail!("parsing {:?} failed: {:?}", from, other),
     }
 }
@@ -48,19 +50,15 @@ fn process_escapes(from: &str) -> Result<String> {
     let mut result = Vec::with_capacity(bytes.len());
     loop {
         match bytes.next() {
-            Some(c) if b'\\' == c => {
-                match bytes.next() {
-                    Some(c) if [b'\'', b'"'].contains(&c) => result.push(c),
-                    Some(c) if b'x' == c => {
-                        result.push(parse_ascii_hex(
-                            bytes.next().ok_or("\\x must be followed by a character")?,
-                            bytes.next().ok_or("\\xX must be followed")?,
-                        )?)
-                    }
-                    Some(c) => bail!("unsupported escape: {:?}", c),
-                    None => bail!("\\ at end of string"),
-                }
-            }
+            Some(c) if b'\\' == c => match bytes.next() {
+                Some(c) if [b'\'', b'"'].contains(&c) => result.push(c),
+                Some(c) if b'x' == c => result.push(parse_ascii_hex(
+                    bytes.next().ok_or("\\x must be followed by a character")?,
+                    bytes.next().ok_or("\\xX must be followed")?,
+                )?),
+                Some(c) => bail!("unsupported escape: {:?}", c),
+                None => bail!("\\ at end of string"),
+            },
             Some(c) => result.push(c),
             None => return Ok(String::from_utf8(result)?),
         }
@@ -97,8 +95,14 @@ mod tests {
 
         assert_eq!(
             vec![
-                Identity { name: "foo".to_string(), email: "bar".to_string() },
-                Identity { name: "baz".to_string(), email: "quux".to_string() },
+                Identity {
+                    name: "foo".to_string(),
+                    email: "bar".to_string(),
+                },
+                Identity {
+                    name: "baz".to_string(),
+                    email: "quux".to_string(),
+                },
             ],
             read("foo <bar>, baz <quux>").unwrap()
         );

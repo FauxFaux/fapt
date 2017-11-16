@@ -72,9 +72,9 @@ impl fmt::Debug for ReleaseContent {
 
 impl RequestedRelease {
     pub fn dists(&self) -> Result<Url> {
-        Ok(self.mirror.join("dists/")?.join(
-            &format!("{}/", self.codename),
-        )?)
+        Ok(self.mirror
+            .join("dists/")?
+            .join(&format!("{}/", self.codename))?)
     }
 
     pub fn filesystem_safe(&self) -> String {
@@ -137,9 +137,7 @@ pub fn download_releases<P: AsRef<Path>>(
     }
 
     let client = reqwest::Client::new();
-    fetch(&client, &downloads).chain_err(
-        || "downloading releases",
-    )?;
+    fetch(&client, &downloads).chain_err(|| "downloading releases")?;
 
     let mut ret = Vec::with_capacity(releases.len());
 
@@ -148,20 +146,15 @@ pub fn download_releases<P: AsRef<Path>>(
     for release in releases {
         let downloaded = lists_dir.join(format!("{}_InRelease", release.filesystem_safe()));
         let verified = lists_dir.join(format!("{}_Verified", release.filesystem_safe()));
-        gpg.verify_clearsigned(&downloaded, &verified).chain_err(
-            || {
-                format!("verifying {:?} at {:?}", release, downloaded)
-            },
-        )?;
+        gpg.verify_clearsigned(&downloaded, &verified)
+            .chain_err(|| format!("verifying {:?} at {:?}", release, downloaded))?;
         ret.push(parse_release_file(verified)?);
     }
     Ok(ret)
 }
 
 pub fn load<P: AsRef<Path>>(sources_list: &[Entry], lists_dir: P) -> Result<Vec<Release>> {
-    let req_releases = interpret(&sources_list).chain_err(
-        || "interpreting sources list",
-    )?;
+    let req_releases = interpret(&sources_list).chain_err(|| "interpreting sources list")?;
 
     let release_files = download_releases(
         lists_dir,
@@ -197,9 +190,7 @@ fn mandatory_single_line(data: &HashMap<&str, Vec<&str>>, key: &str) -> Result<S
 
 pub fn parse_release_file<P: AsRef<Path>>(path: P) -> Result<ReleaseFile> {
     let mut file = String::with_capacity(100 * 1024);
-    io::BufReader::new(fs::File::open(path)?).read_to_string(
-        &mut file,
-    )?;
+    io::BufReader::new(fs::File::open(path)?).read_to_string(&mut file)?;
     parse_release(&file)
 }
 
@@ -213,9 +204,9 @@ fn parse_release(release: &str) -> Result<ReleaseFile> {
         changelogs: mandatory_single_line(&data, "Changelogs")?,
         date: rfc822::parse_date(&mandatory_single_line(&data, "Date")?)?,
         valid_until: rfc822::parse_date(&mandatory_single_line(&data, "Valid-Until")?)?,
-        acquire_by_hash: true, // TODO
+        acquire_by_hash: true,     // TODO
         architectures: Vec::new(), // TODO
-        components: Vec::new(), // TODO
+        components: Vec::new(),    // TODO
         description: mandatory_single_line(&data, "Description")?,
         contents: load_contents(&data)?,
     })
@@ -223,9 +214,8 @@ fn parse_release(release: &str) -> Result<ReleaseFile> {
 
 fn load_contents(data: &HashMap<&str, Vec<&str>>) -> Result<Vec<ReleaseContent>> {
     let md5s = take_checksums(data, "MD5Sum")?;
-    let sha256s = take_checksums(data, "SHA256")?.ok_or(
-        "sha256sums missing from release file; refusing to process",
-    )?;
+    let sha256s = take_checksums(data, "SHA256")?
+        .ok_or("sha256sums missing from release file; refusing to process")?;
 
     let mut ret = Vec::with_capacity(sha256s.len());
 

@@ -41,7 +41,6 @@ pub fn fetch(client: &reqwest::Client, downloads: &[Download]) -> Result<()> {
 }
 
 fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<()> {
-
     let mut req = client.get(download.from.as_ref());
 
     if download.to.exists() {
@@ -63,33 +62,23 @@ fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<()> {
     }
     let parent = download.to.parent().ok_or("path must have parent")?;
 
-    fs::create_dir_all(parent).chain_err(|| {
-        format!("creating directories: {:?}", parent)
-    })?;
+    fs::create_dir_all(parent).chain_err(|| format!("creating directories: {:?}", parent))?;
 
-    let mut tmp = persistable_tempfile_in(parent).chain_err(
-        || "couldn't create temporary file",
-    )?;
+    let mut tmp = persistable_tempfile_in(parent).chain_err(|| "couldn't create temporary file")?;
 
     if let Some(len) = resp.headers().get::<header::ContentLength>() {
-        tmp.set_len(**len).chain_err(
-            || "pretending to allocate space",
-        )?;
+        tmp.set_len(**len)
+            .chain_err(|| "pretending to allocate space")?;
     }
 
-    io::copy(&mut resp, tmp.as_mut()).chain_err(
-        || "copying data",
-    )?;
+    io::copy(&mut resp, tmp.as_mut()).chain_err(|| "copying data")?;
 
     if download.to.exists() {
-        fs::remove_file(&download.to).chain_err(
-            || "removing destination for overwriting",
-        )?;
+        fs::remove_file(&download.to).chain_err(|| "removing destination for overwriting")?;
     }
 
-    tmp.persist_noclobber(&download.to).chain_err(
-        || "persisting result",
-    )?;
+    tmp.persist_noclobber(&download.to)
+        .chain_err(|| "persisting result")?;
 
     // TODO: move the modification time back to the actual server claimed time
 

@@ -1,8 +1,8 @@
 #[macro_use]
 extern crate error_chain;
+extern crate flate2;
 extern crate gpgme;
 extern crate hex;
-extern crate flate2;
 extern crate mailparse;
 extern crate md5;
 
