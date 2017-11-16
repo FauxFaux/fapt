@@ -43,7 +43,7 @@ pub struct ReleaseFile {
     codename: String,
     changelogs: Option<String>,
     date: i64,
-    valid_until: i64,
+    valid_until: Option<i64>,
     pub acquire_by_hash: bool,
     architectures: Vec<String>,
     components: Vec<String>,
@@ -237,7 +237,9 @@ fn parse_release(release: &str) -> Result<ReleaseFile> {
         codename: mandatory_single_line(&data, "Codename")?,
         changelogs: mandatory_single_line(&data, "Changelogs").ok(),
         date: rfc822::parse_date(&mandatory_single_line(&data, "Date")?)?,
-        valid_until: rfc822::parse_date(&mandatory_single_line(&data, "Valid-Until")?)?,
+        valid_until: mandatory_single_line(&data, "Valid-Until")
+            .and_then(|s| rfc822::parse_date(&s))
+            .ok(),
         acquire_by_hash: mandatory_single_line(&data, "Acquire-By-Hash")
             .map(|s| "yes" == s)
             .unwrap_or(false),
