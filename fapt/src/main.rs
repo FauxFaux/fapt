@@ -124,11 +124,7 @@ fn run() -> Result<()> {
         ));
     }
 
-    let lists_dir = cache_dir.join("lists");
-    fs::create_dir_all(&lists_dir)
-        .chain_err(|| format!("creating cache directory: {:?}", lists_dir))?;
-
-    let mut system = fapt_pkg::commands::System::cache_dirs_only(lists_dir)?;
+    let mut system = fapt_pkg::commands::System::cache_dirs_only(cache_dir.join("lists"))?;
     system.add_sources_entries(sources_entries.clone().into_iter());
     system.add_keyring_paths(["/usr/share/keyrings/debian-archive-keyring.gpg"].into_iter())?;
 
