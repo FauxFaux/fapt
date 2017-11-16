@@ -12,6 +12,7 @@ pub struct Entry {
     pub url: String,
     pub suite_codename: String,
     pub components: Vec<String>,
+    pub arch: Option<String>,
 }
 
 fn line_space(c: char) -> bool {
@@ -31,8 +32,16 @@ named!(url<&str, &str>, take_till1_s!(line_space));
 named!(word<&str, &str>, take_while1_s!(dist_component_char));
 named!(spaces<&str, &str>, take_while1_s!(line_space));
 
+named!(arch<&str, &str>,
+    delimited!(
+        tag!("[arch="),
+        word,
+        tag!("]")
+    ));
+
 named!(single_line<&str, Entry>, do_parse!(
     src: deb_or_src >>
+    arch: opt!(preceded!(spaces, arch)) >>
     spaces >>
     url: url >>
     spaces >>
@@ -42,7 +51,8 @@ named!(single_line<&str, Entry>, do_parse!(
         src,
         url: if url.ends_with('/') { url.to_string() } else { format!("{}/", url) },
         suite_codename: suite.to_string(),
-        components: components.into_iter().map(|x| x.to_string()).collect()
+        components: components.into_iter().map(|x| x.to_string()).collect(),
+        arch: arch.map(|arch| arch.to_string()),
      } )
 ));
 

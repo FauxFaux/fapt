@@ -122,6 +122,7 @@ fn run() -> Result<()> {
                     url: url.to_string(),
                     suite_codename: suite_codename.to_string(),
                     components: parts.iter().map(|x| x.to_string()).collect(),
+                    arch: Some("amd64".to_string()),
                 });
             }
         }
