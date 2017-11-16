@@ -184,6 +184,11 @@ pub fn walk_all<'i, P: AsRef<Path> + 'i>(
                         })
                     })
                 })
+                // We have a Result<Iterator<Result<T>>
+                // We're in a flatmap, so the return value is Iterator<Result<T>>.
+                // I was hoping .unwrap_or_else(|e| [Err(e)].into_iter()) would work.
+                // But it doesn't, as the type is not map(closure..).
+                // And I couldn't get it it to work with Box, either. That was weirder.
                 .expect("couldn't get the error handling to typecheck, sorry")
         },
     )))
