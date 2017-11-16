@@ -17,7 +17,12 @@ pub fn update<P: AsRef<Path>>(sources_entries: &[Entry], lists_dir: P) -> Result
 
     let client = reqwest::Client::new();
 
-    let releases = release::load(&sources_entries, &lists_dir).chain_err(|| "loading releases")?;
+    let requested = release::RequestedReleases::from_sources_lists(&sources_entries)?;
+    requested.download(
+        &lists_dir,
+        &["/usr/share/keyrings/debian-archive-keyring.gpg"],
+    )?;
+    let releases = requested.parse(&lists_dir)?;
 
     lists::download_files(&client, &lists_dir, &releases)?;
 
@@ -25,8 +30,10 @@ pub fn update<P: AsRef<Path>>(sources_entries: &[Entry], lists_dir: P) -> Result
 }
 
 pub fn export<P: AsRef<Path>>(sources_entries: &[Entry], lists_dir: P) -> Result<()> {
-    let releases: Vec<release::Release> =
-        release::load(&sources_entries, &lists_dir).chain_err(|| "loading releases")?;
+    let releases: Vec<release::Release> = release::RequestedReleases::from_sources_lists(
+        &sources_entries,
+    )?.parse(&lists_dir)
+        .chain_err(|| "loading releases")?;
 
     let client = reqwest::Client::new();
 

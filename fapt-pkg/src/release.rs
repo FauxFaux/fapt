@@ -23,6 +23,10 @@ use signing::GpgClient;
 
 use Hashes;
 
+pub struct RequestedReleases {
+    releases: Vec<(RequestedRelease, Vec<Entry>)>,
+}
+
 #[derive(PartialOrd, Ord, Hash, PartialEq, Eq, Debug)]
 pub struct RequestedRelease {
     mirror: Url,
@@ -107,91 +111,76 @@ impl RequestedRelease {
     }
 }
 
-/// A sources list, in entirety, suggests:
-///  * fetching some "Release" (e.g. `deb.debian.org/debian sid`) files,
-///  * whitelisting some of its "components" (`main`, `contrib`, `non-free`),
-///  * and specifying the types of thing to pick from it (`deb`, `deb-src`).
-pub fn interpret(sources_list: &[Entry]) -> Result<Vec<(RequestedRelease, Vec<Entry>)>> {
-    let mut ret = HashMap::with_capacity(sources_list.len() / 2);
+impl RequestedReleases {
+    /// A sources list, in entirety, suggests:
+    ///  * fetching some "Release" (e.g. `deb.debian.org/debian sid`) files,
+    ///  * whitelisting some of its "components" (`main`, `contrib`, `non-free`),
+    ///  * and specifying the types of thing to pick from it (`deb`, `deb-src`).
+    pub fn from_sources_lists(sources_list: &[Entry]) -> Result<RequestedReleases> {
+        let mut ret = HashMap::with_capacity(sources_list.len() / 2);
 
-    for entry in sources_list {
-        ensure!(
-            entry.url.ends_with('/'),
-            "urls must end with a '/': {:?}",
-            entry.url
-        );
-        match ret.entry(RequestedRelease {
-            mirror: Url::parse(&entry.url)?,
-            codename: entry.suite_codename.to_string(),
-        }) {
-            hash_map::Entry::Vacant(vacancy) => {
-                vacancy.insert(vec![entry.clone()]);
+        for entry in sources_list {
+            ensure!(
+                entry.url.ends_with('/'),
+                "urls must end with a '/': {:?}",
+                entry.url
+            );
+            match ret.entry(RequestedRelease {
+                mirror: Url::parse(&entry.url)?,
+                codename: entry.suite_codename.to_string(),
+            }) {
+                hash_map::Entry::Vacant(vacancy) => {
+                    vacancy.insert(vec![entry.clone()]);
+                }
+                hash_map::Entry::Occupied(mut existing) => existing.get_mut().push(entry.clone()),
             }
-            hash_map::Entry::Occupied(mut existing) => existing.get_mut().push(entry.clone()),
         }
+
+        Ok(RequestedReleases {
+            releases: ret.into_iter().collect(),
+        })
     }
 
-    Ok(ret.into_iter().collect())
-}
+    pub fn download<P: AsRef<Path>>(&self, lists_dir: P, keyring_paths: &[&str]) -> Result<()> {
+        let lists_dir = lists_dir.as_ref();
 
-pub fn download_releases<P: AsRef<Path>>(
-    lists_dir: P,
-    releases: &[&RequestedRelease],
-    keyring_paths: &[&str],
-) -> Result<()> {
-    let lists_dir = lists_dir.as_ref();
+        let mut downloads = Vec::with_capacity(self.releases.len());
 
-    let mut downloads = Vec::with_capacity(releases.len());
+        for &(ref release, _) in &self.releases {
+            let url = release.dists()?.join("InRelease")?;
+            let dest = release.download_path(lists_dir);
+            downloads.push(Download::from_to(url, dest));
+        }
 
-    for release in releases {
-        let url = release.dists()?.join("InRelease")?;
-        let dest = release.download_path(lists_dir);
-        downloads.push(Download::from_to(url, dest));
+        let client = reqwest::Client::new();
+        fetch(&client, &downloads).chain_err(|| "downloading releases")?;
+
+        let mut gpg = GpgClient::new(keyring_paths)?;
+
+        for &(ref release, _) in &self.releases {
+            let downloaded = release.download_path(lists_dir);
+            let verified = release.verified_path(lists_dir);
+            gpg.verify_clearsigned(&downloaded, &verified)
+                .chain_err(|| format!("verifying {:?} at {:?}", release, downloaded))?;
+        }
+
+        Ok(())
     }
 
-    let client = reqwest::Client::new();
-    fetch(&client, &downloads).chain_err(|| "downloading releases")?;
-
-    let mut gpg = GpgClient::new(keyring_paths)?;
-
-    for release in releases {
-        let downloaded = release.download_path(lists_dir);
-        let verified = release.verified_path(lists_dir);
-        gpg.verify_clearsigned(&downloaded, &verified)
-            .chain_err(|| format!("verifying {:?} at {:?}", release, downloaded))?;
-    }
-
-    Ok(())
-}
-
-pub fn parse_releases<P: AsRef<Path>>(
-    lists_dir: P,
-    releases: Vec<(RequestedRelease, Vec<Entry>)>,
-) -> Result<Vec<Release>> {
-    releases
-        .into_iter()
-        .map(|(req, sources_entries)|
-            parse_release_file(req.verified_path(&lists_dir)).map(|file|
-            Release {
-                req, file, sources_entries
+    pub fn parse<P: AsRef<Path>>(self, lists_dir: P) -> Result<Vec<Release>> {
+        self.releases
+            .into_iter()
+            .map(|(req, sources_entries)| {
+                parse_release_file(req.verified_path(&lists_dir)).map(|file| {
+                    Release {
+                        req,
+                        file,
+                        sources_entries,
+                    }
+                })
             })
-        )
-        .collect::<Result<Vec<Release>>>()
-}
-
-pub fn load<P: AsRef<Path>>(sources_list: &[Entry], lists_dir: P) -> Result<Vec<Release>> {
-    let req_release_entries = interpret(&sources_list).chain_err(|| "interpreting sources list")?;
-
-    download_releases(
-        &lists_dir,
-        &req_release_entries
-            .iter()
-            .map(|x| &x.0)
-            .collect::<Vec<&RequestedRelease>>(),
-        &["/usr/share/keyrings/debian-archive-keyring.gpg"],
-    )?;
-
-    Ok(parse_releases(&lists_dir, req_release_entries)?)
+            .collect::<Result<Vec<Release>>>()
+    }
 }
 
 fn mandatory_single_line(data: &HashMap<&str, Vec<&str>>, key: &str) -> Result<String> {
