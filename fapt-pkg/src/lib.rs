@@ -4,7 +4,7 @@ extern crate gpgme;
 extern crate hex;
 extern crate flate2;
 extern crate mailparse;
-extern crate md_5;
+extern crate md5;
 
 #[macro_use]
 extern crate nom;
@@ -36,12 +36,11 @@ pub struct Hashes {
 
 impl fmt::Debug for Hashes {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use hex::ToHex;
         write!(
             f,
             "md5:{} sha256:{}",
-            self.md5.to_hex(),
-            self.sha256.to_hex()
+            hex::encode(self.md5),
+            hex::encode(self.sha256)
         )
     }
 }

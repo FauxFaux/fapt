@@ -7,6 +7,7 @@ use std::io::Write;
 use std::path::Path;
 
 use flate2::bufread::GzDecoder;
+use hex;
 use reqwest::Client;
 use reqwest::Url;
 use tempdir::TempDir;
@@ -46,8 +47,7 @@ pub struct List {
 
 impl List {
     pub fn local_name(&self) -> String {
-        use hex::ToHex;
-        self.decompressed_hashes.sha256.to_hex()
+        hex::encode(self.decompressed_hashes.sha256)
     }
 }
 
