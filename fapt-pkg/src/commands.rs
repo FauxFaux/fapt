@@ -50,7 +50,7 @@ impl System {
             .chain_err(|| "parsing sources entries")?;
 
         requested
-            .download(&self.lists_dir, &self.keyring_paths)
+            .download(&self.lists_dir, &self.keyring_paths, &self.client)
             .chain_err(|| "downloading releases")?;
 
         let releases = requested

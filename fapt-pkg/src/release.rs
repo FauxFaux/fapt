@@ -146,6 +146,7 @@ impl RequestedReleases {
         &self,
         lists_dir: P,
         keyring_paths: &[Q],
+        client: &reqwest::Client,
     ) -> Result<()> {
         let lists_dir = lists_dir.as_ref();
 
@@ -157,7 +158,6 @@ impl RequestedReleases {
             downloads.push(Download::from_to(url, dest));
         }
 
-        let client = reqwest::Client::new();
         fetch(&client, &downloads).chain_err(|| "downloading releases")?;
 
         let mut gpg = GpgClient::new(keyring_paths)?;
