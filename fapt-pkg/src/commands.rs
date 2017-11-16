@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::io;
 use std::path::Path;
@@ -71,7 +72,9 @@ impl System {
 
         for result in lists::walk_all(&releases, &self.lists_dir)? {
             let (release, section) = result?;
-            let map = rfc822::map(&section).chain_err(|| format!("scanning {:?}", release))?;
+            let map: HashMap<&str, String> = rfc822::map(&section).chain_err(|| format!("scanning {:?}", release))?
+                .into_iter().map(|(k, v)| (k, v.join("\n")))
+                .collect();
             serde_json::to_writer(io::stdout(), &map)?;
             println!();
         }
