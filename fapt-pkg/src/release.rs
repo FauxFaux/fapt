@@ -196,6 +196,15 @@ fn mandatory_single_line(data: &HashMap<&str, Vec<&str>>, key: &str) -> Result<S
     )
 }
 
+fn mandatory_whitespace_list(data: &HashMap<&str, Vec<&str>>, key: &str) -> Result<Vec<String>> {
+    Ok(
+        mandatory_single_line(data, key)?
+            .split_whitespace()
+            .map(|x| x.to_string())
+            .collect(),
+    )
+}
+
 pub fn parse_release_file<P: AsRef<Path>>(path: P) -> Result<ReleaseFile> {
     let mut file = String::with_capacity(100 * 1024);
     io::BufReader::new(fs::File::open(path)?).read_to_string(&mut file)?;
@@ -212,9 +221,11 @@ fn parse_release(release: &str) -> Result<ReleaseFile> {
         changelogs: mandatory_single_line(&data, "Changelogs")?,
         date: rfc822::parse_date(&mandatory_single_line(&data, "Date")?)?,
         valid_until: rfc822::parse_date(&mandatory_single_line(&data, "Valid-Until")?)?,
-        acquire_by_hash: true,     // TODO
-        architectures: Vec::new(), // TODO
-        components: Vec::new(),    // TODO
+        acquire_by_hash: mandatory_single_line(&data, "Acquire-By-Hash")
+            .map(|s| "yes" == s)
+            .unwrap_or(false),
+        architectures: mandatory_whitespace_list(&data, "Architectures")?,
+        components: mandatory_whitespace_list(&data, "Components")?,
         description: mandatory_single_line(&data, "Description")?,
         contents: load_contents(&data)?,
     })
