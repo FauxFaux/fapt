@@ -166,45 +166,32 @@ pub fn download_releases<P: AsRef<Path>>(
 
 pub fn parse_releases<P: AsRef<Path>>(
     lists_dir: P,
-    releases: &[&RequestedRelease],
-) -> Result<Vec<ReleaseFile>> {
+    releases: Vec<(RequestedRelease, Vec<Entry>)>,
+) -> Result<Vec<Release>> {
     releases
         .into_iter()
-        .map(|r| parse_release_file(r.verified_path(&lists_dir)))
-        .collect::<Result<Vec<ReleaseFile>>>()
+        .map(|(req, sources_entries)|
+            parse_release_file(req.verified_path(&lists_dir)).map(|file|
+            Release {
+                req, file, sources_entries
+            })
+        )
+        .collect::<Result<Vec<Release>>>()
 }
 
 pub fn load<P: AsRef<Path>>(sources_list: &[Entry], lists_dir: P) -> Result<Vec<Release>> {
     let req_release_entries = interpret(&sources_list).chain_err(|| "interpreting sources list")?;
 
-    let release_files = {
-        let req_releases = req_release_entries
+    download_releases(
+        &lists_dir,
+        &req_release_entries
             .iter()
             .map(|x| &x.0)
-            .collect::<Vec<&RequestedRelease>>();
+            .collect::<Vec<&RequestedRelease>>(),
+        &["/usr/share/keyrings/debian-archive-keyring.gpg"],
+    )?;
 
-        download_releases(
-            &lists_dir,
-            &req_releases,
-            &["/usr/share/keyrings/debian-archive-keyring.gpg"],
-        )?;
-
-        parse_releases(&lists_dir, &req_releases)?
-    };
-
-    Ok(
-        release_files
-            .into_iter()
-            .zip(req_release_entries)
-            .map(|(file, (req, sources_entries))| {
-                Release {
-                    req,
-                    file,
-                    sources_entries,
-                }
-            })
-            .collect(),
-    )
+    Ok(parse_releases(&lists_dir, req_release_entries)?)
 }
 
 fn mandatory_single_line(data: &HashMap<&str, Vec<&str>>, key: &str) -> Result<String> {
