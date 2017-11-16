@@ -41,7 +41,7 @@ pub struct ReleaseFile {
     label: String,
     suite: String,
     codename: String,
-    changelogs: String,
+    changelogs: Option<String>,
     date: i64,
     valid_until: i64,
     pub acquire_by_hash: bool,
@@ -235,7 +235,7 @@ fn parse_release(release: &str) -> Result<ReleaseFile> {
         label: mandatory_single_line(&data, "Label")?,
         suite: mandatory_single_line(&data, "Suite")?,
         codename: mandatory_single_line(&data, "Codename")?,
-        changelogs: mandatory_single_line(&data, "Changelogs")?,
+        changelogs: mandatory_single_line(&data, "Changelogs").ok(),
         date: rfc822::parse_date(&mandatory_single_line(&data, "Date")?)?,
         valid_until: rfc822::parse_date(&mandatory_single_line(&data, "Valid-Until")?)?,
         acquire_by_hash: mandatory_single_line(&data, "Acquire-By-Hash")
