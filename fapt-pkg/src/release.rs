@@ -95,11 +95,15 @@ impl RequestedRelease {
     }
 
     pub fn download_path<P: AsRef<Path>>(&self, lists_dir: P) -> PathBuf {
-        lists_dir.as_ref().join(format!("{}_InRelease", self.filesystem_safe()))
+        lists_dir
+            .as_ref()
+            .join(format!("{}_InRelease", self.filesystem_safe()))
     }
 
     pub fn verified_path<P: AsRef<Path>>(&self, lists_dir: P) -> PathBuf {
-        lists_dir.as_ref().join(format!("{}_Verified", self.filesystem_safe()))
+        lists_dir
+            .as_ref()
+            .join(format!("{}_Verified", self.filesystem_safe()))
     }
 }
 
@@ -134,7 +138,7 @@ pub fn download_releases<P: AsRef<Path>>(
     lists_dir: P,
     releases: &[&RequestedRelease],
     keyring_paths: &[&str],
-) -> Result<Vec<ReleaseFile>> {
+) -> Result<()> {
     let lists_dir = lists_dir.as_ref();
 
     let mut downloads = Vec::with_capacity(releases.len());
@@ -148,8 +152,6 @@ pub fn download_releases<P: AsRef<Path>>(
     let client = reqwest::Client::new();
     fetch(&client, &downloads).chain_err(|| "downloading releases")?;
 
-    let mut ret = Vec::with_capacity(releases.len());
-
     let mut gpg = GpgClient::new(keyring_paths)?;
 
     for release in releases {
@@ -157,27 +159,43 @@ pub fn download_releases<P: AsRef<Path>>(
         let verified = release.verified_path(lists_dir);
         gpg.verify_clearsigned(&downloaded, &verified)
             .chain_err(|| format!("verifying {:?} at {:?}", release, downloaded))?;
-        ret.push(parse_release_file(verified)?);
     }
-    Ok(ret)
+
+    Ok(())
+}
+
+pub fn parse_releases<P: AsRef<Path>>(
+    lists_dir: P,
+    releases: &[&RequestedRelease],
+) -> Result<Vec<ReleaseFile>> {
+    releases
+        .into_iter()
+        .map(|r| parse_release_file(r.verified_path(&lists_dir)))
+        .collect::<Result<Vec<ReleaseFile>>>()
 }
 
 pub fn load<P: AsRef<Path>>(sources_list: &[Entry], lists_dir: P) -> Result<Vec<Release>> {
-    let req_releases = interpret(&sources_list).chain_err(|| "interpreting sources list")?;
+    let req_release_entries = interpret(&sources_list).chain_err(|| "interpreting sources list")?;
 
-    let release_files = download_releases(
-        lists_dir,
-        &req_releases
+    let release_files = {
+        let req_releases = req_release_entries
             .iter()
             .map(|x| &x.0)
-            .collect::<Vec<&RequestedRelease>>(),
-        &["/usr/share/keyrings/debian-archive-keyring.gpg"],
-    )?;
+            .collect::<Vec<&RequestedRelease>>();
+
+        download_releases(
+            &lists_dir,
+            &req_releases,
+            &["/usr/share/keyrings/debian-archive-keyring.gpg"],
+        )?;
+
+        parse_releases(&lists_dir, &req_releases)?
+    };
 
     Ok(
         release_files
             .into_iter()
-            .zip(req_releases)
+            .zip(req_release_entries)
             .map(|(file, (req, sources_entries))| {
                 Release {
                     req,
