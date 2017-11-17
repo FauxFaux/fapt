@@ -14,6 +14,9 @@ extern crate sha2;
 extern crate tempdir;
 extern crate tempfile_fast;
 
+#[cfg(intellij_type_hinting)]
+extern crate error_chain_for_dumb_ides;
+
 use std::fmt;
 
 mod checksum;

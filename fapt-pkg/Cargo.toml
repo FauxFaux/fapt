@@ -20,3 +20,6 @@ tempfile-fast = "0.1"
 [dependencies.digest]
 features = ["std"]
 version = "0.7"
+
+[dev-dependencies.error-chain-for-dumb-ides]
+git = "https://github.com/FauxFaux/error-chain-for-dumb-ides"

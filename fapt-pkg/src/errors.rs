@@ -10,3 +10,6 @@ error_chain!{
         Serde(::serde_json::Error);
     }
 }
+
+#[cfg(intellij_type_hinting)]
+pub use error_chain_for_dumb_ides::stubs::*;
