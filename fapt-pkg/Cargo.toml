@@ -5,6 +5,7 @@ version = "0.1.0"
 
 [dependencies]
 error-chain = "0.11"
+filetime = "0.1"
 flate2 = "0.2"
 gpgme = "0.6"
 hex = "0.3"
@@ -20,6 +21,5 @@ tempfile-fast = "0.1"
 [dependencies.digest]
 features = ["std"]
 version = "0.7"
-
 [dev-dependencies.error-chain-for-dumb-ides]
 git = "https://github.com/FauxFaux/error-chain-for-dumb-ides"

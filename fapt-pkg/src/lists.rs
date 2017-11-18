@@ -193,7 +193,6 @@ pub fn selected_listings(release: &Release) -> Vec<Listing> {
                     })
                 }
             }
-
         }
     }
 

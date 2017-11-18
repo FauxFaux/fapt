@@ -6,6 +6,7 @@ error_chain!{
         ReqwestUrl(::reqwest::UrlError);
         ParseHexError(::hex::FromHexError);
         ParseIntError(::std::num::ParseIntError);
+        ParseSystemTimeError(::std::time::SystemTimeError);
         ParseUtf8Error(::std::string::FromUtf8Error);
         Serde(::serde_json::Error);
     }

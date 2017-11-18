@@ -1,5 +1,6 @@
 #[macro_use]
 extern crate error_chain;
+extern crate filetime;
 extern crate flate2;
 extern crate gpgme;
 extern crate hex;
