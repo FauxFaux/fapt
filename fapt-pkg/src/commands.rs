@@ -70,15 +70,19 @@ impl System {
             .parse(&self.lists_dir)
             .chain_err(|| "parsing releases")?;
 
-        for result in lists::walk_all(&releases, &self.lists_dir)? {
-            let (release, section) = result?;
-            let map: HashMap<&str, String> = rfc822::map(&section)
-                .chain_err(|| format!("scanning {:?}", release))?
-                .into_iter()
-                .map(|(k, v)| (k, v.join("\n")))
-                .collect();
-            serde_json::to_writer(io::stdout(), &map)?;
-            println!();
+        for release in releases {
+            for listing in lists::selected_listings(&release) {
+                for section in lists::sections_in(&release, &listing, &self.lists_dir)? {
+                    let section = section?;
+                    let map: HashMap<&str, String> = rfc822::map(&section)
+                        .chain_err(|| format!("scanning {:?}", release))?
+                        .into_iter()
+                        .map(|(k, v)| (k, v.join("\n")))
+                        .collect();
+                    serde_json::to_writer(io::stdout(), &map)?;
+                    println!();
+                }
+            }
         }
 
         Ok(())

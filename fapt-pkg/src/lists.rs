@@ -77,7 +77,7 @@ pub fn download_files<P: AsRef<Path>>(
 
     let downloads: Vec<fetch::Download> = lists
         .iter()
-        .filter_map(|&(_, ref list)| {
+        .filter_map(|list| {
             let local_name = list.local_name();
 
             if lists_dir.as_ref().join(&local_name).exists() {
@@ -93,7 +93,7 @@ pub fn download_files<P: AsRef<Path>>(
 
     fetch::fetch(client, &downloads).chain_err(|| "downloading listed files")?;
 
-    for (_, list) in lists {
+    for list in lists {
         store_list_item(&list, &temp_dir, &lists_dir)?;
     }
 
@@ -168,7 +168,11 @@ pub fn selected_listings(release: &Release) -> Vec<Listing> {
         for component in &entry.components {
             ret.push(Listing {
                 component: component.to_string(),
-                arch: Some("amd64".to_string()),
+                arch: if entry.src {
+                    None
+                } else {
+                    Some("amd64".to_string())
+                },
                 directory: directory.to_string(),
                 name: name.to_string(),
             })
@@ -178,54 +182,49 @@ pub fn selected_listings(release: &Release) -> Vec<Listing> {
     ret
 }
 
-pub fn extract_downloads(releases: &[Release]) -> Result<Vec<(&Release, DownloadableListing)>> {
-    let mut lists = Vec::new();
-
-    for rel in releases {
-        let dists = rel.req.dists()?;
-
-        for listing in selected_listings(rel) {
-            lists.push((
-                rel,
-                find_file(
-                    &dists,
-                    &rel.file.contents,
-                    rel.file.acquire_by_hash,
-                    &listing,
-                )?,
-            ));
-        }
-    }
-
-    Ok(lists)
+pub fn extract_downloads(releases: &[Release]) -> Result<Vec<DownloadableListing>> {
+    releases
+        .iter()
+        .flat_map(|rel| {
+            selected_listings(rel)
+                .into_iter()
+                .map(|listing| find_file_easy(rel, &listing))
+        })
+        .collect()
 }
 
-pub fn walk_all<'i, P: AsRef<Path> + 'i>(
-    releases: &'i [Release],
+pub fn sections_in<'i, P: AsRef<Path> + 'i>(
+    release: &'i Release,
+    listing: &'i Listing,
     lists_dir: P,
-) -> Result<Box<Iterator<Item = Result<(&'i Release, String)>> + 'i>> {
-    Ok(Box::new(extract_downloads(releases)?.into_iter().flat_map(
-        move |(release, list)| {
-            fs::File::open(lists_dir.as_ref().join(list.local_name()))
-                .chain_err(|| format!("opening {}", list.local_name()))
-                .map(|file| {
-                    rfc822::Section::new(file).map(move |maybe_section| {
-                        maybe_section
-                            .and_then(|block_vec| {
-                                String::from_utf8(block_vec)
-                                    .chain_err(|| "section not valid utf-8")
-                                    .map(|block| (release, block))
-                            }).chain_err(|| format!("scanning section in {}", list.local_name()))
-                    })
-                })
-                // We have a Result<Iterator<Result<T>>
-                // We're in a flatmap, so the return value is Iterator<Result<T>>.
-                // I was hoping .unwrap_or_else(|e| [Err(e)].into_iter()) would work.
-                // But it doesn't, as the type is not map(closure..).
-                // And I couldn't get it it to work with Box, either. That was weirder.
-                .expect("couldn't get the error handling to typecheck, sorry")
-        },
-    )))
+) -> Result<Box<Iterator<Item = Result<String>> + 'i>> {
+    Ok(Box::new(
+        rfc822::Section::new(open_listing(release, listing, lists_dir)?).map(decode_vec),
+    ))
+}
+
+fn decode_vec(from: Result<Vec<u8>>) -> Result<String> {
+    from.and_then(|vec| String::from_utf8(vec).chain_err(|| "decoding string"))
+}
+
+pub fn open_listing<P: AsRef<Path>>(
+    release: &Release,
+    listing: &Listing,
+    lists_dir: P,
+) -> Result<fs::File> {
+    let local_path = lists_dir
+        .as_ref()
+        .join(find_file_easy(release, listing)?.local_name());
+    fs::File::open(&local_path).chain_err(|| format!("Couldn't open {:?}", local_path))
+}
+
+pub fn find_file_easy(release: &Release, listing: &Listing) -> Result<DownloadableListing> {
+    find_file(
+        &release.req.dists()?,
+        &release.file.contents,
+        release.file.acquire_by_hash,
+        &listing,
+    ).chain_err(|| format!("finding {:?} in {:?}", listing, release))
 }
 
 pub fn find_file(
@@ -255,7 +254,7 @@ pub fn find_file(
         }
     }
 
-    let raw_hashes = raw_hashes.ok_or("file not found in release")?;
+    let raw_hashes = raw_hashes.ok_or_else(|| format!("file {:?} not found in release", base))?;
 
     let url = base_url.join(&if acquire_by_hash {
         format!(
