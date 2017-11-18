@@ -47,7 +47,7 @@ pub struct ReleaseFile {
     date: i64,
     valid_until: Option<i64>,
     pub acquire_by_hash: bool,
-    arches: Vec<String>,
+    pub arches: Vec<String>,
     components: Vec<String>,
     description: Option<String>,
     pub contents: Vec<ReleaseContent>,

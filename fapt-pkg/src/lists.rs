@@ -175,6 +175,16 @@ pub fn selected_listings(release: &Release) -> Vec<Listing> {
                 })
             } else {
                 for arch in &release.req.arches {
+                    if !release.file.arches.contains(arch) {
+                        continue;
+                    }
+
+                    if let Some(ref entry_arch) = entry.arch {
+                        if arch != entry_arch {
+                            continue;
+                        }
+                    }
+
                     ret.push(Listing {
                         component: component.to_string(),
                         arch: Some(arch.to_string()),
