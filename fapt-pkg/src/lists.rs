@@ -188,7 +188,7 @@ pub fn extract_downloads(releases: &[Release]) -> Result<Vec<DownloadableListing
         .flat_map(|rel| {
             selected_listings(rel)
                 .into_iter()
-                .map(|listing| find_file_easy(rel, &listing))
+                .map(move |listing| find_file_easy(rel, &listing))
         })
         .collect()
 }
