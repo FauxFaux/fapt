@@ -39,17 +39,30 @@ impl Compression {
 }
 
 #[derive(Debug)]
-pub struct List {
+pub struct DownloadableListing {
     pub url: Url,
     pub codec: Compression,
     pub compressed_hashes: Hashes,
     pub decompressed_hashes: Hashes,
 }
 
-impl List {
+impl DownloadableListing {
     pub fn local_name(&self) -> String {
         hex::encode(self.decompressed_hashes.sha256)
     }
+}
+
+// https://deb.debian.org/debian/dists/unstable/contrib/binary-amd64/Packages.gz
+// arch: Some("amd64"),
+// component: "contrib",
+// directory: "binary",
+// name: "packages"
+#[derive(Debug, Hash, PartialEq, Eq)]
+pub struct Listing {
+    pub component: String,
+    pub arch: Option<String>,
+    pub directory: String,
+    pub name: String,
 }
 
 pub fn download_files<P: AsRef<Path>>(
@@ -57,7 +70,7 @@ pub fn download_files<P: AsRef<Path>>(
     lists_dir: P,
     releases: &[Release],
 ) -> Result<()> {
-    let lists = find_files(releases).chain_err(|| "filtering releases")?;
+    let lists = extract_downloads(releases).chain_err(|| "filtering releases")?;
 
     let temp_dir =
         TempDir::new_in(&lists_dir, ".fapt-lists").chain_err(|| "creating temporary directory")?;
@@ -88,7 +101,7 @@ pub fn download_files<P: AsRef<Path>>(
 }
 
 fn store_list_item<P: AsRef<Path>, Q: AsRef<Path>>(
-    list: &List,
+    list: &DownloadableListing,
     temp_dir: P,
     lists_dir: Q,
 ) -> Result<()> {
@@ -145,41 +158,42 @@ fn decompress_gz<R: Read, F: Read + Write + Seek>(
     Ok(())
 }
 
-pub fn find_files(releases: &[Release]) -> Result<Vec<(&Release, List)>> {
+pub fn selected_listings(release: &Release) -> Vec<Listing> {
+    let mut ret = Vec::new();
+
+    for entry in &release.sources_entries {
+        let directory = if entry.src { "source" } else { "binary" };
+        let name = if entry.src { "Sources" } else { "Packages" };
+
+        for component in &entry.components {
+            ret.push(Listing {
+                component: component.to_string(),
+                arch: Some("amd64".to_string()),
+                directory: directory.to_string(),
+                name: name.to_string(),
+            })
+        }
+    }
+
+    ret
+}
+
+pub fn extract_downloads(releases: &[Release]) -> Result<Vec<(&Release, DownloadableListing)>> {
     let mut lists = Vec::new();
 
     for rel in releases {
-        let &Release {
-            ref req,
-            ref file,
-            ref sources_entries,
-        } = rel;
+        let dists = rel.req.dists()?;
 
-        let dists = req.dists()?;
-
-        for entry in sources_entries {
-            for component in &entry.components {
-                let directory = if entry.src {
-                    "source"
-                } else {
-                    // TODO: arch
-                    "binary-amd64"
-                };
-
-                let name = if entry.src { "Sources" } else { "Packages" };
-
-                lists.push((
-                    rel,
-                    find_file(
-                        &dists,
-                        &file.contents,
-                        file.acquire_by_hash,
-                        component,
-                        directory,
-                        name,
-                    )?,
-                ));
-            }
+        for listing in selected_listings(rel) {
+            lists.push((
+                rel,
+                find_file(
+                    &dists,
+                    &rel.file.contents,
+                    rel.file.acquire_by_hash,
+                    &listing,
+                )?,
+            ));
         }
     }
 
@@ -190,7 +204,7 @@ pub fn walk_all<'i, P: AsRef<Path> + 'i>(
     releases: &'i [Release],
     lists_dir: P,
 ) -> Result<Box<Iterator<Item = Result<(&'i Release, String)>> + 'i>> {
-    Ok(Box::new(find_files(releases)?.into_iter().flat_map(
+    Ok(Box::new(extract_downloads(releases)?.into_iter().flat_map(
         move |(release, list)| {
             fs::File::open(lists_dir.as_ref().join(list.local_name()))
                 .chain_err(|| format!("opening {}", list.local_name()))
@@ -198,10 +212,10 @@ pub fn walk_all<'i, P: AsRef<Path> + 'i>(
                     rfc822::Section::new(file).map(move |maybe_section| {
                         maybe_section
                             .and_then(|block_vec| {
-                            String::from_utf8(block_vec)
-                                .chain_err(|| "section not valid utf-8")
-                                .map(|block| (release, block))
-                        }).chain_err(|| format!("scanning section in {}", list.local_name()))
+                                String::from_utf8(block_vec)
+                                    .chain_err(|| "section not valid utf-8")
+                                    .map(|block| (release, block))
+                            }).chain_err(|| format!("scanning section in {}", list.local_name()))
                     })
                 })
                 // We have a Result<Iterator<Result<T>>
@@ -218,11 +232,16 @@ pub fn find_file(
     base_url: &Url,
     contents: &[ReleaseContent],
     acquire_by_hash: bool,
-    component: &str,
-    directory: &str,
-    name: &str,
-) -> Result<List> {
-    let base = format!("{}/{}/{}", component, directory, name);
+    listing: &Listing,
+) -> Result<DownloadableListing> {
+    let directory = listing
+        .arch
+        .as_ref()
+        .map(|arch| format!("{}-{}", listing.directory, arch))
+        .unwrap_or_else(|| listing.directory.to_string());
+
+    let base = format!("{}/{}/{}", listing.component, directory, listing.name);
+
     let gz_name = format!("{}{}", base, Compression::Gz.suffix());
 
     let mut gz_hashes = None;
@@ -241,7 +260,7 @@ pub fn find_file(
     let url = base_url.join(&if acquire_by_hash {
         format!(
             "{}/{}/by-hash/SHA256/{}",
-            component,
+            listing.component,
             directory,
             hex::encode(gz_hashes.unwrap_or(raw_hashes).sha256)
         )
@@ -249,7 +268,7 @@ pub fn find_file(
         gz_hashes.map(|_| gz_name).unwrap_or(base)
     })?;
 
-    Ok(List {
+    Ok(DownloadableListing {
         url,
         codec: gz_hashes
             .map(|_| Compression::Gz)

@@ -72,8 +72,10 @@ impl System {
 
         for result in lists::walk_all(&releases, &self.lists_dir)? {
             let (release, section) = result?;
-            let map: HashMap<&str, String> = rfc822::map(&section).chain_err(|| format!("scanning {:?}", release))?
-                .into_iter().map(|(k, v)| (k, v.join("\n")))
+            let map: HashMap<&str, String> = rfc822::map(&section)
+                .chain_err(|| format!("scanning {:?}", release))?
+                .into_iter()
+                .map(|(k, v)| (k, v.join("\n")))
                 .collect();
             serde_json::to_writer(io::stdout(), &map)?;
             println!();
