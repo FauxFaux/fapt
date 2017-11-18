@@ -17,6 +17,7 @@ use errors::*;
 pub struct System {
     lists_dir: PathBuf,
     sources_entries: Vec<Entry>,
+    arches: Vec<String>,
     keyring_paths: Vec<PathBuf>,
     client: reqwest::Client,
 }
@@ -28,6 +29,7 @@ impl System {
         Ok(System {
             lists_dir: lists_dir.as_ref().to_path_buf(),
             sources_entries: Vec::new(),
+            arches: Vec::new(),
             keyring_paths: Vec::new(),
             client: reqwest::Client::new(),
         })
@@ -35,6 +37,10 @@ impl System {
 
     pub fn add_sources_entries<I: Iterator<Item = Entry>>(&mut self, entries: I) {
         self.sources_entries.extend(entries);
+    }
+
+    pub fn set_arches(&mut self, arches: &[&str]) {
+        self.arches = arches.iter().map(|x| x.to_string()).collect();
     }
 
     pub fn add_keyring_paths<P: AsRef<Path>, I: Iterator<Item = P>>(
@@ -47,8 +53,9 @@ impl System {
     }
 
     pub fn update(&self) -> Result<()> {
-        let requested = release::RequestedReleases::from_sources_lists(&self.sources_entries)
-            .chain_err(|| "parsing sources entries")?;
+        let requested =
+            release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
+                .chain_err(|| "parsing sources entries")?;
 
         requested
             .download(&self.lists_dir, &self.keyring_paths, &self.client)
@@ -65,10 +72,11 @@ impl System {
     }
 
     pub fn export(&self) -> Result<()> {
-        let releases = release::RequestedReleases::from_sources_lists(&self.sources_entries)
-            .chain_err(|| "parsing sources entries")?
-            .parse(&self.lists_dir)
-            .chain_err(|| "parsing releases")?;
+        let releases =
+            release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
+                .chain_err(|| "parsing sources entries")?
+                .parse(&self.lists_dir)
+                .chain_err(|| "parsing releases")?;
 
         for release in releases {
             for listing in lists::selected_listings(&release) {

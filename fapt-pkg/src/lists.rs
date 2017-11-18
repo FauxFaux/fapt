@@ -166,16 +166,24 @@ pub fn selected_listings(release: &Release) -> Vec<Listing> {
         let name = if entry.src { "Sources" } else { "Packages" };
 
         for component in &entry.components {
-            ret.push(Listing {
-                component: component.to_string(),
-                arch: if entry.src {
-                    None
-                } else {
-                    Some("amd64".to_string())
-                },
-                directory: directory.to_string(),
-                name: name.to_string(),
-            })
+            if entry.src {
+                ret.push(Listing {
+                    component: component.to_string(),
+                    arch: None,
+                    directory: directory.to_string(),
+                    name: name.to_string(),
+                })
+            } else {
+                for arch in &release.req.arches {
+                    ret.push(Listing {
+                        component: component.to_string(),
+                        arch: Some(arch.to_string()),
+                        directory: directory.to_string(),
+                        name: name.to_string(),
+                    })
+                }
+            }
+
         }
     }
 

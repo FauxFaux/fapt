@@ -33,6 +33,8 @@ pub struct RequestedRelease {
     /// This can also be called "suite" in some places,
     /// e.g. "unstable" (suite) == "sid" (codename)
     codename: String,
+
+    pub arches: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -45,7 +47,7 @@ pub struct ReleaseFile {
     date: i64,
     valid_until: Option<i64>,
     pub acquire_by_hash: bool,
-    architectures: Vec<String>,
+    arches: Vec<String>,
     components: Vec<String>,
     description: Option<String>,
     pub contents: Vec<ReleaseContent>,
@@ -117,7 +119,10 @@ impl RequestedReleases {
     ///  * fetching some "Release" (e.g. `deb.debian.org/debian sid`) files,
     ///  * whitelisting some of its "components" (`main`, `contrib`, `non-free`),
     ///  * and specifying the types of thing to pick from it (`deb`, `deb-src`).
-    pub fn from_sources_lists(sources_list: &[Entry]) -> Result<RequestedReleases> {
+    pub fn from_sources_lists(
+        sources_list: &[Entry],
+        arches: &[String],
+    ) -> Result<RequestedReleases> {
         let mut ret = HashMap::with_capacity(sources_list.len() / 2);
 
         for entry in sources_list {
@@ -129,6 +134,7 @@ impl RequestedReleases {
             match ret.entry(RequestedRelease {
                 mirror: Url::parse(&entry.url)?,
                 codename: entry.suite_codename.to_string(),
+                arches: arches.to_vec(),
             }) {
                 hash_map::Entry::Vacant(vacancy) => {
                     vacancy.insert(vec![entry.clone()]);
@@ -243,7 +249,7 @@ fn parse_release(release: &str) -> Result<ReleaseFile> {
         acquire_by_hash: mandatory_single_line(&data, "Acquire-By-Hash")
             .map(|s| "yes" == s)
             .unwrap_or(false),
-        architectures: mandatory_whitespace_list(&data, "Architectures")?,
+        arches: mandatory_whitespace_list(&data, "Architectures")?,
         components: mandatory_whitespace_list(&data, "Components")?,
         description: mandatory_single_line(&data, "Description").ok(),
         contents: load_contents(&data)?,

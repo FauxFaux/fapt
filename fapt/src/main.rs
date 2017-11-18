@@ -57,6 +57,15 @@ fn run() -> Result<()> {
                     " e.g. http://deb.debian.org/debian#sid,main,contrib,non-free"
                 )),
         )
+        .arg(
+            Arg::with_name("arch")
+                .long("arch")
+                .short("a")
+                .value_name("ARCH")
+                .multiple(true)
+                .number_of_values(1)
+                .help("an explicit arch (e.g. 'amd64'); the first provided will be the 'primary'"),
+        )
         .subcommand(
             SubCommand::with_name("update").help("just fetch necessary data for specified sources"),
         )
@@ -122,11 +131,16 @@ fn run() -> Result<()> {
                     url: url.to_string(),
                     suite_codename: suite_codename.to_string(),
                     components: parts.iter().map(|x| x.to_string()).collect(),
-                    arch: Some("amd64".to_string()),
+                    arch: None,
                 });
             }
         }
     }
+
+    let arches = match matches.values_of("arch") {
+        Some(arches) => arches.collect(),
+        None => vec!["amd64"],
+    };
 
     if sources_entries.is_empty() {
         bail!(concat!(
@@ -142,6 +156,8 @@ fn run() -> Result<()> {
             system.add_keyring_paths(expand_dot_d(keyring)?.into_iter())?;
         }
     }
+
+    system.set_arches(&arches);
 
     match matches.subcommand() {
         ("export", Some(_)) => {
