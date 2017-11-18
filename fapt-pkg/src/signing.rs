@@ -79,7 +79,7 @@ impl GpgClient {
             fs::File::open(file.as_ref()).chain_err(|| "opening input file")?,
         )?;
         validate_signature(&result)?;
-        fs::rename(file, dest)?;
+        fs::copy(file, dest)?;
         Ok(())
     }
 }
