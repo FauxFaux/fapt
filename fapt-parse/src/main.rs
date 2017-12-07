@@ -160,8 +160,7 @@ fn to_map<'a>(reader: capnp::struct_list::Reader<entry::Owned>) -> Result<HashMa
 
 fn fill_identity<'a, F>(value: Option<&str>, into: F) -> Result<()>
 where
-    F: FnOnce(u32)
-        -> capnp::struct_list::Builder<'a, identity::Owned>,
+    F: FnOnce(u32) -> capnp::struct_list::Builder<'a, identity::Owned>,
 {
     if value.is_none() {
         return Ok(());
@@ -200,8 +199,7 @@ fn parse_priority(string: &str) -> Result<Priority> {
 
 fn fill_dep<'a, F>(map: &mut HashMap<&str, &str>, key: &str, init: F) -> Result<()>
 where
-    F: FnOnce(u32)
-        -> capnp::struct_list::Builder<'a, dependency::Owned>,
+    F: FnOnce(u32) -> capnp::struct_list::Builder<'a, dependency::Owned>,
 {
     match map.remove(key) {
         Some(raw) => fill_dep_in(raw, init).chain_err(|| format!("parsing {}", key)),
@@ -211,8 +209,7 @@ where
 
 fn fill_dep_in<'a, F>(raw: &str, init: F) -> Result<()>
 where
-    F: FnOnce(u32)
-        -> capnp::struct_list::Builder<'a, dependency::Owned>,
+    F: FnOnce(u32) -> capnp::struct_list::Builder<'a, dependency::Owned>,
 {
     let read = deps::read(raw)?;
 
