@@ -110,27 +110,31 @@ fn run() -> Result<()> {
         }
     }
 
-    if let Some(urls) = matches.values_of("release-url") {
-        for url in urls {
-            let octothorpe = url.find('#')
-                .ok_or_else(|| format!("url must contain octothorpe: {:?}", url))?;
-            let (url, extras) = url.split_at(octothorpe);
-            let mut parts: Vec<&str> = extras[1..].split(',').collect();
-
+    if let Some(lines) = matches.values_of("release-url") {
+        for line in lines {
+            let tokens: Vec<&str> = line.split_whitespace().collect();
             ensure!(
-                parts.len() > 1,
-                "at least one component must be specified: {:?}",
-                url
+                tokens.len() >= 3,
+                "{:?} not in format: deb|deb-src|debs URL SUITE|CODENAME [component..]",
+                line
             );
 
-            let suite_codename = parts.remove(0);
+            let src: &[bool] = match tokens[0] {
+                "deb" => &[false],
+                "deb-src" => &[true],
+                "debs" => &[false, true],
+                _ => bail!("expected deb|deb-src|debs in {:?}", line),
+            };
 
-            for src in &[false, true] {
+            let url = tokens[1];
+            let suite_codename = tokens[2];
+
+            for src in src {
                 sources_entries.push(classic_sources_list::Entry {
                     src: *src,
                     url: url.to_string(),
                     suite_codename: suite_codename.to_string(),
-                    components: parts.iter().map(|x| x.to_string()).collect(),
+                    components: tokens[3..].into_iter().map(|s| s.to_string()).collect(),
                     arch: None,
                 });
             }
