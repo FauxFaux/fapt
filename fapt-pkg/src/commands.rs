@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::env;
 use std::fs;
 use std::io;
 use std::path::Path;
@@ -26,12 +27,18 @@ impl System {
     pub fn cache_dirs_only<P: AsRef<Path>>(lists_dir: P) -> Result<Self> {
         fs::create_dir_all(lists_dir.as_ref())?;
 
+        let client = if let Ok(proxy) = env::var("http_proxy") {
+            reqwest::Client::builder().proxy(reqwest::Proxy::http(&proxy)?).build()?
+        } else {
+            reqwest::Client::new()
+        };
+
         Ok(System {
             lists_dir: lists_dir.as_ref().to_path_buf(),
             sources_entries: Vec::new(),
             arches: Vec::new(),
             keyring_paths: Vec::new(),
-            client: reqwest::Client::new(),
+            client,
         })
     }
 
