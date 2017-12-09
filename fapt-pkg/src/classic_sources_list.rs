@@ -6,12 +6,6 @@ use std::path;
 
 use std::io::BufRead;
 
-enum Style {
-    Deb,
-    DebSrc,
-    Both,
-}
-
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Entry {
     pub src: bool,
@@ -21,88 +15,63 @@ pub struct Entry {
     pub arch: Option<String>,
 }
 
-fn line_space(c: char) -> bool {
-    ' ' == c || '\t' == c
-}
-
-fn dist_component_char(c: char) -> bool {
-    c.is_alphanumeric() || '-' == c
-}
-
-named!(deb_or_src<&str, Style>, alt!(
-    tag!("deb-src") => { |_| Style::DebSrc } |
-    tag!("deb") => { |_| Style::Deb } |
-    tag!("debs") => { |_| Style::Both }
-));
-
-named!(url<&str, &str>, take_till1_s!(line_space));
-named!(word<&str, &str>, take_while1_s!(dist_component_char));
-named!(spaces<&str, &str>, take_while1_s!(line_space));
-
-named!(arch<&str, &str>,
-    delimited!(
-        tag!("[arch="),
-        word,
-        tag!("]")
-    ));
-
-named!(single_line<&str, Vec<Entry>>, do_parse!(
-    src: deb_or_src >>
-    arch: opt!(preceded!(spaces, arch)) >>
-    spaces >>
-    url: url >>
-    spaces >>
-    suite: word >>
-    components: many1!(preceded!(spaces, word)) >>
-    ({
-        let srcs: &[bool] = match src {
-            Style::Deb => &[false],
-            Style::DebSrc => &[true],
-            Style::Both => &[false, true],
-        };
-
-        let mut ret = Vec::with_capacity(srcs.len());
-
-        for src in srcs {
-            ret.push(Entry {
-                src: *src,
-                url: if url.ends_with('/') { url.to_string() } else { format!("{}/", url) },
-                suite_codename: suite.to_string(),
-                components: components.iter().map(|x| x.to_string()).collect(),
-                arch: arch.map(|arch| arch.to_string())
-            });
-        }
-
-        ret
-     })
-));
-
-fn read_single_line(line: &str) -> Option<Result<Vec<Entry>>> {
+fn read_single_line(line: &str) -> Result<Vec<Entry>> {
     let line = match line.find('#') {
         Some(comment) => &line[..comment],
         None => line,
     }.trim();
 
     if line.is_empty() {
-        return None;
+        return Ok(Vec::new());
     }
 
-    use nom::IResult::*;
-    Some(match single_line(line) {
-        Done("", en) => Ok(en),
-        Done(trailing, _) => Err(format!("trailing garbage: {:?}", trailing).into()),
-        other => Err(format!("other error: {:?}", other).into()),
-    })
+    let mut parts = line.split_whitespace().peekable();
+
+    let src = parts.next().ok_or("deb{,s,-src} section required")?;
+    let arch = match parts.peek() {
+        Some(&val) if val.starts_with("[") => {
+            parts.next();
+            Some(val)
+        },
+        Some(_) => None,
+        None => bail!("unexpected end of line looking for arch or url"),
+    };
+
+    let url = parts.next().ok_or("url section required")?;
+    let suite = parts.next().ok_or("suite section required")?;
+
+    let components: Vec<&str> = parts.collect();
+
+    let srcs: &[bool] = match src {
+        "deb" => &[false],
+        "deb-src" => &[true],
+        "debs" => &[false, true],
+        other => bail!("unsupported deb-src tag: {:?}", other),
+    };
+
+    let mut ret = Vec::with_capacity(srcs.len());
+
+    for src in srcs {
+        ret.push(Entry {
+            src: *src,
+            url: if url.ends_with('/') { url.to_string() } else { format!("{}/", url) },
+            suite_codename: suite.to_string(),
+            components: components.iter().map(|x| x.to_string()).collect(),
+            arch: arch.map(|arch| arch.to_string())
+        });
+    }
+
+    Ok(ret)
 }
 
-fn read_single_line_number(line: &str, no: usize) -> Option<Result<Vec<Entry>>> {
-    read_single_line(line).map(|r| r.chain_err(|| format!("parsing line {}", no + 1)))
+fn read_single_line_number(line: &str, no: usize) -> Result<Vec<Entry>> {
+    read_single_line(line).chain_err(|| format!("parsing line {}", no + 1))
 }
 
 pub fn read(from: &str) -> Result<Vec<Entry>> {
     from.lines()
         .enumerate()
-        .flat_map(|(no, line)| read_single_line_number(line, no))
+        .map(|(no, line)| read_single_line_number(line, no))
         .collect::<Result<Vec<Vec<Entry>>>>()
         .map(|vec_vec| vec_vec.into_iter().flat_map(|x| x).collect())
 }
@@ -111,11 +80,11 @@ pub fn load<P: AsRef<path::Path>>(path: P) -> Result<Vec<Entry>> {
     io::BufReader::new(fs::File::open(path)?)
         .lines()
         .enumerate()
-        .flat_map(|(no, line)| match line {
+        .map(|(no, line)| match line {
             Ok(line) => read_single_line_number(&line, no),
-            Err(e) => Some(Err(
+            Err(e) => Err(
                 Error::with_chain(e, format!("reading around line {}", no)),
-            )),
+            ),
         })
         .collect::<Result<Vec<Vec<Entry>>>>()
         .map(|vec_vec| vec_vec.into_iter().flat_map(|x| x).collect())
@@ -132,12 +101,14 @@ mod tests {
             vec![
                 Entry {
                     src: false,
+                    arch: None,
                     url: "http://foo/".to_string(),
                     suite_codename: "bar".to_string(),
                     components: vec!["baz".to_string(), "quux".to_string()],
                 },
                 Entry {
                     src: true,
+                    arch: None,
                     url: "http://foo/".to_string(),
                     suite_codename: "bar".to_string(),
                     components: vec!["baz".to_string(), "quux".to_string()],
