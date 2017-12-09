@@ -112,32 +112,16 @@ fn run() -> Result<()> {
 
     if let Some(lines) = matches.values_of("release-url") {
         for line in lines {
-            let tokens: Vec<&str> = line.split_whitespace().collect();
+            let entries = classic_sources_list::read(line)
+                .chain_err(|| format!("parsing command line: {:?}", line))?;
+
             ensure!(
-                tokens.len() >= 3,
-                "{:?} not in format: deb|deb-src|debs URL SUITE|CODENAME [component..]",
+                !entries.is_empty(),
+                "{:?} resulted in no valid entries",
                 line
             );
 
-            let src: &[bool] = match tokens[0] {
-                "deb" => &[false],
-                "deb-src" => &[true],
-                "debs" => &[false, true],
-                _ => bail!("expected deb|deb-src|debs in {:?}", line),
-            };
-
-            let url = tokens[1];
-            let suite_codename = tokens[2];
-
-            for src in src {
-                sources_entries.push(classic_sources_list::Entry {
-                    src: *src,
-                    url: url.to_string(),
-                    suite_codename: suite_codename.to_string(),
-                    components: tokens[3..].into_iter().map(|s| s.to_string()).collect(),
-                    arch: None,
-                });
-            }
+            sources_entries.extend(entries);
         }
     }
 

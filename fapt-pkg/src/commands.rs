@@ -28,7 +28,9 @@ impl System {
         fs::create_dir_all(lists_dir.as_ref())?;
 
         let client = if let Ok(proxy) = env::var("http_proxy") {
-            reqwest::Client::builder().proxy(reqwest::Proxy::http(&proxy)?).build()?
+            reqwest::Client::builder()
+                .proxy(reqwest::Proxy::http(&proxy)?)
+                .build()?
         } else {
             reqwest::Client::new()
         };

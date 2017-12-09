@@ -6,6 +6,12 @@ use std::path;
 
 use std::io::BufRead;
 
+enum Style {
+    Deb,
+    DebSrc,
+    Both,
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Entry {
     pub src: bool,
@@ -23,9 +29,10 @@ fn dist_component_char(c: char) -> bool {
     c.is_alphanumeric() || '-' == c
 }
 
-named!(deb_or_src<&str, bool>, alt!(
-    tag!("deb-src") => { |_| true } |
-    tag!("deb") => { |_| false }
+named!(deb_or_src<&str, Style>, alt!(
+    tag!("deb-src") => { |_| Style::DebSrc } |
+    tag!("deb") => { |_| Style::Deb } |
+    tag!("debs") => { |_| Style::Both }
 ));
 
 named!(url<&str, &str>, take_till1_s!(line_space));
@@ -39,7 +46,7 @@ named!(arch<&str, &str>,
         tag!("]")
     ));
 
-named!(single_line<&str, Entry>, do_parse!(
+named!(single_line<&str, Vec<Entry>>, do_parse!(
     src: deb_or_src >>
     arch: opt!(preceded!(spaces, arch)) >>
     spaces >>
@@ -47,16 +54,30 @@ named!(single_line<&str, Entry>, do_parse!(
     spaces >>
     suite: word >>
     components: many1!(preceded!(spaces, word)) >>
-    ( Entry {
-        src,
-        url: if url.ends_with('/') { url.to_string() } else { format!("{}/", url) },
-        suite_codename: suite.to_string(),
-        components: components.into_iter().map(|x| x.to_string()).collect(),
-        arch: arch.map(|arch| arch.to_string()),
-     } )
+    ({
+        let srcs: &[bool] = match src {
+            Style::Deb => &[false],
+            Style::DebSrc => &[true],
+            Style::Both => &[false, true],
+        };
+
+        let mut ret = Vec::with_capacity(srcs.len());
+
+        for src in srcs {
+            ret.push(Entry {
+                src: *src,
+                url: if url.ends_with('/') { url.to_string() } else { format!("{}/", url) },
+                suite_codename: suite.to_string(),
+                components: components.iter().map(|x| x.to_string()).collect(),
+                arch: arch.map(|arch| arch.to_string())
+            });
+        }
+
+        ret
+     })
 ));
 
-fn read_single_line(line: &str) -> Option<Result<Entry>> {
+fn read_single_line(line: &str) -> Option<Result<Vec<Entry>>> {
     let line = match line.find('#') {
         Some(comment) => &line[..comment],
         None => line,
@@ -74,7 +95,7 @@ fn read_single_line(line: &str) -> Option<Result<Entry>> {
     })
 }
 
-fn read_single_line_number(line: &str, no: usize) -> Option<Result<Entry>> {
+fn read_single_line_number(line: &str, no: usize) -> Option<Result<Vec<Entry>>> {
     read_single_line(line).map(|r| r.chain_err(|| format!("parsing line {}", no + 1)))
 }
 
@@ -82,7 +103,8 @@ pub fn read(from: &str) -> Result<Vec<Entry>> {
     from.lines()
         .enumerate()
         .flat_map(|(no, line)| read_single_line_number(line, no))
-        .collect()
+        .collect::<Result<Vec<Vec<Entry>>>>()
+        .map(|vec_vec| vec_vec.into_iter().flat_map(|x| x).collect())
 }
 
 pub fn load<P: AsRef<path::Path>>(path: P) -> Result<Vec<Entry>> {
@@ -95,7 +117,8 @@ pub fn load<P: AsRef<path::Path>>(path: P) -> Result<Vec<Entry>> {
                 Error::with_chain(e, format!("reading around line {}", no)),
             )),
         })
-        .collect()
+        .collect::<Result<Vec<Vec<Entry>>>>()
+        .map(|vec_vec| vec_vec.into_iter().flat_map(|x| x).collect())
 }
 
 #[cfg(test)]
