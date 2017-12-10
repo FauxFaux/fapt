@@ -273,7 +273,7 @@ fn load_contents(data: &HashMap<&str, Vec<&str>>) -> Result<Vec<ReleaseContent>>
             if let Some(hash) = md5s.get(&key) {
                 let v = Vec::from_hex(hash)?;
                 ensure!(
-                    16 == v.len(),
+                    md5.len() == v.len(),
                     "a md5 checksum isn't the right length? {}",
                     hash
                 );
@@ -284,7 +284,7 @@ fn load_contents(data: &HashMap<&str, Vec<&str>>) -> Result<Vec<ReleaseContent>>
         {
             let v = Vec::from_hex(hash)?;
             ensure!(
-                32 == v.len(),
+                sha256.len() == v.len(),
                 "a sha256 checksum isn't the right length? {}",
                 hash
             );
