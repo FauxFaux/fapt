@@ -212,20 +212,16 @@ impl RequestedReleases {
 }
 
 fn mandatory_single_line(data: &HashMap<&str, Vec<&str>>, key: &str) -> Result<String> {
-    Ok(
-        data.get(key)
-            .ok_or_else(|| format!("{} is mandatory", key))?
-            .join(" "),
-    )
+    Ok(data.get(key)
+        .ok_or_else(|| format!("{} is mandatory", key))?
+        .join(" "))
 }
 
 fn mandatory_whitespace_list(data: &HashMap<&str, Vec<&str>>, key: &str) -> Result<Vec<String>> {
-    Ok(
-        mandatory_single_line(data, key)?
-            .split_whitespace()
-            .map(|x| x.to_string())
-            .collect(),
-    )
+    Ok(mandatory_single_line(data, key)?
+        .split_whitespace()
+        .map(|x| x.to_string())
+        .collect())
 }
 
 pub fn parse_release_file<P: AsRef<Path>>(path: P) -> Result<ReleaseFile> {

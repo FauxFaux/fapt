@@ -75,11 +75,9 @@ pub fn populate<'a>(
 
     vcs::extract(map, &mut output.borrow())?;
 
-    fill_dep(
-        map,
-        "Build-Depends",
-        |len| output.borrow().init_build_dep(len),
-    )?;
+    fill_dep(map, "Build-Depends", |len| {
+        output.borrow().init_build_dep(len)
+    })?;
 
     fill_dep(map, "Build-Depends-Arch", |len| {
         output.borrow().init_build_dep_arch(len)

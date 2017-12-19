@@ -122,9 +122,8 @@ fn store_list_item<P: AsRef<Path>, Q: AsRef<Path>>(
         Compression::None => fs::rename(temp_path, destination_path)?,
         Compression::Gz => {
             temp.seek(SeekFrom::Start(0))?;
-            let mut uncompressed_temp = persistable_tempfile_in(&lists_dir).chain_err(|| {
-                format!("making temporary file in {:?}", lists_dir.as_ref())
-            })?;
+            let mut uncompressed_temp = persistable_tempfile_in(&lists_dir)
+                .chain_err(|| format!("making temporary file in {:?}", lists_dir.as_ref()))?;
 
             decompress_gz(temp, uncompressed_temp.as_mut(), list.decompressed_hashes)
                 .chain_err(|| format!("decomressing {:?}", temp_path))?;

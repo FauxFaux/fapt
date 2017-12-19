@@ -36,9 +36,8 @@ pub fn fetch(client: &reqwest::Client, downloads: &[Download]) -> Result<()> {
     for download in downloads {
         write!(io::stderr(), "Downloading: {} ... ", download.from)?;
         io::stderr().flush()?;
-        fetch_single(client, download).chain_err(|| {
-            format!("downloading {} to {:?}", download.from, download.to)
-        })?;
+        fetch_single(client, download)
+            .chain_err(|| format!("downloading {} to {:?}", download.from, download.to))?;
     }
 
     Ok(())

@@ -65,21 +65,17 @@ pub fn populate<'a>(
 
     fill_dep(map, "Depends", |len| output.borrow().init_depends(len))?;
 
-    fill_dep(
-        map,
-        "Recommends",
-        |len| output.borrow().init_recommends(len),
-    )?;
+    fill_dep(map, "Recommends", |len| {
+        output.borrow().init_recommends(len)
+    })?;
 
     fill_dep(map, "Suggests", |len| output.borrow().init_suggests(len))?;
 
     fill_dep(map, "Enhances", |len| output.borrow().init_enhances(len))?;
 
-    fill_dep(
-        map,
-        "Pre-Depends",
-        |len| output.borrow().init_pre_depends(len),
-    )?;
+    fill_dep(map, "Pre-Depends", |len| {
+        output.borrow().init_pre_depends(len)
+    })?;
 
     fill_dep(map, "Breaks", |len| output.borrow().init_breaks(len))?;
 

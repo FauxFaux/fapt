@@ -32,7 +32,7 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>> {
         Some(&val) if val.starts_with("[") => {
             parts.next();
             Some(val)
-        },
+        }
         Some(_) => None,
         None => bail!("unexpected end of line looking for arch or url"),
     };
@@ -54,10 +54,14 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>> {
     for src in srcs {
         ret.push(Entry {
             src: *src,
-            url: if url.ends_with('/') { url.to_string() } else { format!("{}/", url) },
+            url: if url.ends_with('/') {
+                url.to_string()
+            } else {
+                format!("{}/", url)
+            },
             suite_codename: suite.to_string(),
             components: components.iter().map(|x| x.to_string()).collect(),
-            arch: arch.map(|arch| arch.to_string())
+            arch: arch.map(|arch| arch.to_string()),
         });
     }
 
@@ -82,9 +86,7 @@ pub fn load<P: AsRef<path::Path>>(path: P) -> Result<Vec<Entry>> {
         .enumerate()
         .map(|(no, line)| match line {
             Ok(line) => read_single_line_number(&line, no),
-            Err(e) => Err(
-                Error::with_chain(e, format!("reading around line {}", no)),
-            ),
+            Err(e) => Err(Error::with_chain(e, format!("reading around line {}", no))),
         })
         .collect::<Result<Vec<Vec<Entry>>>>()
         .map(|vec_vec| vec_vec.into_iter().flat_map(|x| x).collect())
