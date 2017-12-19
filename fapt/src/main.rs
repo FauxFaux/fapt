@@ -75,6 +75,9 @@ fn run() -> Result<()> {
                 .arg(Arg::with_name("format").short("f").value_name("FORMAT")),
         )
         .subcommand(
+            SubCommand::with_name("source-ninja").help("dump out all source packages as ninja"),
+        )
+        .subcommand(
             SubCommand::with_name("yaml")
                 .help("who knows what this could be")
                 .setting(AppSettings::SubcommandRequired)
@@ -150,6 +153,9 @@ fn run() -> Result<()> {
     match matches.subcommand() {
         ("export", Some(_)) => {
             system.export()?;
+        }
+        ("source-ninja", Some(_)) => {
+            system.source_ninja()?;
         }
         ("update", _) => {
             system.update()?;

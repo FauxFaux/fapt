@@ -104,4 +104,45 @@ impl System {
 
         Ok(())
     }
+
+    pub fn source_ninja(&self) -> Result<()> {
+        let entries: Vec<Entry> = self.sources_entries
+            .iter()
+            .filter(|entry| entry.src)
+            .cloned()
+            .collect();
+        let releases = release::RequestedReleases::from_sources_lists(&entries, &self.arches)
+            .chain_err(|| "parsing sources entries")?
+            .parse(&self.lists_dir)
+            .chain_err(|| "parsing releases")?;
+
+        for release in releases {
+            for listing in lists::selected_listings(&release) {
+                for section in lists::sections_in(&release, &listing, &self.lists_dir)? {
+                    let section = section?;
+                    let map =
+                        rfc822::map(&section).chain_err(|| format!("scanning {:?}", release))?;
+
+                    println!(
+                        concat!(
+                            "build $dest/{0}_{1}$suffix:  $job $\n",
+                            "   {0} {1}\n",
+                            "    $mirror/{2}/{0}_{1}.dsc\n",
+                            "    | $script"
+                        ),
+                        one_line(&map["Package"])?,
+                        one_line(&map["Version"])?,
+                        one_line(&map["Directory"])?,
+                    );
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+fn one_line<'a>(lines: &[&'a str]) -> Result<&'a str> {
+    ensure!(1 == lines.len(), "{:?} isn't exactly one line", lines);
+    Ok(lines[0])
 }
