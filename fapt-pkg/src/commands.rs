@@ -122,18 +122,7 @@ impl System {
                     let section = section?;
                     let map =
                         rfc822::map(&section).chain_err(|| format!("scanning {:?}", release))?;
-
-                    println!(
-                        concat!(
-                            "build $dest/{0}_{1}$suffix:  $job $\n",
-                            "   {0} {1}\n",
-                            "    $mirror/{2}/{0}_{1}.dsc\n",
-                            "    | $script"
-                        ),
-                        one_line(&map["Package"])?,
-                        one_line(&map["Version"])?,
-                        one_line(&map["Directory"])?,
-                    );
+                    print(&map)?;
                 }
             }
         }
@@ -145,4 +134,52 @@ impl System {
 fn one_line<'a>(lines: &[&'a str]) -> Result<&'a str> {
     ensure!(1 == lines.len(), "{:?} isn't exactly one line", lines);
     Ok(lines[0])
+}
+
+// Sigh, I've already written this.
+fn subdir(name: &str) -> &str {
+    if name.starts_with("lib") {
+        &name[..4]
+    } else {
+        &name[..1]
+    }
+}
+
+fn print(map: &HashMap<&str, Vec<&str>>) -> Result<()> {
+    let pkg = one_line(&map["Package"])?;
+    let version = one_line(&map["Version"])?.replace(':', "$:");
+    let dir = one_line(&map["Directory"])?;
+
+    let dsc = map["Files"]
+        .iter()
+        .filter(|line| line.ends_with(".dsc"))
+        .next()
+        .unwrap()
+        .split_whitespace()
+        .nth(2)
+        .unwrap();
+
+    let size: u64 = map["Files"]
+        .iter()
+        .map(|line| {
+            let num: &str = line.split_whitespace().nth(1).unwrap();
+            let num: u64 = num.parse().unwrap();
+            num
+        })
+        .sum();
+
+    println!(
+        "build $dest/{}/{}_{}$suffix: process-source | $script",
+        subdir(pkg),
+        pkg,
+        version
+    );
+
+    println!("  description = PS {} {}", pkg, version);
+    println!("  pkg = {}", pkg);
+    println!("  version = {}", version);
+    println!("  url = $mirror/{}/{}", dir, dsc);
+    println!("  size = {}", size);
+
+    Ok(())
 }
