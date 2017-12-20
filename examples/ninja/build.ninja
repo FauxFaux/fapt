@@ -1,0 +1,10 @@
+mirror = http://urika:3142/debian
+dest = /var/tmp/a
+suffix =
+script = ./with-download.sh
+
+rule process-source
+    command = $script $url $out
+
+include sid-main.ninja
+
