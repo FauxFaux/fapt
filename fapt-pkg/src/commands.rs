@@ -168,18 +168,23 @@ fn print(map: &HashMap<&str, Vec<&str>>) -> Result<()> {
         })
         .sum();
 
-    println!(
-        "build $dest/{}/{}_{}$suffix: process-source | $script",
-        subdir(pkg),
-        pkg,
-        version
-    );
+    let prefix = format!("{}/{}_{}", subdir(pkg), pkg, version);
+
+    println!("build $dest/{}$suffix: process-source | $script", prefix);
 
     println!("  description = PS {} {}", pkg, version);
     println!("  pkg = {}", pkg);
     println!("  version = {}", version);
     println!("  url = $mirror/{}/{}", dir, dsc);
+    println!("  prefix = {}", prefix);
     println!("  size = {}", size);
+    if size > 250 * 1024 * 1024 {
+        // ~20 packages
+        println!("  pool = massive")
+    } else if size > 100 * 1024 * 1024 {
+        // <1%
+        println!("  pool = big")
+    }
 
     Ok(())
 }

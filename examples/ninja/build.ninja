@@ -1,10 +1,16 @@
 mirror = http://urika:3142/debian
-dest = /var/tmp/a
-suffix =
+dest = /var/tmp/debdirs
+suffix = /debian.log
 script = ./with-download.sh
 
+pool big
+    depth = 2
+
+pool massive
+    depth = 1
+
 rule process-source
-    command = $script $url $out
+    command = $script $url $dest/$prefix
 
 include sid-main.ninja
 
