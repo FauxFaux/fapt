@@ -106,15 +106,11 @@ impl System {
     }
 
     pub fn source_ninja(&self) -> Result<()> {
-        let entries: Vec<Entry> = self.sources_entries
-            .iter()
-            .filter(|entry| entry.src)
-            .cloned()
-            .collect();
-        let releases = release::RequestedReleases::from_sources_lists(&entries, &self.arches)
-            .chain_err(|| "parsing sources entries")?
-            .parse(&self.lists_dir)
-            .chain_err(|| "parsing releases")?;
+        let releases =
+            release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
+                .chain_err(|| "parsing sources entries")?
+                .parse(&self.lists_dir)
+                .chain_err(|| "parsing releases")?;
 
         for release in releases {
             for listing in lists::selected_listings(&release) {
@@ -122,7 +118,11 @@ impl System {
                     let section = section?;
                     let map =
                         rfc822::map(&section).chain_err(|| format!("scanning {:?}", release))?;
-                    print(&map)?;
+                    if map.contains_key("Files") {
+                        print_ninja_source(&map)?;
+                    } else {
+                        print_ninja_binary(&map)?;
+                    }
                 }
             }
         }
@@ -145,7 +145,7 @@ fn subdir(name: &str) -> &str {
     }
 }
 
-fn print(map: &HashMap<&str, Vec<&str>>) -> Result<()> {
+fn print_ninja_source(map: &HashMap<&str, Vec<&str>>) -> Result<()> {
     let pkg = one_line(&map["Package"])?;
     let version = one_line(&map["Version"])?.replace(':', "$:");
     let dir = one_line(&map["Directory"])?;
@@ -183,6 +183,32 @@ fn print(map: &HashMap<&str, Vec<&str>>) -> Result<()> {
         println!("  pool = massive")
     } else if size > 100 * 1024 * 1024 {
         // <1%
+        println!("  pool = big")
+    }
+
+    Ok(())
+}
+
+fn print_ninja_binary(map: &HashMap<&str, Vec<&str>>) -> Result<()> {
+    let pkg = one_line(&map["Package"])?;
+    let arch = one_line(&map["Architecture"])?;
+    let version = one_line(&map["Version"])?.replace(':', "$:");
+    let filename = one_line(&map["Filename"])?;
+    let size: u64 = one_line(&map["Size"])?.parse()?;
+
+    let prefix = format!("{}/{}_{}", subdir(pkg), pkg, version);
+
+    println!("build $dest/{}$suffix: process-binary | $script", prefix);
+    println!("  description = PB {} {} {}", pkg, version, arch);
+    println!("  pkg = {}", pkg);
+    println!("  version = {}", version);
+    println!("  arch = {}", arch);
+    println!("  url = $mirror/{}", filename);
+    println!("  prefix = {}", prefix);
+
+    if size > 250 * 1024 * 1024 {
+        println!("  pool = massive")
+    } else if size > 100 * 1024 * 1024 {
         println!("  pool = big")
     }
 
