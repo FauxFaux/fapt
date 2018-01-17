@@ -191,13 +191,16 @@ fn print_ninja_source(map: &HashMap<&str, Vec<&str>>) -> Result<()> {
 
 fn print_ninja_binary(map: &HashMap<&str, Vec<&str>>) -> Result<()> {
     let pkg = one_line(&map["Package"])?;
-    let source = one_line(&map.get("Source").unwrap_or_else(|| &map["Package"]))?;
+    let source = one_line(&map.get("Source").unwrap_or_else(|| &map["Package"]))?
+        .split_whitespace()
+        .nth(0)
+        .unwrap();
     let arch = one_line(&map["Architecture"])?;
     let version = one_line(&map["Version"])?.replace(':', "$:");
     let filename = one_line(&map["Filename"])?;
     let size: u64 = one_line(&map["Size"])?.parse()?;
 
-    let prefix = format!("{}/{}_{}_{}", subdir(source), pkg, version, arch);
+    let prefix = format!("{}/{}/{}_{}_{}", subdir(source), source, pkg, version, arch);
 
     println!("build $dest/{}$suffix: process-binary | $script", prefix);
     println!("  description = PB {} {} {} {}", source, pkg, version, arch);
