@@ -143,7 +143,7 @@ fn decompress_gz<R: Read, F: Read + Write + Seek>(
     decompressed_hashes: Hashes,
 ) -> Result<()> {
     io::copy(
-        &mut GzDecoder::new(io::BufReader::new(&mut compressed))?,
+        &mut GzDecoder::new(io::BufReader::new(&mut compressed)),
         &mut uncompressed,
     ).chain_err(|| "decomressing")?;
 
