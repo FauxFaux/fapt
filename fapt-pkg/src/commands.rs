@@ -85,7 +85,7 @@ impl System {
         Ok(())
     }
 
-    pub fn sections<'a>(&'a self) -> Result<Box<Iterator<Item=Result<String>> + 'a>> {
+    pub fn sections<'a>(&'a self) -> Result<Box<Iterator<Item = Result<String>> + 'a>> {
         let releases =
             release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
                 .chain_err(|| "parsing sources entries")?
@@ -107,19 +107,26 @@ impl System {
 
     // Oh dear oh dear, not even close.
     #[cfg(never)]
-    pub fn sections<'a>(&'a self) -> Result<Box<Iterator<Item=String> + 'a>> {
+    pub fn sections<'a>(&'a self) -> Result<Box<Iterator<Item = String> + 'a>> {
         let releases =
             release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
                 .chain_err(|| "parsing sources entries")?
                 .parse(&self.lists_dir)
                 .chain_err(|| "parsing releases")?;
 
-        Ok(Box::new(releases.iter()
-            .flat_map(|release| lists::selected_listings(&release).into_iter().map(move |x| (release, x)))
-            .flat_map(move |(release, listing)| lists::sections_in(&release, &listing, &self.lists_dir).expect("??"))
-            .map(|section| {
-                section.expect("???")
-            })))
+        Ok(Box::new(
+            releases
+                .iter()
+                .flat_map(|release| {
+                    lists::selected_listings(&release)
+                        .into_iter()
+                        .map(move |x| (release, x))
+                })
+                .flat_map(move |(release, listing)| {
+                    lists::sections_in(&release, &listing, &self.lists_dir).expect("??")
+                })
+                .map(|section| section.expect("???")),
+        ))
     }
 
     pub fn export(&self) -> Result<()> {

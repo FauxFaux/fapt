@@ -71,9 +71,7 @@ impl fmt::Debug for ReleaseContent {
         write!(
             f,
             "RC {{ {:?} ({}) {:?} }}",
-            self.name,
-            self.len,
-            self.hashes,
+            self.name, self.len, self.hashes,
         )
     }
 }
@@ -199,12 +197,10 @@ impl RequestedReleases {
         self.releases
             .into_iter()
             .map(|(req, sources_entries)| {
-                parse_release_file(req.verified_path(&lists_dir)).map(|file| {
-                    Release {
-                        req,
-                        file,
-                        sources_entries,
-                    }
+                parse_release_file(req.verified_path(&lists_dir)).map(|file| Release {
+                    req,
+                    file,
+                    sources_entries,
                 })
             })
             .collect::<Result<Vec<Release>>>()
@@ -226,7 +222,10 @@ fn mandatory_whitespace_list(data: &HashMap<&str, Vec<&str>>, key: &str) -> Resu
 
 pub fn parse_release_file<P: AsRef<Path>>(path: P) -> Result<ReleaseFile> {
     let mut file = String::with_capacity(100 * 1024);
-    io::BufReader::new(fs::File::open(path.as_ref())?).read_to_string(&mut file)?;
+    io::BufReader::new(fs::File::open(path.as_ref())
+        .chain_err(|| format!("finding release file: {:?}", path.as_ref()))?)
+        .read_to_string(&mut file)
+        .chain_err(|| format!("reading release file: {:?}", path.as_ref()))?;
     parse_release(&file).chain_err(|| format!("parsing {:?}", path.as_ref()))
 }
 

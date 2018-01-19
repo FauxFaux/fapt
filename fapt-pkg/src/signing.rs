@@ -36,7 +36,6 @@ impl GpgClient {
         Ok(GpgClient { ctx, _root: dir })
     }
 
-
     pub fn verify_clearsigned<P: AsRef<Path>, Q: AsRef<Path>>(
         &mut self,
         file: P,

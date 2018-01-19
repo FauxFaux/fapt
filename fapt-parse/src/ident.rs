@@ -73,7 +73,6 @@ fn parse_ascii_hex(first: u8, second: u8) -> Result<u8> {
     )?)
 }
 
-
 #[cfg(test)]
 mod tests {
     #[test]

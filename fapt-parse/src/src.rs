@@ -29,8 +29,8 @@ pub fn populate<'a>(
             builder.set_name(parts[0]);
             builder.set_style(parts[1]);
             builder.set_section(parts[2]);
-            builder.set_priority(parse_priority(parts[3])
-                .chain_err(|| "priority inside package list")?);
+            builder
+                .set_priority(parse_priority(parts[3]).chain_err(|| "priority inside package list")?);
 
             if parts.len() > 4 {
                 let mut builder = builder.init_extras(as_u32(parts.len() - 4));
