@@ -44,7 +44,12 @@ impl System {
         })
     }
 
-    pub fn add_sources_entries<I: Iterator<Item = Entry>>(&mut self, entries: I) {
+    pub fn add_sources_entry_line(&mut self, src: &str) -> Result<()> {
+        self.add_sources_entries(::classic_sources_list::read(src)?);
+        Ok(())
+    }
+
+    pub fn add_sources_entries<I: IntoIterator<Item = Entry>>(&mut self, entries: I) {
         self.sources_entries.extend(entries);
     }
 
@@ -52,12 +57,12 @@ impl System {
         self.arches = arches.iter().map(|x| x.to_string()).collect();
     }
 
-    pub fn add_keyring_paths<P: AsRef<Path>, I: Iterator<Item = P>>(
+    pub fn add_keyring_paths<P: AsRef<Path>, I: IntoIterator<Item = P>>(
         &mut self,
         keyrings: I,
     ) -> Result<()> {
         self.keyring_paths
-            .extend(keyrings.map(|x| x.as_ref().to_path_buf()));
+            .extend(keyrings.into_iter().map(|x| x.as_ref().to_path_buf()));
         Ok(())
     }
 
@@ -78,6 +83,43 @@ impl System {
             .chain_err(|| "downloading release content")?;
 
         Ok(())
+    }
+
+    pub fn sections<'a>(&'a self) -> Result<Box<Iterator<Item=Result<String>> + 'a>> {
+        let releases =
+            release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
+                .chain_err(|| "parsing sources entries")?
+                .parse(&self.lists_dir)
+                .chain_err(|| "parsing releases")?;
+
+        let mut ret = Vec::new();
+
+        for release in releases {
+            for listing in lists::selected_listings(&release) {
+                for section in lists::sections_in(&release, &listing, &self.lists_dir)? {
+                    ret.push(section);
+                }
+            }
+        }
+
+        Ok(Box::new(ret.into_iter()))
+    }
+
+    // Oh dear oh dear, not even close.
+    #[cfg(never)]
+    pub fn sections<'a>(&'a self) -> Result<Box<Iterator<Item=String> + 'a>> {
+        let releases =
+            release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
+                .chain_err(|| "parsing sources entries")?
+                .parse(&self.lists_dir)
+                .chain_err(|| "parsing releases")?;
+
+        Ok(Box::new(releases.iter()
+            .flat_map(|release| lists::selected_listings(&release).into_iter().map(move |x| (release, x)))
+            .flat_map(move |(release, listing)| lists::sections_in(&release, &listing, &self.lists_dir).expect("??"))
+            .map(|section| {
+                section.expect("???")
+            })))
     }
 
     pub fn export(&self) -> Result<()> {

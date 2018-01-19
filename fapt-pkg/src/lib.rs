@@ -32,6 +32,7 @@ mod signing;
 
 pub use errors::*;
 pub use commands::System;
+pub use rfc822::map as rfc822_into_map;
 
 #[derive(Copy, Clone)]
 pub struct Hashes {
