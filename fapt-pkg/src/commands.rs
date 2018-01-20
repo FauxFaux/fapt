@@ -194,6 +194,37 @@ fn subdir(name: &str) -> &str {
     }
 }
 
+#[cfg(never)]
+struct Sections<'i> {
+    lists_dir: PathBuf,
+    releases: Box<Iterator<Item = release::Release> + 'i>,
+    release: release::Release,
+    listings: Box<Iterator<Item = lists::Listing> + 'i>,
+    sections: Box<Iterator<Item = Result<String>>>,
+}
+
+#[cfg(never)]
+impl<'i> Iterator for Sections<'i> {
+    type Item = Result<String>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(section) = self.sections.next() {
+                return Some(section);
+            }
+
+            if let Some(listing) = self.listings.next() {
+                // peek() also doesn't live long enough
+                self.sections = match lists::sections_in(&self.release, &listing, self.lists_dir) {
+                    Ok(sections) => sections,
+                    Err(e) => return Some(Err(e)),
+                };
+                continue;
+            }
+        }
+    }
+}
+
 fn print_ninja_source(map: &HashMap<&str, Vec<&str>>) -> Result<()> {
     let pkg = one_line(&map["Package"])?;
     let version = one_line(&map["Version"])?.replace(':', "$:");
