@@ -85,98 +85,46 @@ impl System {
         Ok(())
     }
 
-    pub fn sections<'a>(&'a self) -> Result<Box<Iterator<Item = Result<String>> + 'a>> {
+    pub fn walk_sections<F>(&self, mut walker: F) -> Result<()>
+    where
+        F: FnMut(StringSection) -> Result<()>,
+    {
         let releases =
             release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
                 .chain_err(|| "parsing sources entries")?
                 .parse(&self.lists_dir)
                 .chain_err(|| "parsing releases")?;
-
-        let mut ret = Vec::new();
 
         for release in releases {
             for listing in lists::selected_listings(&release) {
                 for section in lists::sections_in(&release, &listing, &self.lists_dir)? {
-                    ret.push(section);
+                    let section = section?;
+                    walker(StringSection {
+                        inner: rfc822::map(&section)
+                            .chain_err(|| format!("loading section: {:?}", section))?,
+                    }).chain_err(|| "processing section")?;
                 }
             }
         }
-
-        Ok(Box::new(ret.into_iter()))
-    }
-
-    // Oh dear oh dear, not even close.
-    #[cfg(never)]
-    pub fn sections<'a>(&'a self) -> Result<Box<Iterator<Item = String> + 'a>> {
-        let releases =
-            release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
-                .chain_err(|| "parsing sources entries")?
-                .parse(&self.lists_dir)
-                .chain_err(|| "parsing releases")?;
-
-        Ok(Box::new(
-            releases
-                .iter()
-                .flat_map(|release| {
-                    lists::selected_listings(&release)
-                        .into_iter()
-                        .map(move |x| (release, x))
-                })
-                .flat_map(move |(release, listing)| {
-                    lists::sections_in(&release, &listing, &self.lists_dir).expect("??")
-                })
-                .map(|section| section.expect("???")),
-        ))
+        Ok(())
     }
 
     pub fn export(&self) -> Result<()> {
-        let releases =
-            release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
-                .chain_err(|| "parsing sources entries")?
-                .parse(&self.lists_dir)
-                .chain_err(|| "parsing releases")?;
-
-        for release in releases {
-            for listing in lists::selected_listings(&release) {
-                for section in lists::sections_in(&release, &listing, &self.lists_dir)? {
-                    let section = section?;
-                    let map: HashMap<&str, String> = rfc822::map(&section)
-                        .chain_err(|| format!("scanning {:?}", release))?
-                        .into_iter()
-                        .map(|(k, v)| (k, v.join("\n")))
-                        .collect();
-                    serde_json::to_writer(io::stdout(), &map)?;
-                    println!();
-                }
-            }
-        }
-
-        Ok(())
+        self.walk_sections(|section| {
+            serde_json::to_writer(io::stdout(), &section.joined_lines())?;
+            println!();
+            Ok(())
+        })
     }
 
     pub fn source_ninja(&self) -> Result<()> {
-        let releases =
-            release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
-                .chain_err(|| "parsing sources entries")?
-                .parse(&self.lists_dir)
-                .chain_err(|| "parsing releases")?;
-
-        for release in releases {
-            for listing in lists::selected_listings(&release) {
-                for section in lists::sections_in(&release, &listing, &self.lists_dir)? {
-                    let section = section?;
-                    let map =
-                        rfc822::map(&section).chain_err(|| format!("scanning {:?}", release))?;
-                    if map.contains_key("Files") {
-                        print_ninja_source(&map)?;
-                    } else {
-                        print_ninja_binary(&map)?;
-                    }
-                }
+        self.walk_sections(|map| {
+            if map.as_ref().contains_key("Files") {
+                print_ninja_source(map.as_ref())
+            } else {
+                print_ninja_binary(map.as_ref())
             }
-        }
-
-        Ok(())
+        })
     }
 }
 
@@ -191,6 +139,33 @@ fn subdir(name: &str) -> &str {
         &name[..4]
     } else {
         &name[..1]
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StringSection<'s> {
+    inner: HashMap<&'s str, Vec<&'s str>>,
+}
+
+impl<'s> StringSection<'s> {
+    pub fn joined_lines(&self) -> HashMap<&str, String> {
+        self.inner.iter().map(|(&k, v)| (k, v.join("\n"))).collect()
+    }
+
+    pub fn get_if_one_line(&self, key: &str) -> Option<&str> {
+        match self.inner.get(key) {
+            Some(list) => match list.len() {
+                1 => Some(list[0]),
+                _ => None,
+            },
+            None => None,
+        }
+    }
+}
+
+impl<'s> AsRef<HashMap<&'s str, Vec<&'s str>>> for StringSection<'s> {
+    fn as_ref(&self) -> &HashMap<&'s str, Vec<&'s str>> {
+        &self.inner
     }
 }
 
