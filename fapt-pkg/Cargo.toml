@@ -34,4 +34,4 @@ features = ["rust_backend"]
 version = "1"
 
 [dev-dependencies.error-chain-for-dumb-ides]
-git = "https://github.com/FauxFaux/error-chain-for-dumb-ides"
+version = "0"
