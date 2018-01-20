@@ -1,3 +1,6 @@
+sudo: false
+dist: trusty
+
 language: rust
 rust:
   - nightly
@@ -7,3 +10,9 @@ rust:
 matrix:
   allow_failures:
     - rust: nightly
+
+addons:
+  apt:
+    packages:
+    - libgpg-error-dev
+    - libgpgme11-dev

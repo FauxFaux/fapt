@@ -1,7 +1,13 @@
 [package]
 authors = ["Chris West (Faux) <git@goeswhere.com>"]
+description = "Faux' apt package manager for Debian"
+license = "MIT"
 name = "fapt-pkg"
+repository = "https://github.com/FauxFaux/fapt"
 version = "0.1.0"
+
+[badges.travis-ci]
+repository = "FauxFaux/fapt"
 
 [dependencies]
 error-chain = "0.11"
