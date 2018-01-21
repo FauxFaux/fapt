@@ -11,7 +11,6 @@ use std::collections::HashMap;
 mod bin;
 mod deps;
 mod errors;
-mod fields;
 mod ident;
 mod src;
 mod types;

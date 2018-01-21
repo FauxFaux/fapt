@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use errors::*;
-use fields;
 
 #[cfg(capnp)]
 use fill_dep;

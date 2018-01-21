@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use errors::*;
-use fields;
 use types::Source;
 use types::SourceFormat;
 use vcs;
