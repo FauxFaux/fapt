@@ -1,289 +1,289 @@
 // Everything deals with streams of Items.
 
 pub enum Item {
-    end      ,
-    raw      (RawPackage),
-    index    (RawIndex),
-    package  (Package),
+    end,
+    raw(RawPackage),
+    index(RawIndex),
+    package(Package),
 }
 
 // An unparsed, raw package
 
 pub struct RawPackage {
-    type_     :RawPackageType,
-    entries  :Vec<Entry>,
+    type_: RawPackageType,
+    entries: Vec<Entry>,
 }
 
 pub enum RawPackageType {
-    source ,
-    binary ,
+    source,
+    binary,
 }
 
 pub struct Entry {
-    key    :String,
-    value  :String,
+    key: String,
+    value: String,
 }
 
 // An unparsed, raw index
 
 pub struct RawIndex {
-    archive    :String,
-    version    :String,
-    origin     :String,
-    codename   :String,
-    label      :String,
-    site       :String,
-    component  :String,
-    arch       :String,
-    type_       :String,
+    archive: String,
+    version: String,
+    origin: String,
+    codename: String,
+    label: String,
+    site: String,
+    component: String,
+    arch: String,
+    type_: String,
 }
 
 // The parsed top-level types for package
 
 pub enum PackageType {
-    source   (Source),
-    binary   (Binary),
+    source(Source),
+    binary(Binary),
 }
 
 pub struct Package {
-    name      :String,
-    version   :String,
-    priority  :Priority,
-    arch      :Vec<String>,
+    name: String,
+    version: String,
+    priority: Priority,
+    arch: Vec<String>,
 
-    maintainer          :Vec<Identity>,
-    originalMaintainer  :Vec<Identity>,
+    maintainer: Vec<Identity>,
+    originalMaintainer: Vec<Identity>,
 
-    parseErrors         :Vec<String>,
-    unrecognisedFields  :Vec<String>,
+    parseErrors: Vec<String>,
+    unrecognisedFields: Vec<String>,
 
-    style :PackageType,
+    style: PackageType,
 }
 
 pub struct Source {
-    format    :SourceFormat,
+    format: SourceFormat,
 
-    binaries  :Vec<SourceBinary>,
-    files     :Vec<File>,
-    vcs       :Vec<Vcs>,
+    binaries: Vec<SourceBinary>,
+    files: Vec<File>,
+    vcs: Vec<Vcs>,
 
-    buildDep            :Vec<Dependency>,
-    buildDepArch        :Vec<Dependency>,
-    buildDepIndep       :Vec<Dependency>,
-    buildConflict       :Vec<Dependency>,
-    buildConflictArch   :Vec<Dependency>,
-    buildConflictIndep  :Vec<Dependency>,
+    buildDep: Vec<Dependency>,
+    buildDepArch: Vec<Dependency>,
+    buildDepIndep: Vec<Dependency>,
+    buildConflict: Vec<Dependency>,
+    buildConflictArch: Vec<Dependency>,
+    buildConflictIndep: Vec<Dependency>,
 
-    uploaders  :Vec<Identity>,
+    uploaders: Vec<Identity>,
 
-    unparsed   :UnparsedSource,
+    unparsed: UnparsedSource,
 }
 
 pub struct Binary {
-    file            :File,
+    file: File,
 
-    essential       :bool,
-    buildEssential  :bool,
+    essential: bool,
+    buildEssential: bool,
 
-    installedSize   :u64,
+    installedSize: u64,
 
-    description     :String,
+    description: String,
 
-    depends      :Vec<Dependency>,
-    recommends   :Vec<Dependency>,
-    suggests     :Vec<Dependency>,
-    enhances     :Vec<Dependency>,
-    preDepends   :Vec<Dependency>,
+    depends: Vec<Dependency>,
+    recommends: Vec<Dependency>,
+    suggests: Vec<Dependency>,
+    enhances: Vec<Dependency>,
+    preDepends: Vec<Dependency>,
 
-    breaks      :Vec<Dependency>,
-    conflicts   :Vec<Dependency>,
-    replaces    :Vec<Dependency>,
+    breaks: Vec<Dependency>,
+    conflicts: Vec<Dependency>,
+    replaces: Vec<Dependency>,
 
-    provides    :Vec<Dependency>,
+    provides: Vec<Dependency>,
 
-    unparsed    :UnparsedBinary,
+    unparsed: UnparsedBinary,
 }
 
 // The dependency chain types
 
 pub struct Dependency {
-    alternate  :Vec<SingleDependency>,
+    alternate: Vec<SingleDependency>,
 }
 
 pub struct SingleDependency {
-    package             :String,
-    arch                :String,
-    versionConstraints  :Vec<Constraint>,
-    archFilter          :Vec<String>,
-    stageFilter         :Vec<String>,
+    package: String,
+    arch: String,
+    versionConstraints: Vec<Constraint>,
+    archFilter: Vec<String>,
+    stageFilter: Vec<String>,
 }
 
 pub struct Constraint {
-    version   :String,
-    operator  :ConstraintOperator,
+    version: String,
+    operator: ConstraintOperator,
 }
 
 pub enum ConstraintOperator {
-    ge ,
-    eq ,
-    le ,
-    gt ,
-    lt ,
+    ge,
+    eq,
+    le,
+    gt,
+    lt,
 }
 
 // Other types
 
 pub struct File {
-    name    :String,
-    size    :u64,
-    md5     :String,
-    sha1    :String,
-    sha256  :String,
-    sha512  :String,
+    name: String,
+    size: u64,
+    md5: String,
+    sha1: String,
+    sha256: String,
+    sha512: String,
 }
 
 pub struct Vcs {
-    description  :String,
-    type_         :VcsType,
-    tag         :VcsTag,
+    description: String,
+    type_: VcsType,
+    tag: VcsTag,
 }
 
 #[derive(Copy, Clone)]
 pub enum VcsType {
-    browser ,
-    arch    ,
-    bzr     ,
-    cvs     ,
-    darcs   ,
-    git     ,
-    hg      ,
-    mtn     ,
-    svn     ,
+    browser,
+    arch,
+    bzr,
+    cvs,
+    darcs,
+    git,
+    hg,
+    mtn,
+    svn,
 }
 
 #[derive(Copy, Clone)]
 pub enum VcsTag {
-    vcs      ,
-    orig     ,
-    debian   ,
-    upstream ,
+    vcs,
+    orig,
+    debian,
+    upstream,
 }
 
 pub struct SourceBinary {
-    name       :String,
-    style      :String,
-    section    :String,
+    name: String,
+    style: String,
+    section: String,
 
-    priority   :Priority,
-    extras     :Vec<String>,
+    priority: Priority,
+    extras: Vec<String>,
 }
 
 // https://www.debian.org/doc/debian-policy/#priorities
 pub enum Priority {
     Unknown,
-    Required  ,
-    Important ,
-    Standard  ,
-    Optional  ,
-    Extra     ,
-    Source    ,
+    Required,
+    Important,
+    Standard,
+    Optional,
+    Extra,
+    Source,
 }
 
 pub struct Description {
-    locale  :String,
-    value   :String,
+    locale: String,
+    value: String,
 }
 
 pub struct Identity {
-    name   :String,
-    email  :String,
+    name: String,
+    email: String,
 }
 
 pub enum SourceFormat {
-    Unknown     ,
-    Original    ,
-    Quilt3dot0  ,
-    Native3dot0 ,
-    Git3dot0    ,
+    Unknown,
+    Original,
+    Quilt3dot0,
+    Native3dot0,
+    Git3dot0,
 }
 
 // generated by gen.py
 
 pub struct UnparsedSource {
-    directory               :String,
-    homepage                :String,
-    standardsVersion        :String,
-    section                 :String,
-    testsuite               :String,
-    testsuiteTriggers       :String,
-    testsuiteRestrictions   :String,
-    autobuild               :String,
-    dmUploadAllowed         :String,
-    extraSourceOnly         :String,
-    buildIndepArchitecture  :String,
-    dgit                    :String,
-    goImportPath            :String,
-    pythonVersion           :String,
-    python3Version          :String,
-    rubyVersions            :String,
+    directory: String,
+    homepage: String,
+    standardsVersion: String,
+    section: String,
+    testsuite: String,
+    testsuiteTriggers: String,
+    testsuiteRestrictions: String,
+    autobuild: String,
+    dmUploadAllowed: String,
+    extraSourceOnly: String,
+    buildIndepArchitecture: String,
+    dgit: String,
+    goImportPath: String,
+    pythonVersion: String,
+    python3Version: String,
+    rubyVersions: String,
 }
 
 pub struct UnparsedBinary {
-    homepage                :String,
-    section                 :String,
-    source                  :String,
-    task                    :String,
-    bugs                    :String,
-    supported               :String,
-    origin                  :String,
-    status                  :String,
-    buildIds                :String,
-    multiArch               :String,
-    packageType             :String,
-    autoBuiltPackage        :String,
-    builtUsing              :String,
-    modaliases              :String,
-    gstreamerDecoders       :String,
-    gstreamerElements       :String,
-    gstreamerEncoders       :String,
-    gstreamerUriSinks       :String,
-    gstreamerUriSources     :String,
-    gstreamerVersion        :String,
-    license                 :String,
-    vendor                  :String,
-    goImportPath            :String,
-    pythonVersion           :String,
-    python3Version          :String,
-    rubyVersions            :String,
-    luaVersions             :String,
-    pythonEggName           :String,
-    ghcPackage              :String,
-    nppApplications         :String,
-    nppDescription          :String,
-    nppFile                 :String,
-    nppMimetype             :String,
-    nppName                 :String,
-    postgresqlCatversion    :String,
-    postgresqlVersion       :String,
-    tads2Version            :String,
-    tads3Version            :String,
-    xulAppid                :String,
-    phasedUpdatePercentage  :String,
-    builtForProfiles        :String,
-    class                   :String,
-    conffiles               :String,
-    configVersion           :String,
-    files                   :String,
-    important               :String,
-    installerMenuItem       :String,
-    kernelVersion           :String,
-    msdosFilename           :String,
-    optional                :String,
-    packageRevision         :String,
-    recommended             :String,
-    revision                :String,
-    subarchitecture         :String,
-    tag                     :String,
-    triggersAwaited         :String,
-    triggersPending         :String,
+    homepage: String,
+    section: String,
+    source: String,
+    task: String,
+    bugs: String,
+    supported: String,
+    origin: String,
+    status: String,
+    buildIds: String,
+    multiArch: String,
+    packageType: String,
+    autoBuiltPackage: String,
+    builtUsing: String,
+    modaliases: String,
+    gstreamerDecoders: String,
+    gstreamerElements: String,
+    gstreamerEncoders: String,
+    gstreamerUriSinks: String,
+    gstreamerUriSources: String,
+    gstreamerVersion: String,
+    license: String,
+    vendor: String,
+    goImportPath: String,
+    pythonVersion: String,
+    python3Version: String,
+    rubyVersions: String,
+    luaVersions: String,
+    pythonEggName: String,
+    ghcPackage: String,
+    nppApplications: String,
+    nppDescription: String,
+    nppFile: String,
+    nppMimetype: String,
+    nppName: String,
+    postgresqlCatversion: String,
+    postgresqlVersion: String,
+    tads2Version: String,
+    tads3Version: String,
+    xulAppid: String,
+    phasedUpdatePercentage: String,
+    builtForProfiles: String,
+    class: String,
+    conffiles: String,
+    configVersion: String,
+    files: String,
+    important: String,
+    installerMenuItem: String,
+    kernelVersion: String,
+    msdosFilename: String,
+    optional: String,
+    packageRevision: String,
+    recommended: String,
+    revision: String,
+    subarchitecture: String,
+    tag: String,
+    triggersAwaited: String,
+    triggersPending: String,
 }
