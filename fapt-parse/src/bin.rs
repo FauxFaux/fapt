@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 
-use apt_capnp::binary;
 use errors::*;
 use fields;
 
+#[cfg(capnp)]
 use fill_dep;
 use yes_no;
 
+#[cfg(capnp)]
 pub fn populate<'a>(
     mut output: binary::Builder,
     map: &mut HashMap<&'a str, &str>,

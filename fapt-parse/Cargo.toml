@@ -3,11 +3,7 @@ authors = ["Chris West (Faux) <git@goeswhere.com>"]
 name = "fapt-parse"
 version = "0.1.0"
 
-[build-dependencies]
-capnpc = "0.8"
-
 [dependencies]
-capnp = "0.8"
 error-chain = "0.11"
 md-5 = "0.7"
 nom = "3"

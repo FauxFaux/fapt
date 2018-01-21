@@ -1,17 +1,19 @@
 use std::collections::HashMap;
 
-use apt_capnp::source;
-use apt_capnp::SourceFormat;
-
 use errors::*;
 use fields;
+use types::Source;
+use types::SourceFormat;
 use vcs;
 
 use as_u32;
+#[cfg(capnp)]
 use fill_identity;
 use parse_priority;
+#[cfg(capnp)]
 use fill_dep;
 
+#[cfg(capnp)]
 pub fn populate<'a>(
     mut output: source::Builder,
     map: &mut HashMap<&'a str, &str>,

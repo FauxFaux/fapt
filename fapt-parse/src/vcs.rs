@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 
-use apt_capnp;
 use as_u32;
 use errors::*;
 
-use apt_capnp::VcsTag;
-use apt_capnp::VcsType;
+use types::VcsTag;
+use types::VcsType;
 
 #[derive(Clone)]
 struct Entry {
@@ -24,6 +23,7 @@ impl Entry {
     }
 }
 
+#[cfg(capnp)]
 pub fn extract(
     map: &mut HashMap<&str, &str>,
     builder: &mut apt_capnp::source::Builder,
