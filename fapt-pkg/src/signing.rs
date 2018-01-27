@@ -9,7 +9,7 @@ use gpgme::Data;
 use gpgme::Protocol;
 
 use tempdir::TempDir;
-use tempfile_fast::persistable_tempfile_in;
+use tempfile_fast::PersistableTempFile;
 
 use errors::*;
 
@@ -42,7 +42,7 @@ impl GpgClient {
         dest: Q,
     ) -> Result<()> {
         let from = fs::File::open(file).chain_err(|| "opening input file")?;
-        let to = persistable_tempfile_in(dest.as_ref().parent().ok_or("full path please")?)
+        let to = PersistableTempFile::new_in(dest.as_ref().parent().ok_or("full path please")?)
             .chain_err(|| "creating temporary file")?;
 
         let result = self.ctx
@@ -56,12 +56,8 @@ impl GpgClient {
 
         validate_signature(&result)?;
 
-        // Slightly racy, but not unsafe.
-        if dest.as_ref().exists() {
-            fs::remove_file(dest.as_ref()).chain_err(|| "removing output file")?;
-        }
-
-        to.persist_noclobber(dest)
+        to.persist_by_rename(dest)
+            .map_err(|e| e.error)
             .chain_err(|| "persisting output file")?;
 
         Ok(())

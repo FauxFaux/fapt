@@ -11,7 +11,7 @@ use hex;
 use reqwest::Client;
 use reqwest::Url;
 use tempdir::TempDir;
-use tempfile_fast::persistable_tempfile_in;
+use tempfile_fast::PersistableTempFile;
 
 use checksum;
 use fetch;
@@ -122,14 +122,15 @@ fn store_list_item<P: AsRef<Path>, Q: AsRef<Path>>(
         Compression::None => fs::rename(temp_path, destination_path)?,
         Compression::Gz => {
             temp.seek(SeekFrom::Start(0))?;
-            let mut uncompressed_temp = persistable_tempfile_in(&lists_dir)
+            let mut uncompressed_temp = PersistableTempFile::new_in(&lists_dir)
                 .chain_err(|| format!("making temporary file in {:?}", lists_dir.as_ref()))?;
 
-            decompress_gz(temp, uncompressed_temp.as_mut(), list.decompressed_hashes)
+            decompress_gz(temp, &mut uncompressed_temp, list.decompressed_hashes)
                 .chain_err(|| format!("decomressing {:?}", temp_path))?;
 
             uncompressed_temp
-                .persist_noclobber(destination_path)
+                .persist_by_rename(destination_path)
+                .map_err(|e| e.error)
                 .chain_err(|| "storing decompressed file")?;
         }
     }

@@ -12,7 +12,7 @@ use reqwest;
 use reqwest::header;
 use reqwest::header::IfModifiedSince;
 
-use tempfile_fast::persistable_tempfile_in;
+use tempfile_fast::PersistableTempFile;
 
 use errors::*;
 
@@ -67,20 +67,17 @@ fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<()> {
 
     fs::create_dir_all(parent).chain_err(|| format!("creating directories: {:?}", parent))?;
 
-    let mut tmp = persistable_tempfile_in(parent).chain_err(|| "couldn't create temporary file")?;
+    let mut tmp = PersistableTempFile::new_in(parent).chain_err(|| "couldn't create temporary file")?;
 
     if let Some(len) = resp.headers().get::<header::ContentLength>() {
         tmp.set_len(**len)
             .chain_err(|| "pretending to allocate space")?;
     }
 
-    io::copy(&mut resp, tmp.as_mut()).chain_err(|| "copying data")?;
+    io::copy(&mut resp, &mut tmp).chain_err(|| "copying data")?;
 
-    if download.to.exists() {
-        fs::remove_file(&download.to).chain_err(|| "removing destination for overwriting")?;
-    }
-
-    tmp.persist_noclobber(&download.to)
+    tmp.persist_by_rename(&download.to)
+        .map_err(|e| e.error)
         .chain_err(|| "persisting result")?;
 
     if let Some(modified) = resp.headers().get::<header::LastModified>() {
