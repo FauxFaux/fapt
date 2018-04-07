@@ -4,7 +4,6 @@ use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 use std::time::SystemTime;
-use std::time::UNIX_EPOCH;
 
 use filetime;
 
@@ -82,12 +81,7 @@ fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<()> {
         .chain_err(|| "persisting result")?;
 
     if let Some(modified) = resp.headers().get::<header::LastModified>() {
-        // YAY fourteen date apis
-        let since_epoch = SystemTime::from(**modified).duration_since(UNIX_EPOCH)?;
-        let file_time = filetime::FileTime::from_seconds_since_1970(
-            since_epoch.as_secs(),
-            since_epoch.subsec_nanos(),
-        );
+        let file_time = filetime::FileTime::from_system_time(SystemTime::from(**modified));
         filetime::set_file_times(&download.to, file_time, file_time)?;
     }
 

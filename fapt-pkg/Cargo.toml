@@ -11,7 +11,7 @@ repository = "FauxFaux/fapt"
 
 [dependencies]
 error-chain = "0.11"
-filetime = "0.1"
+filetime = "0.2"
 gpgme = "0.7"
 hex = "0.3"
 mailparse = "0.6"
