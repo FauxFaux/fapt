@@ -67,7 +67,8 @@ fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<()> {
 
     fs::create_dir_all(parent).chain_err(|| format!("creating directories: {:?}", parent))?;
 
-    let mut tmp = PersistableTempFile::new_in(parent).chain_err(|| "couldn't create temporary file")?;
+    let mut tmp =
+        PersistableTempFile::new_in(parent).chain_err(|| "couldn't create temporary file")?;
 
     if let Some(len) = resp.headers().get::<header::ContentLength>() {
         tmp.set_len(**len)

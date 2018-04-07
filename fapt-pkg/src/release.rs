@@ -16,8 +16,8 @@ use reqwest::Url;
 
 use classic_sources_list::Entry;
 use errors::*;
-use fetch::fetch;
 use fetch::Download;
+use fetch::fetch;
 use rfc822;
 use signing::GpgClient;
 

@@ -4,8 +4,8 @@ use hex;
 use sha2::Digest;
 use sha2::Sha256;
 
-use errors::*;
 use Hashes;
+use errors::*;
 
 // TODO: also check the md5?
 pub fn validate<R: Read>(mut file: R, checksum: Hashes) -> Result<()> {

@@ -89,8 +89,8 @@ mod tests {
 
     #[test]
     fn read() {
-        use super::read;
         use super::Identity;
+        use super::read;
 
         assert_eq!(
             vec![

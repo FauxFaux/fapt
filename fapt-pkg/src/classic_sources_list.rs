@@ -94,8 +94,8 @@ pub fn load<P: AsRef<path::Path>>(path: P) -> Result<Vec<Entry>> {
 
 #[cfg(test)]
 mod tests {
-    use super::read;
     use super::Entry;
+    use super::read;
 
     #[test]
     fn simple() {

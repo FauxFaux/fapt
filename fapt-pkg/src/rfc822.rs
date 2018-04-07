@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::io;
-use std::io::Read;
 use std::io::BufRead;
+use std::io::Read;
 
 use mailparse::dateparse;
 
@@ -118,9 +118,9 @@ mod tests {
 
     #[test]
     fn walkies() {
-        use std::io;
         use super::Section;
         use errors::*;
+        use std::io;
 
         let parts: Result<Vec<Vec<u8>>> =
             Section::new(io::Cursor::new(b"foo\nbar\n\nbaz\n")).collect();

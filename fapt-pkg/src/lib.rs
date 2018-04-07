@@ -30,8 +30,8 @@ mod release;
 mod rfc822;
 mod signing;
 
-pub use errors::*;
 pub use commands::System;
+pub use errors::*;
 
 #[derive(Copy, Clone)]
 pub struct Hashes {

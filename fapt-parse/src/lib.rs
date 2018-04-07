@@ -16,16 +16,16 @@ mod src;
 mod types;
 mod vcs;
 
-use types::Item;
 use types::Entry;
+use types::Item;
 use types::Package;
 
-use types::RawPackageType;
 use types::Priority;
+use types::RawPackageType;
 
 use types::Dependency;
-use types::SingleDependency;
 use types::Identity;
+use types::SingleDependency;
 
 use errors::*;
 

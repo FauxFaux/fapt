@@ -3,10 +3,10 @@ use std::io;
 use std::io::Write;
 use std::path::Path;
 
-use gpgme::context::Context;
-use gpgme::results::VerificationResult;
 use gpgme::Data;
 use gpgme::Protocol;
+use gpgme::context::Context;
+use gpgme::results::VerificationResult;
 
 use tempdir::TempDir;
 use tempfile_fast::PersistableTempFile;

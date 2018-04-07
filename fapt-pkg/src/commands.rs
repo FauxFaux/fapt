@@ -9,9 +9,9 @@ use reqwest;
 use serde_json;
 
 use classic_sources_list::Entry;
+use lists;
 use release;
 use rfc822;
-use lists;
 
 use errors::*;
 
