@@ -1,4 +1,5 @@
-use nom::IResult;
+use nom::Err;
+use nom::types::CompleteStr;
 
 use errors::*;
 
@@ -8,20 +9,20 @@ pub struct Identity {
     pub email: String,
 }
 
-named!(ident<&str, Result<Identity>>,
+named!(ident<CompleteStr, Result<Identity>>,
     do_parse!(
         name: take_until_and_consume_s!(" <") >>
         email: take_until_and_consume_s!(">") >>
-        ( process_escapes(name.trim()).map(|name|
+        ( process_escapes(name.0.trim()).map(|name|
             Identity {
                 name: name.to_string(),
-                email: email.to_string(),
+                email: email.0.to_string(),
             })
         )
     )
 );
 
-named!(parse<&str, Vec<Result<Identity>>>,
+named!(parse<CompleteStr, Vec<Result<Identity>>>,
     ws!(
         terminated!(
             separated_list!(
@@ -34,13 +35,14 @@ named!(parse<&str, Vec<Result<Identity>>>,
 );
 
 pub fn read(from: &str) -> Result<Vec<Identity>> {
-    match parse(from) {
-        Ok(("", vec)) => vec.into_iter().collect::<Result<Vec<Identity>>>(),
+    match parse(CompleteStr(from)) {
+        Ok((CompleteStr(""), vec)) => vec.into_iter().collect::<Result<Vec<Identity>>>(),
         Ok((tailing, _)) => bail!(
             "parsing {:?} finished early, trailing garbage: {:?}",
             from,
             tailing
         ),
+        Err(Err::Incomplete(_)) => unreachable!(),
         other => bail!("parsing {:?} failed: {:?}", from, other),
     }
 }
