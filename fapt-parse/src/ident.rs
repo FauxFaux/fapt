@@ -35,8 +35,8 @@ named!(parse<&str, Vec<Result<Identity>>>,
 
 pub fn read(from: &str) -> Result<Vec<Identity>> {
     match parse(from) {
-        IResult::Done("", vec) => vec.into_iter().collect::<Result<Vec<Identity>>>(),
-        IResult::Done(tailing, _) => bail!(
+        Ok(("", vec)) => vec.into_iter().collect::<Result<Vec<Identity>>>(),
+        Ok((tailing, _)) => bail!(
             "parsing {:?} finished early, trailing garbage: {:?}",
             from,
             tailing

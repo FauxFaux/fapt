@@ -41,12 +41,13 @@ pub enum Op {
 }
 
 pub fn read(val: &str) -> Result<Vec<Dep>> {
+    use nom::Err as NomErr;
     match parse(val) {
-        IResult::Done("", val) => Ok(val),
-        IResult::Incomplete(_) => Err("unexpected end of input".into()),
-        IResult::Done(trailing, _) => Err(format!("trailing data: '{:?}'", trailing).into()),
-        x @ IResult::Error(_) => x.to_result().chain_err(|| "executing nom"),
-    }.chain_err(|| format!("parsing: '{}'", val))
+        Ok(("", val)) => Ok(val),
+        Err(NomErr::Incomplete(_)) => Err("unexpected end of input".into()),
+        Ok((trailing, _)) => Err(format!("trailing data: '{:?}'", trailing).into()),
+        other => Err(format!("nom error: {:?}", other).into()),
+    }
 }
 
 fn is_arch_char(val: char) -> bool {
@@ -139,12 +140,12 @@ named!(parse<&str, Vec<Dep>>,
 
 #[test]
 fn check() {
-    assert_eq!(IResult::Done("", "foo"), package_name("foo"));
-    assert_eq!(IResult::Done(" bar", "foo"), package_name("foo bar"));
+    assert_eq!(("", "foo"), package_name("foo").unwrap());
+    assert_eq!((" bar", "foo"), package_name("foo bar").unwrap());
 
     assert_eq!(
-        IResult::Done("", Constraint::new(Op::Gt, "1")),
-        version_constraint("(>> 1)")
+        ("", Constraint::new(Op::Gt, "1")),
+        version_constraint("(>> 1)").unwrap()
     );
 
     println!("{:?}", single("foo (>> 1) (<< 9) [linux-any]"));
