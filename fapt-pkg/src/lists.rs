@@ -215,8 +215,12 @@ pub fn sections_in<'i, P: AsRef<Path> + 'i>(
     listing: &'i Listing,
     lists_dir: P,
 ) -> Result<Box<Iterator<Item = Result<String>> + 'i>> {
+    sections_in_reader(open_listing(release, listing, lists_dir)?)
+}
+
+pub fn sections_in_reader<'r, R: 'r + Read>(input: R) -> Result<Box<Iterator<Item = Result<String>> + 'r>> {
     Ok(Box::new(
-        rfc822::Section::new(open_listing(release, listing, lists_dir)?).map(decode_vec),
+        rfc822::Section::new(input).map(decode_vec)
     ))
 }
 

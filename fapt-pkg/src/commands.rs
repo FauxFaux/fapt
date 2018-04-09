@@ -17,6 +17,7 @@ use errors::*;
 
 pub struct System {
     lists_dir: PathBuf,
+    dpkg_database: Option<PathBuf>,
     sources_entries: Vec<Entry>,
     arches: Vec<String>,
     keyring_paths: Vec<PathBuf>,
@@ -37,6 +38,7 @@ impl System {
 
         Ok(System {
             lists_dir: lists_dir.as_ref().to_path_buf(),
+            dpkg_database: None,
             sources_entries: Vec::new(),
             arches: Vec::new(),
             keyring_paths: Vec::new(),
@@ -55,6 +57,10 @@ impl System {
 
     pub fn set_arches(&mut self, arches: &[&str]) {
         self.arches = arches.iter().map(|x| x.to_string()).collect();
+    }
+
+    pub fn set_dpkg_database<P: AsRef<Path>>(&mut self, dpkg: P) {
+        self.dpkg_database = Some(dpkg.as_ref().to_path_buf());
     }
 
     pub fn add_keyring_paths<P: AsRef<Path>, I: IntoIterator<Item = P>>(
@@ -115,6 +121,17 @@ impl System {
             println!();
             Ok(())
         })
+    }
+
+    pub fn list_installed(&self) -> Result<()> {
+        let mut status = self.dpkg_database.as_ref().ok_or("dpkg database not set")?.to_path_buf();
+        status.push("status");
+
+        for section in lists::sections_in_reader(fs::File::open(status)?)? {
+            println!("{:?}", section)
+        }
+
+        Ok(())
     }
 
     pub fn source_ninja(&self) -> Result<()> {

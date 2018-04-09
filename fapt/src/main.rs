@@ -66,9 +66,17 @@ fn run() -> Result<()> {
                 .number_of_values(1)
                 .help("an explicit arch (e.g. 'amd64'); the first provided will be the 'primary'"),
         )
+        .arg(
+            Arg::with_name("system-dpkg")
+                .long("system-dpkg")
+                .value_name("PATH")
+                .default_value("/var/lib/dpkg")
+                .help("dpkg database location"),
+        )
         .subcommand(
             SubCommand::with_name("update").help("just fetch necessary data for specified sources"),
         )
+        .subcommand(SubCommand::with_name("list").help("show some packages"))
         .subcommand(
             SubCommand::with_name("export")
                 .help("dump out all packages as json")
@@ -150,9 +158,14 @@ fn run() -> Result<()> {
 
     system.set_arches(&arches);
 
+    system.set_dpkg_database(matches.value_of("system-dpkg").unwrap());
+
     match matches.subcommand() {
         ("export", Some(_)) => {
             system.export()?;
+        }
+        ("list", Some(_)) => {
+            system.list_installed()?;
         }
         ("source-ninja", Some(_)) => {
             system.source_ninja()?;
