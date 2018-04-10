@@ -1,6 +1,7 @@
 use fapt_parse::deps;
 use fapt_parse::deps::Dep;
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 use errors::*;
 use rfc822::mandatory_single_line;
@@ -15,6 +16,7 @@ struct Deps {
     depends: Vec<Dep>,
     recommends: Vec<Dep>,
     suggests: Vec<Dep>,
+    provides: Vec<Dep>,
 }
 
 #[derive(Debug)]
@@ -24,13 +26,19 @@ struct Version {
 }
 
 #[derive(Debug)]
-struct Package {
+pub struct Package {
     versions: HashMap<VersionNumber, Version>,
 }
 
 #[derive(Debug)]
 pub struct DepGraph {
     packages: HashMap<String, Package>,
+}
+
+#[derive(Debug)]
+pub struct Leaves {
+    pub aliases: HashMap<String, HashSet<String>>,
+    pub direct_dep: HashSet<String>,
 }
 
 impl Package {
@@ -57,6 +65,7 @@ impl DepGraph {
             depends: parse_dep(row.get("Depends"))?,
             recommends: parse_dep(row.get("Recommends"))?,
             suggests: parse_dep(row.get("Suggests"))?,
+            provides: parse_dep(row.get("Provides"))?,
         };
 
         // TODO: not technically correct
@@ -68,6 +77,50 @@ impl DepGraph {
             .versions
             .insert(version, Version { deps, essential });
         Ok(())
+    }
+
+    pub fn sloppy_leaves(&self) -> Leaves {
+        let mut direct_dep = HashSet::with_capacity(self.packages.len() / 2);
+        let mut aliases = HashMap::with_capacity(self.packages.len() / 10);
+
+        for (name, p) in &self.packages {
+            for v in p.versions.values() {
+                if v.essential {
+                    direct_dep.insert(name.to_string());
+                }
+
+                for p in &v.deps.provides {
+                    assert_eq!(1, p.alternate.len());
+                    let p = &p.alternate[0];
+                    assert_eq!(None, p.arch);
+                    aliases
+                        .entry(p.package.to_string())
+                        .or_insert_with(HashSet::new)
+                        .insert(name.to_string());
+                }
+
+                for d in &v.deps.depends {
+                    match d.alternate.len() {
+                        0 => unreachable!(),
+                        1 => {
+                            direct_dep.insert(d.alternate[0].package.to_string());
+                        }
+                        _ => {
+                            // TODO: actual alternatives
+                        }
+                    }
+                }
+            }
+        }
+
+        Leaves {
+            aliases,
+            direct_dep,
+        }
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &Package)> {
+        self.packages.iter()
     }
 }
 

@@ -147,7 +147,31 @@ impl System {
             dep_graph.read(&section)?;
         }
 
-        println!("{:?}", dep_graph);
+        let mut unexplained = Vec::with_capacity(100);
+
+        let leaves = dep_graph.sloppy_leaves();
+
+        'packages: for (name, _p) in dep_graph.iter() {
+            if leaves.direct_dep.contains(name) {
+                continue;
+            }
+
+            if let Some(aliases) = leaves.aliases.get(name) {
+                for alias in aliases {
+                    if leaves.direct_dep.contains(alias) {
+                        continue 'packages;
+                    }
+                }
+            }
+
+            unexplained.push(name);
+        }
+
+        unexplained.sort_unstable();
+
+        for p in unexplained {
+            println!("{}", p);
+        }
 
         Ok(())
     }
