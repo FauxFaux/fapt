@@ -9,7 +9,7 @@ extern crate nom;
 use std::collections::HashMap;
 
 mod bin;
-mod deps;
+pub mod deps;
 mod errors;
 mod ident;
 mod src;
@@ -27,7 +27,7 @@ use types::Dependency;
 use types::Identity;
 use types::SingleDependency;
 
-use errors::*;
+pub use errors::*;
 
 #[cfg(capnp)]
 fn fill_package(

@@ -9,9 +9,11 @@ use reqwest;
 use serde_json;
 
 use classic_sources_list::Entry;
+use dep_graph::DepGraph;
 use lists;
 use release;
 use rfc822;
+use rfc822::one_line;
 
 use errors::*;
 
@@ -124,12 +126,28 @@ impl System {
     }
 
     pub fn list_installed(&self) -> Result<()> {
-        let mut status = self.dpkg_database.as_ref().ok_or("dpkg database not set")?.to_path_buf();
+        let mut status = self.dpkg_database
+            .as_ref()
+            .ok_or("dpkg database not set")?
+            .to_path_buf();
         status.push("status");
 
+        let mut dep_graph = DepGraph::new();
+
         for section in lists::sections_in_reader(fs::File::open(status)?)? {
-            println!("{:?}", section)
+            // BORROW CHECKER
+            let section = section?;
+            let section = rfc822::map(&section)?;
+
+            // TODO: panic?
+            if "install ok installed" != one_line(&section["Status"])? {
+                continue;
+            }
+
+            dep_graph.read(&section)?;
         }
+
+        println!("{:?}", dep_graph);
 
         Ok(())
     }
@@ -143,11 +161,6 @@ impl System {
             }
         })
     }
-}
-
-fn one_line<'a>(lines: &[&'a str]) -> Result<&'a str> {
-    ensure!(1 == lines.len(), "{:?} isn't exactly one line", lines);
-    Ok(lines[0])
 }
 
 // Sigh, I've already written this.

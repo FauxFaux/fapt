@@ -1,4 +1,8 @@
 error_chain!{
+    links {
+        Parse(::fapt_parse::Error, ::fapt_parse::ErrorKind);
+    }
+
     foreign_links {
         Io(::std::io::Error);
         GpgMe(::gpgme::Error);

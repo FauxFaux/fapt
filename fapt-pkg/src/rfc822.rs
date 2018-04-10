@@ -9,7 +9,7 @@ use errors::*;
 
 pub fn scan(block: &str) -> Result<Vec<(&str, Vec<&str>)>> {
     let mut it = block.lines().peekable();
-    let mut ret = Vec::new();
+    let mut ret = Vec::with_capacity(20);
     while let Some(line) = it.next() {
         let colon = line.find(':')
             .ok_or_else(|| format!("expected a key: in {:?}", line))?;
@@ -89,6 +89,27 @@ impl<R: Read> Iterator for Section<R> {
             Some(Ok(buf))
         }
     }
+}
+
+pub fn mandatory_single_line(data: &HashMap<&str, Vec<&str>>, key: &str) -> Result<String> {
+    Ok(data.get(key)
+        .ok_or_else(|| format!("{} is mandatory", key))?
+        .join(" "))
+}
+
+pub fn mandatory_whitespace_list(
+    data: &HashMap<&str, Vec<&str>>,
+    key: &str,
+) -> Result<Vec<String>> {
+    Ok(mandatory_single_line(data, key)?
+        .split_whitespace()
+        .map(|x| x.to_string())
+        .collect())
+}
+
+pub fn one_line<'a>(lines: &[&'a str]) -> Result<&'a str> {
+    ensure!(1 == lines.len(), "{:?} isn't exactly one line", lines);
+    Ok(lines[0])
 }
 
 #[cfg(test)]

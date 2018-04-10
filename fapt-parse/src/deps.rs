@@ -1,3 +1,4 @@
+use nom::Err;
 use nom::types::CompleteStr;
 
 use errors::*;

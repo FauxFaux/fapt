@@ -19,6 +19,8 @@ use errors::*;
 use fetch::Download;
 use fetch::fetch;
 use rfc822;
+use rfc822::mandatory_single_line;
+use rfc822::mandatory_whitespace_list;
 use signing::GpgClient;
 
 use Hashes;
@@ -205,19 +207,6 @@ impl RequestedReleases {
             })
             .collect::<Result<Vec<Release>>>()
     }
-}
-
-fn mandatory_single_line(data: &HashMap<&str, Vec<&str>>, key: &str) -> Result<String> {
-    Ok(data.get(key)
-        .ok_or_else(|| format!("{} is mandatory", key))?
-        .join(" "))
-}
-
-fn mandatory_whitespace_list(data: &HashMap<&str, Vec<&str>>, key: &str) -> Result<Vec<String>> {
-    Ok(mandatory_single_line(data, key)?
-        .split_whitespace()
-        .map(|x| x.to_string())
-        .collect())
 }
 
 pub fn parse_release_file<P: AsRef<Path>>(path: P) -> Result<ReleaseFile> {

@@ -1,14 +1,12 @@
 #[macro_use]
 extern crate error_chain;
+extern crate fapt_parse;
 extern crate filetime;
 extern crate flate2;
 extern crate gpgme;
 extern crate hex;
 extern crate mailparse;
 extern crate md5;
-
-#[macro_use]
-extern crate nom;
 extern crate reqwest;
 extern crate serde_json;
 extern crate sha2;
@@ -23,6 +21,7 @@ use std::fmt;
 mod checksum;
 pub mod classic_sources_list;
 mod commands;
+mod dep_graph;
 mod errors;
 mod fetch;
 mod lists;
