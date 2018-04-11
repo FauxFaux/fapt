@@ -39,6 +39,8 @@ pub struct DepGraph {
 pub struct Leaves {
     pub aliases: HashMap<String, HashSet<String>>,
     pub direct_dep: HashSet<String>,
+    pub maybe_dep: HashSet<String>,
+    pub recommended: HashSet<String>,
 }
 
 impl Package {
@@ -80,8 +82,11 @@ impl DepGraph {
     }
 
     pub fn sloppy_leaves(&self) -> Leaves {
-        let mut direct_dep = HashSet::with_capacity(self.packages.len() / 2);
-        let mut aliases = HashMap::with_capacity(self.packages.len() / 10);
+        let num_packages = self.packages.len();
+        let mut direct_dep = HashSet::with_capacity(num_packages / 2);
+        let mut maybe_dep = HashSet::with_capacity(num_packages / 10);
+        let mut recommended = HashSet::with_capacity(num_packages / 4);
+        let mut aliases = HashMap::with_capacity(num_packages / 10);
 
         for (name, p) in &self.packages {
             for v in p.versions.values() {
@@ -105,9 +110,16 @@ impl DepGraph {
                         1 => {
                             direct_dep.insert(d.alternate[0].package.to_string());
                         }
-                        _ => {
-                            // TODO: actual alternatives
-                        }
+                        _ => for a in &d.alternate {
+                            maybe_dep.insert(a.package.to_string());
+                        },
+                    }
+                }
+
+                for d in &v.deps.recommends {
+                    // probably always one, does it matter?
+                    for a in &d.alternate {
+                        recommended.insert(a.package.to_string());
                     }
                 }
             }
@@ -116,6 +128,8 @@ impl DepGraph {
         Leaves {
             aliases,
             direct_dep,
+            maybe_dep,
+            recommended,
         }
     }
 

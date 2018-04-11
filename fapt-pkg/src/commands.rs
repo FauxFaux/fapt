@@ -148,26 +148,66 @@ impl System {
         }
 
         let mut unexplained = Vec::with_capacity(100);
+        let mut alt_depended = Vec::with_capacity(100);
+        let mut only_recommended = Vec::with_capacity(100);
 
         let leaves = dep_graph.sloppy_leaves();
 
         'packages: for (name, _p) in dep_graph.iter() {
-            if leaves.direct_dep.contains(name) {
-                continue;
-            }
+            let mut all_names = vec![name];
 
             if let Some(aliases) = leaves.aliases.get(name) {
-                for alias in aliases {
-                    if leaves.direct_dep.contains(alias) {
-                        continue 'packages;
-                    }
+                all_names.extend(aliases);
+            }
+
+            for alias in &all_names {
+                if leaves.direct_dep.contains(*alias) {
+                    continue 'packages;
+                }
+            }
+
+            for alias in &all_names {
+                if leaves.maybe_dep.contains(*alias) {
+                    alt_depended.push(name.to_string());
+                    continue 'packages;
+                }
+            }
+
+            for alias in &all_names {
+                if leaves.recommended.contains(*alias) {
+                    only_recommended.push(name.to_string());
+                    continue 'packages;
                 }
             }
 
             unexplained.push(name);
         }
 
+        alt_depended.sort_unstable();
+        only_recommended.sort_unstable();
         unexplained.sort_unstable();
+
+        println!("Packages may sometimes be required");
+        println!("==================================");
+        println!();
+
+        for p in alt_depended {
+            println!("{}", p);
+        }
+
+        println!();
+        println!("Packages are recommended by something");
+        println!("=====================================");
+        println!();
+
+        for p in only_recommended {
+            println!("{}", p);
+        }
+
+        println!();
+        println!("Unexplained packages");
+        println!("====================");
+        println!();
 
         for p in unexplained {
             println!("{}", p);
