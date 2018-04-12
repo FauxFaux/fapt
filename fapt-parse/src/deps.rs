@@ -12,6 +12,7 @@ pub struct Dep {
 pub struct SingleDep {
     pub package: String,
     pub arch: Option<String>,
+    /// Note: It's possible Debian only supports a single version constraint.
     pub version_constraints: Vec<Constraint>,
     pub arch_filter: Vec<String>,
     pub stage_filter: Vec<String>,
