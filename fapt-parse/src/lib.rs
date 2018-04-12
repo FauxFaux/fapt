@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate error_chain;
 
+extern crate mailparse;
 extern crate md5;
 
 #[macro_use]
@@ -12,6 +13,7 @@ mod bin;
 pub mod deps;
 mod errors;
 mod ident;
+pub mod rfc822;
 mod src;
 pub mod types;
 mod vcs;

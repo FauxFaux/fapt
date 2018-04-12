@@ -6,6 +6,7 @@ use std::io::SeekFrom;
 use std::io::Write;
 use std::path::Path;
 
+use fapt_parse::rfc822;
 use flate2::bufread::GzDecoder;
 use hex;
 use reqwest::Client;
@@ -18,7 +19,6 @@ use checksum;
 use fetch;
 use release::Release;
 use release::ReleaseContent;
-use rfc822;
 
 use errors::*;
 
@@ -221,7 +221,9 @@ pub fn sections_in<'i, P: AsRef<Path> + 'i>(
 pub fn sections_in_reader<'r, R: 'r + Read>(
     input: R,
 ) -> Result<Box<Iterator<Item = Result<String>> + 'r>> {
-    Ok(Box::new(rfc822::Section::new(input).map(decode_vec)))
+    Ok(Box::new(
+        rfc822::Section::new(input).map(|v| decode_vec(v.chain_err(|| "decoding"))),
+    ))
 }
 
 fn decode_vec(from: Result<Vec<u8>>) -> Result<String> {

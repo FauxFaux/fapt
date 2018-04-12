@@ -3,8 +3,9 @@ use fapt_parse::types::Dependency as Dep;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+use fapt_parse::rfc822::mandatory_single_line;
+
 use errors::*;
-use rfc822::mandatory_single_line;
 
 type VersionNumber = String;
 

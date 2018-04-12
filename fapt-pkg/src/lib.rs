@@ -5,7 +5,6 @@ extern crate filetime;
 extern crate flate2;
 extern crate gpgme;
 extern crate hex;
-extern crate mailparse;
 extern crate md5;
 extern crate reqwest;
 extern crate serde_json;
@@ -26,7 +25,6 @@ mod errors;
 mod fetch;
 mod lists;
 mod release;
-mod rfc822;
 mod signing;
 
 pub use commands::System;

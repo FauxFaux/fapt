@@ -16,11 +16,11 @@ use reqwest::Url;
 
 use classic_sources_list::Entry;
 use errors::*;
+use fapt_parse::rfc822;
+use fapt_parse::rfc822::mandatory_single_line;
+use fapt_parse::rfc822::mandatory_whitespace_list;
 use fetch::Download;
 use fetch::fetch;
-use rfc822;
-use rfc822::mandatory_single_line;
-use rfc822::mandatory_whitespace_list;
 use signing::GpgClient;
 
 use Hashes;

@@ -53,7 +53,7 @@ impl<'a> Iterator for Scanner<'a> {
             self.it.next().expect("just peeked");
         }
 
-        return Some(Ok((key, sub)));
+        Some(Ok((key, sub)))
     }
 }
 

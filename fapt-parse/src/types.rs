@@ -1,5 +1,8 @@
 use std::collections::HashMap;
 
+use errors::*;
+use rfc822;
+
 // Everything deals with streams of Items.
 
 pub enum Item {
@@ -212,6 +215,12 @@ pub enum SourceFormat {
     Quilt3dot0,
     Native3dot0,
     Git3dot0,
+}
+
+impl Package {
+    fn parse_bin<'i, I: Iterator<Item = rfc822::Line<'i>>>(it: I) -> Result<Package> {
+        unimplemented!()
+    }
 }
 
 impl Constraint {

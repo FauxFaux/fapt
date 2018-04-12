@@ -5,6 +5,8 @@ use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 
+use fapt_parse::rfc822;
+use fapt_parse::rfc822::one_line;
 use reqwest;
 use serde_json;
 
@@ -12,8 +14,6 @@ use classic_sources_list::Entry;
 use dep_graph::DepGraph;
 use lists;
 use release;
-use rfc822;
-use rfc822::one_line;
 
 use errors::*;
 
