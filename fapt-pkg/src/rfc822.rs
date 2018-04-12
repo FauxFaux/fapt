@@ -9,7 +9,9 @@ use mailparse::dateparse;
 
 use errors::*;
 
-pub fn scan(block: &str) -> impl Iterator<Item = Result<(&str, Vec<&str>)>> {
+pub type Line<'s> = (&'s str, Vec<&'s str>);
+
+pub fn scan(block: &str) -> impl Iterator<Item = Result<Line>> {
     Scanner {
         it: block.lines().peekable(),
     }
@@ -20,7 +22,7 @@ struct Scanner<'a> {
 }
 
 impl<'a> Iterator for Scanner<'a> {
-    type Item = Result<(&'a str, Vec<&'a str>)>;
+    type Item = Result<Line<'a>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let line = match self.it.next() {
@@ -56,9 +58,11 @@ impl<'a> Iterator for Scanner<'a> {
 }
 
 pub fn map(block: &str) -> Result<HashMap<&str, Vec<&str>>> {
-    // TYPE INFERRER / Vec collect() hack.
-    let vec: Result<Vec<(&str, Vec<&str>)>> = scan(block).collect();
-    Ok(vec?.into_iter().collect())
+    // Vec collect() hack doesn't seem to apply to map; super lazy solution
+    Ok(scan(block)
+        .collect::<Result<Vec<Line>>>()?
+        .into_iter()
+        .collect())
 }
 
 #[cfg(rage)]
@@ -134,18 +138,25 @@ pub fn one_line<'a>(lines: &[&'a str]) -> Result<&'a str> {
 
 #[cfg(test)]
 mod tests {
+    use super::Line;
     use super::scan;
+    use errors::*;
 
     #[test]
     fn single_line_header() {
-        assert_eq!(vec![("Foo", vec!["bar"])], scan("Foo: bar\n").unwrap());
+        assert_eq!(
+            vec![("Foo", vec!["bar"])],
+            scan("Foo: bar\n").collect::<Result<Vec<Line>>>().unwrap()
+        );
     }
 
     #[test]
     fn multi_line_header() {
         assert_eq!(
             vec![("Foo", vec!["bar", "baz"])],
-            scan("Foo:\n bar\n baz\n").unwrap()
+            scan("Foo:\n bar\n baz\n")
+                .collect::<Result<Vec<Line>>>()
+                .unwrap()
         );
     }
 
@@ -153,7 +164,9 @@ mod tests {
     fn multi_line_joined() {
         assert_eq!(
             vec![("Foo", vec!["bar", "baz", "quux"])],
-            scan("Foo: bar\n baz\n quux\n").unwrap()
+            scan("Foo: bar\n baz\n quux\n")
+                .collect::<Result<Vec<Line>>>()
+                .unwrap()
         );
     }
 
