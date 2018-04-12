@@ -2,47 +2,12 @@ use nom::Err;
 use nom::types::CompleteStr;
 
 use errors::*;
+use types::Constraint;
+use types::ConstraintOperator;
+use types::Dependency;
+use types::SingleDependency;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Dep {
-    pub alternate: Vec<SingleDep>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SingleDep {
-    pub package: String,
-    pub arch: Option<String>,
-    /// Note: It's possible Debian only supports a single version constraint.
-    pub version_constraints: Vec<Constraint>,
-    pub arch_filter: Vec<String>,
-    pub stage_filter: Vec<String>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Constraint {
-    pub version: String,
-    pub operator: Op,
-}
-
-impl Constraint {
-    fn new(operator: Op, version: &str) -> Self {
-        Constraint {
-            operator,
-            version: version.to_string(),
-        }
-    }
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum Op {
-    Ge,
-    Eq,
-    Le,
-    Gt,
-    Lt,
-}
-
-pub fn read(val: &str) -> Result<Vec<Dep>> {
+pub fn read(val: &str) -> Result<Vec<Dependency>> {
     use nom::Err as NomErr;
     match parse(CompleteStr(val)) {
         Ok((CompleteStr(""), val)) => Ok(val),
@@ -71,13 +36,13 @@ named!(version_constraint<CompleteStr, Constraint>,
     ws!(do_parse!(
         tag!("(") >>
         operator: alt!(
-            tag!(">=") => { |_| Op::Ge } |
-            tag!("<=") => { |_| Op::Le } |
-            tag!(">>") => { |_| Op::Gt } |
-            tag!("<<") => { |_| Op::Lt } |
-            tag!(">") => { |_| Op::Gt } |
-            tag!("<") => { |_| Op::Lt } |
-            tag!("=") => { |_| Op::Eq }
+            tag!(">=") => { |_| ConstraintOperator::Ge } |
+            tag!("<=") => { |_| ConstraintOperator::Le } |
+            tag!(">>") => { |_| ConstraintOperator::Gt } |
+            tag!("<<") => { |_| ConstraintOperator::Lt } |
+            tag!(">") => { |_| ConstraintOperator::Gt } |
+            tag!("<") => { |_| ConstraintOperator::Lt } |
+            tag!("=") => { |_| ConstraintOperator::Eq }
         ) >>
         version: version >>
         tag!(")") >>
@@ -104,14 +69,14 @@ named!(arch_suffix<CompleteStr, CompleteStr>,
     preceded!(tag!(":"), take_while1_s!(is_arch_char))
 );
 
-named!(single<CompleteStr, SingleDep>,
+named!(single<CompleteStr, SingleDependency>,
     ws!(do_parse!(
         package: package_name >>
         arch: opt!(complete!(arch_suffix)) >>
         version_constraints: ws!(many0!(complete!(version_constraint))) >>
         arch_filter: ws!(many0!(complete!(arch_filter))) >>
         stage_filter: ws!(many0!(complete!(stage_filter))) >>
-        ( SingleDep {
+        ( SingleDependency {
             package: package.0.to_string(),
             arch: arch.map(|x| x.0.to_string()),
             version_constraints,
@@ -121,17 +86,17 @@ named!(single<CompleteStr, SingleDep>,
     ))
 );
 
-named!(dep<CompleteStr, Dep>,
+named!(dep<CompleteStr, Dependency>,
     ws!(do_parse!(
         alternate: ws!(separated_nonempty_list!(
             complete!(tag!("|")),
             single)
         ) >>
-        ( Dep { alternate })
+        ( Dependency { alternate })
     ))
 );
 
-named!(parse<CompleteStr, Vec<Dep>>,
+named!(parse<CompleteStr, Vec<Dependency>>,
     ws!(
         separated_list!(
             complete!(tag!(",")),
@@ -152,7 +117,10 @@ fn check() {
     );
 
     assert_eq!(
-        (CompleteStr(""), Constraint::new(Op::Gt, "1")),
+        (
+            CompleteStr(""),
+            Constraint::new(ConstraintOperator::Gt, "1")
+        ),
         version_constraint(CompleteStr("(>> 1)")).unwrap()
     );
 

@@ -108,23 +108,28 @@ pub struct Binary {
 
 // The dependency chain types
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Dependency {
-    alternate: Vec<SingleDependency>,
+    pub alternate: Vec<SingleDependency>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SingleDependency {
-    package: String,
-    arch: String,
-    version_constraints: Vec<Constraint>,
-    arch_filter: Vec<String>,
-    stage_filter: Vec<String>,
+    pub package: String,
+    pub arch: Option<String>,
+    /// Note: It's possible Debian only supports a single version constraint.
+    pub version_constraints: Vec<Constraint>,
+    pub arch_filter: Vec<String>,
+    pub stage_filter: Vec<String>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Constraint {
     version: String,
     operator: ConstraintOperator,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ConstraintOperator {
     Ge,
     Eq,
@@ -207,4 +212,13 @@ pub enum SourceFormat {
     Quilt3dot0,
     Native3dot0,
     Git3dot0,
+}
+
+impl Constraint {
+    pub fn new(operator: ConstraintOperator, version: &str) -> Self {
+        Constraint {
+            operator,
+            version: version.to_string(),
+        }
+    }
 }

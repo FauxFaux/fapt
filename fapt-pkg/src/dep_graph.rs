@@ -1,5 +1,5 @@
 use fapt_parse::deps;
-use fapt_parse::deps::Dep;
+use fapt_parse::types::Dependency as Dep;
 use std::collections::HashMap;
 use std::collections::HashSet;
 

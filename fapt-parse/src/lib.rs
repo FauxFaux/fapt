@@ -13,7 +13,7 @@ pub mod deps;
 mod errors;
 mod ident;
 mod src;
-mod types;
+pub mod types;
 mod vcs;
 
 use types::Entry;
@@ -155,7 +155,7 @@ where
 }
 
 #[cfg(capnp)]
-fn fill_single_dep(single: deps::SingleDep, mut builder: single_dependency::Builder) {
+fn fill_single_dep(single: deps::SingleDependency, mut builder: single_dependency::Builder) {
     builder.set_package(&single.package);
 
     if let Some(ref arch) = single.arch {
@@ -169,14 +169,14 @@ fn fill_single_dep(single: deps::SingleDep, mut builder: single_dependency::Buil
         for (i, version) in single.version_constraints.into_iter().enumerate() {
             let mut builder = builder.borrow().get(as_u32(i));
             builder.set_version(&version.version);
-            use deps::Op;
+            use deps::ConstraintOperator;
             use types::ConstraintOperator::*;
             builder.set_operator(match version.operator {
-                Op::Ge => Ge,
-                Op::Eq => Eq,
-                Op::Le => Le,
-                Op::Gt => Gt,
-                Op::Lt => Lt,
+                ConstraintOperator::Ge => Ge,
+                ConstraintOperator::Eq => Eq,
+                ConstraintOperator::Le => Le,
+                ConstraintOperator::Gt => Gt,
+                ConstraintOperator::Lt => Lt,
             });
         }
     }
