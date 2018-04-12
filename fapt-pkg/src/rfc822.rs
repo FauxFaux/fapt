@@ -2,17 +2,37 @@ use std::collections::HashMap;
 use std::io;
 use std::io::BufRead;
 use std::io::Read;
+use std::iter::Peekable;
+use std::str::Lines;
 
 use mailparse::dateparse;
 
 use errors::*;
 
-pub fn scan(block: &str) -> Result<Vec<(&str, Vec<&str>)>> {
-    let mut it = block.lines().peekable();
-    let mut ret = Vec::with_capacity(20);
-    while let Some(line) = it.next() {
-        let colon = line.find(':')
-            .ok_or_else(|| format!("expected a key: in {:?}", line))?;
+pub fn scan(block: &str) -> impl Iterator<Item = Result<(&str, Vec<&str>)>> {
+    Scanner {
+        it: block.lines().peekable(),
+    }
+}
+
+struct Scanner<'a> {
+    it: Peekable<Lines<'a>>,
+}
+
+impl<'a> Iterator for Scanner<'a> {
+    type Item = Result<(&'a str, Vec<&'a str>)>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let line = match self.it.next() {
+            Some(line) => line,
+            None => return None,
+        };
+
+        let colon = match line.find(':') {
+            Some(colon) => colon,
+            None => return Some(Err(format!("expected a key: in {:?}", line).into())),
+        };
+
         let (key, first_val) = line.split_at(colon);
         let first_val = first_val[1..].trim();
         let mut sub = Vec::new();
@@ -21,24 +41,24 @@ pub fn scan(block: &str) -> Result<Vec<(&str, Vec<&str>)>> {
         }
 
         loop {
-            match it.peek() {
+            match self.it.peek() {
                 Some(line) if line.starts_with(' ') => {
                     sub.push(line.trim());
                 }
                 Some(_) | None => break,
             }
 
-            it.next().expect("just peeked");
+            self.it.next().expect("just peeked");
         }
 
-        ret.push((key, sub));
+        return Some(Ok((key, sub)));
     }
-
-    Ok(ret)
 }
 
 pub fn map(block: &str) -> Result<HashMap<&str, Vec<&str>>> {
-    Ok(scan(block)?.into_iter().collect())
+    // TYPE INFERRER / Vec collect() hack.
+    let vec: Result<Vec<(&str, Vec<&str>)>> = scan(block).collect();
+    Ok(vec?.into_iter().collect())
 }
 
 #[cfg(rage)]
