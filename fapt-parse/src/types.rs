@@ -59,8 +59,7 @@ pub struct Package {
     maintainer: Vec<Identity>,
     original_maintainer: Vec<Identity>,
 
-    parse_errors: Vec<String>,
-    unrecognised_fields: Vec<String>,
+    unparsed: HashMap<String, Vec<String>>,
 
     style: PackageType,
 }
@@ -80,8 +79,6 @@ pub struct Source {
     build_conflict_indep: Vec<Dependency>,
 
     uploaders: Vec<Identity>,
-
-    unparsed: HashMap<String, String>,
 }
 
 pub struct Binary {
@@ -105,8 +102,6 @@ pub struct Binary {
     replaces: Vec<Dependency>,
 
     provides: Vec<Dependency>,
-
-    unparsed: HashMap<String, String>,
 }
 
 // The dependency chain types
@@ -204,9 +199,10 @@ pub struct Description {
     value: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Identity {
-    name: String,
-    email: String,
+    pub name: String,
+    pub email: String,
 }
 
 pub enum SourceFormat {
@@ -219,7 +215,84 @@ pub enum SourceFormat {
 
 impl Package {
     fn parse_bin<'i, I: Iterator<Item = rfc822::Line<'i>>>(it: I) -> Result<Package> {
-        unimplemented!()
+        use rfc822::one_line;
+
+        // Package
+        let mut name = None;
+        let mut version = None;
+        let mut priority = None;
+        let mut arch = None;
+        let mut maintainer = Vec::new();
+        let mut original_maintainer = Vec::new();
+
+        // Binary
+        let mut file = None;
+        let mut essential = None;
+        let mut build_essential = None;
+        let mut installed_size = None;
+        let mut description = None;
+        let mut depends = None;
+        let mut recommends = None;
+        let mut suggests = None;
+        let mut enhances = None;
+        let mut pre_depends = None;
+        let mut breaks = None;
+        let mut conflicts = None;
+        let mut replaces = None;
+        let mut provides = None;
+
+        let mut unparsed = HashMap::new();
+
+        for (key, values) in it {
+            match key {
+                "Package" => name = Some(one_line(&values)?),
+                "Version" => version = Some(one_line(&values)?),
+                "Architecture" => {
+                    arch = Some(
+                        one_line(&values)?
+                            // TODO: alternate splitting rules?
+                            .split_whitespace()
+                            .map(|s| s.to_string())
+                            .collect(),
+                    )
+                }
+                "Priority" => priority = Some(::parse_priority(one_line(&values)?)?),
+                "Maintainer" => maintainer.extend(::ident::read(one_line(&values)?)?),
+
+                other => {
+                    unparsed.insert(
+                        key.to_string(),
+                        values.iter().map(|s| s.to_string()).collect(),
+                    );
+                }
+            }
+        }
+
+        Ok(Package {
+            name: name.ok_or("missing name")?.to_string(),
+            version: version.ok_or("missing version")?.to_string(),
+            priority: priority.ok_or("missing priority")?,
+            arch: arch.ok_or("missing arch")?,
+            maintainer,
+            original_maintainer,
+            style: PackageType::Binary(Binary {
+                file: file.ok_or("missing file")?,
+                essential: essential.ok_or("missing essential")?,
+                build_essential: build_essential.ok_or("missing build_essential")?,
+                installed_size: installed_size.ok_or("missing installed_size")?,
+                description: description.ok_or("missing description")?,
+                depends: depends.ok_or("missing depends")?,
+                recommends: recommends.ok_or("missing recommends")?,
+                suggests: suggests.ok_or("missing suggests")?,
+                enhances: enhances.ok_or("missing enhances")?,
+                pre_depends: pre_depends.ok_or("missing pre_depends")?,
+                breaks: breaks.ok_or("missing breaks")?,
+                conflicts: conflicts.ok_or("missing conflicts")?,
+                replaces: replaces.ok_or("missing replaces")?,
+                provides: provides.ok_or("missing provides")?,
+            }),
+            unparsed,
+        })
     }
 }
 

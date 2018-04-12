@@ -2,12 +2,7 @@ use nom::Err;
 use nom::types::CompleteStr;
 
 use errors::*;
-
-#[derive(Debug, PartialEq, Eq)]
-pub struct Identity {
-    pub name: String,
-    pub email: String,
-}
+use types::Identity;
 
 named!(ident<CompleteStr, Result<Identity>>,
     do_parse!(
