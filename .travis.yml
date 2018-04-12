@@ -11,7 +11,8 @@ rust:
 
 matrix:
   allow_failures:
-    - rust: stable nightly
+    - rust: stable
+    - rust: nightly
 
 addons:
   apt:
