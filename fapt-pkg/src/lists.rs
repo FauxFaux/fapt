@@ -14,11 +14,11 @@ use reqwest::Url;
 use tempdir::TempDir;
 use tempfile_fast::PersistableTempFile;
 
-use Hashes;
 use checksum;
 use fetch;
 use release::Release;
 use release::ReleaseContent;
+use Hashes;
 
 use errors::*;
 

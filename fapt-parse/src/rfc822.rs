@@ -142,8 +142,8 @@ pub fn joined(lines: &[&str]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::Line;
     use super::scan;
+    use super::Line;
     use errors::*;
 
     #[test]

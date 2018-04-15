@@ -1,5 +1,5 @@
-use nom::Err;
 use nom::types::CompleteStr;
+use nom::Err;
 
 use errors::*;
 use types::Identity;
@@ -86,8 +86,8 @@ mod tests {
 
     #[test]
     fn read() {
-        use super::Identity;
         use super::read;
+        use super::Identity;
 
         assert_eq!(
             vec![
@@ -101,6 +101,20 @@ mod tests {
                 },
             ],
             read("foo <bar>, baz <quux>").unwrap()
+        );
+    }
+
+    #[test]
+    fn lazy() {
+        use super::read;
+        use super::Identity;
+
+        assert_eq!(
+            vec![Identity {
+                name: String::new(),
+                email: "bar".to_string(),
+            }],
+            read("just@email.com").unwrap()
         );
     }
 

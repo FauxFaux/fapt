@@ -216,8 +216,8 @@ pub enum SourceFormat {
 
 impl Package {
     pub fn parse_bin<'i, I: Iterator<Item = Result<rfc822::Line<'i>>>>(it: I) -> Result<Package> {
-        use rfc822::one_line;
         use rfc822::joined;
+        use rfc822::one_line;
 
         // Package
         let mut name = None;

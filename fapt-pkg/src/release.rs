@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use std::collections::hash_map;
+use std::collections::HashMap;
 
 use std::fmt;
 use std::fs;
@@ -19,8 +19,8 @@ use errors::*;
 use fapt_parse::rfc822;
 use fapt_parse::rfc822::mandatory_single_line;
 use fapt_parse::rfc822::mandatory_whitespace_list;
-use fetch::Download;
 use fetch::fetch;
+use fetch::Download;
 use signing::GpgClient;
 
 use Hashes;
@@ -164,9 +164,10 @@ impl RequestedReleases {
 
             match fetch(
                 client,
-                &[
-                    Download::from_to(release.dists()?.join("InRelease")?, &dest),
-                ],
+                &[Download::from_to(
+                    release.dists()?.join("InRelease")?,
+                    &dest,
+                )],
             ) {
                 Ok(_) => gpg.verify_clearsigned(&dest, &verified),
                 Err(_) => {
@@ -180,12 +181,10 @@ impl RequestedReleases {
 
                     fetch(
                         client,
-                        &[
-                            Download::from_to(
-                                release.dists()?.join("Release.gpg")?,
-                                &detatched_signature,
-                            ),
-                        ],
+                        &[Download::from_to(
+                            release.dists()?.join("Release.gpg")?,
+                            &detatched_signature,
+                        )],
                     )?;
                     gpg.verify_detached(&dest, detatched_signature, verified)
                 }

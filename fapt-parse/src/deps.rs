@@ -1,5 +1,5 @@
-use nom::Err;
 use nom::types::CompleteStr;
+use nom::Err;
 
 use errors::*;
 use types::Constraint;
