@@ -136,6 +136,10 @@ pub fn one_line<'a>(lines: &[&'a str]) -> Result<&'a str> {
     Ok(lines[0])
 }
 
+pub fn joined(lines: &[&str]) -> String {
+    lines.join(" ")
+}
+
 #[cfg(test)]
 mod tests {
     use super::Line;

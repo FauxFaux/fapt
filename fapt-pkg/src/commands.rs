@@ -7,6 +7,7 @@ use std::path::PathBuf;
 
 use fapt_parse::rfc822;
 use fapt_parse::rfc822::one_line;
+use fapt_parse::types::Package;
 use reqwest;
 use serde_json;
 
@@ -137,6 +138,7 @@ impl System {
         for section in lists::sections_in_reader(fs::File::open(status)?)? {
             // BORROW CHECKER
             let section = section?;
+            Package::parse_bin(rfc822::scan(&section))?;
             let section = rfc822::map(&section)?;
 
             // TODO: panic?

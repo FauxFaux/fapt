@@ -82,7 +82,8 @@ pub struct Source {
 }
 
 pub struct Binary {
-    file: File,
+    // "File" is missing in e.g. dpkg/status, but never in Packages as far as I've seen
+    file: Option<File>,
 
     essential: bool,
     build_essential: bool,
@@ -214,8 +215,9 @@ pub enum SourceFormat {
 }
 
 impl Package {
-    fn parse_bin<'i, I: Iterator<Item = rfc822::Line<'i>>>(it: I) -> Result<Package> {
+    pub fn parse_bin<'i, I: Iterator<Item = Result<rfc822::Line<'i>>>>(it: I) -> Result<Package> {
         use rfc822::one_line;
+        use rfc822::joined;
 
         // Package
         let mut name = None;
@@ -231,19 +233,20 @@ impl Package {
         let mut build_essential = None;
         let mut installed_size = None;
         let mut description = None;
-        let mut depends = None;
-        let mut recommends = None;
-        let mut suggests = None;
-        let mut enhances = None;
-        let mut pre_depends = None;
-        let mut breaks = None;
-        let mut conflicts = None;
-        let mut replaces = None;
-        let mut provides = None;
+        let mut depends = Vec::new();
+        let mut recommends = Vec::new();
+        let mut suggests = Vec::new();
+        let mut enhances = Vec::new();
+        let mut pre_depends = Vec::new();
+        let mut breaks = Vec::new();
+        let mut conflicts = Vec::new();
+        let mut replaces = Vec::new();
+        let mut provides = Vec::new();
 
         let mut unparsed = HashMap::new();
 
-        for (key, values) in it {
+        for res in it {
+            let (key, values) = res?;
             match key {
                 "Package" => name = Some(one_line(&values)?),
                 "Version" => version = Some(one_line(&values)?),
@@ -256,8 +259,23 @@ impl Package {
                             .collect(),
                     )
                 }
+
+                "Essential" => essential = Some(::yes_no(one_line(&values)?)?),
+                "Build-Essential" => build_essential = Some(::yes_no(one_line(&values)?)?),
                 "Priority" => priority = Some(::parse_priority(one_line(&values)?)?),
                 "Maintainer" => maintainer.extend(::ident::read(one_line(&values)?)?),
+                "Installed-Size" => installed_size = Some(one_line(&values)?.parse()?),
+                "Description" => description = Some(joined(&values)),
+
+                "Depends" => depends.extend(parse_dep(&values)?),
+                "Recomends" => recommends.extend(parse_dep(&values)?),
+                "Suggests" => suggests.extend(parse_dep(&values)?),
+                "Enhances" => enhances.extend(parse_dep(&values)?),
+                "Pre-Depends" => pre_depends.extend(parse_dep(&values)?),
+                "Breaks" => breaks.extend(parse_dep(&values)?),
+                "Conflicts" => conflicts.extend(parse_dep(&values)?),
+                "Replaces" => replaces.extend(parse_dep(&values)?),
+                "Provides" => provides.extend(parse_dep(&values)?),
 
                 other => {
                     unparsed.insert(
@@ -276,24 +294,28 @@ impl Package {
             maintainer,
             original_maintainer,
             style: PackageType::Binary(Binary {
-                file: file.ok_or("missing file")?,
-                essential: essential.ok_or("missing essential")?,
-                build_essential: build_essential.ok_or("missing build_essential")?,
+                file,
+                essential: essential.unwrap_or(false),
+                build_essential: build_essential.unwrap_or(false),
                 installed_size: installed_size.ok_or("missing installed_size")?,
                 description: description.ok_or("missing description")?,
-                depends: depends.ok_or("missing depends")?,
-                recommends: recommends.ok_or("missing recommends")?,
-                suggests: suggests.ok_or("missing suggests")?,
-                enhances: enhances.ok_or("missing enhances")?,
-                pre_depends: pre_depends.ok_or("missing pre_depends")?,
-                breaks: breaks.ok_or("missing breaks")?,
-                conflicts: conflicts.ok_or("missing conflicts")?,
-                replaces: replaces.ok_or("missing replaces")?,
-                provides: provides.ok_or("missing provides")?,
+                depends,
+                recommends,
+                suggests,
+                enhances,
+                pre_depends,
+                breaks,
+                conflicts,
+                replaces,
+                provides,
             }),
             unparsed,
         })
     }
+}
+
+fn parse_dep(multi_str: &[&str]) -> Result<Vec<Dependency>> {
+    ::deps::read(&::rfc822::joined(multi_str))
 }
 
 impl Constraint {
