@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use errors::*;
-use types::Source;
 use types::SourceFormat;
 
 fn parse_format(string: &str) -> Result<SourceFormat> {

@@ -1,23 +1,10 @@
 use std::collections::HashMap;
 
+use deps;
 use errors::*;
 use rfc822;
 
-/// An unparsed, raw index
-pub struct RawIndex {
-    archive: String,
-    version: String,
-    origin: String,
-    codename: String,
-    label: String,
-    site: String,
-    component: String,
-    arch: String,
-    type_: String,
-}
-
-// The parsed top-level types for package
-
+/// The parsed top-level types for package
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PackageType {
     Source(Source),
@@ -41,33 +28,33 @@ pub struct Package {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Source {
-    format: SourceFormat,
+    pub format: SourceFormat,
 
-    binaries: Vec<SourceBinary>,
-    files: Vec<File>,
-    vcs: Vec<Vcs>,
+    pub binaries: Vec<SourceBinary>,
+    pub files: Vec<File>,
+    pub vcs: Vec<Vcs>,
 
-    build_dep: Vec<Dependency>,
-    build_dep_arch: Vec<Dependency>,
-    build_dep_indep: Vec<Dependency>,
-    build_conflict: Vec<Dependency>,
-    build_conflict_arch: Vec<Dependency>,
-    build_conflict_indep: Vec<Dependency>,
+    pub build_dep: Vec<Dependency>,
+    pub build_dep_arch: Vec<Dependency>,
+    pub build_dep_indep: Vec<Dependency>,
+    pub build_conflict: Vec<Dependency>,
+    pub build_conflict_arch: Vec<Dependency>,
+    pub build_conflict_indep: Vec<Dependency>,
 
-    uploaders: Vec<Identity>,
+    pub uploaders: Vec<Identity>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Binary {
     // "File" is missing in e.g. dpkg/status, but never in Packages as far as I've seen
-    file: Option<File>,
+    pub file: Option<File>,
 
     pub essential: bool,
-    build_essential: bool,
+    pub build_essential: bool,
 
-    installed_size: u64,
+    pub installed_size: u64,
 
-    description: String,
+    pub description: String,
 
     pub depends: Vec<Dependency>,
     pub recommends: Vec<Dependency>,
@@ -101,8 +88,8 @@ pub struct SingleDependency {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Constraint {
-    version: String,
-    operator: ConstraintOperator,
+    pub version: String,
+    pub operator: ConstraintOperator,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -118,19 +105,19 @@ pub enum ConstraintOperator {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct File {
-    name: String,
-    size: u64,
-    md5: String,
-    sha1: String,
-    sha256: String,
-    sha512: String,
+    pub name: String,
+    pub size: u64,
+    pub md5: String,
+    pub sha1: String,
+    pub sha256: String,
+    pub sha512: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Vcs {
-    description: String,
-    type_: VcsType,
-    tag: VcsTag,
+    pub description: String,
+    pub type_: VcsType,
+    pub tag: VcsTag,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -156,15 +143,15 @@ pub enum VcsTag {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SourceBinary {
-    name: String,
-    style: String,
-    section: String,
+    pub name: String,
+    pub style: String,
+    pub section: String,
 
-    priority: Priority,
-    extras: Vec<String>,
+    pub priority: Priority,
+    pub extras: Vec<String>,
 }
 
-// https://www.debian.org/doc/debian-policy/#priorities
+/// https://www.debian.org/doc/debian-policy/#priorities
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Priority {
     Unknown,
@@ -177,8 +164,8 @@ pub enum Priority {
 }
 
 pub struct Description {
-    locale: String,
-    value: String,
+    pub locale: String,
+    pub value: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -266,7 +253,7 @@ impl Package {
 
                 other => {
                     unparsed.insert(
-                        key.to_string(),
+                        other.to_string(),
                         values.iter().map(|s| s.to_string()).collect(),
                     );
                 }
@@ -307,7 +294,7 @@ impl Package {
 }
 
 fn parse_dep(multi_str: &[&str]) -> Result<Vec<Dependency>> {
-    ::deps::read(&::rfc822::joined(multi_str))
+    deps::read(&rfc822::joined(multi_str))
 }
 
 impl Constraint {

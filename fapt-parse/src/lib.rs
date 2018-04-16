@@ -15,15 +15,11 @@ mod src;
 pub mod types;
 mod vcs;
 
-use types::Package;
-
-use types::Priority;
-
+pub use errors::*;
 use types::Dependency;
 use types::Identity;
+use types::Priority;
 use types::SingleDependency;
-
-pub use errors::*;
 
 fn parse_priority(string: &str) -> Result<Priority> {
     Ok(match string {
