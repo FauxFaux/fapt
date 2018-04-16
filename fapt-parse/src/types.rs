@@ -245,6 +245,8 @@ impl Package {
 
         let mut unparsed = HashMap::new();
 
+        let mut warnings = Vec::new();
+
         for res in it {
             let (key, values) = res?;
             match key {
@@ -263,7 +265,10 @@ impl Package {
                 "Essential" => essential = Some(::yes_no(one_line(&values)?)?),
                 "Build-Essential" => build_essential = Some(::yes_no(one_line(&values)?)?),
                 "Priority" => priority = Some(::parse_priority(one_line(&values)?)?),
-                "Maintainer" => maintainer.extend(::ident::read(one_line(&values)?)?),
+                "Maintainer" => match ::ident::read(one_line(&values)?) {
+                    Ok(idents) => maintainer.extend(idents),
+                    Err(e) => warnings.push(format!("parsing maintainer: {:?}", e)),
+                },
                 "Installed-Size" => installed_size = Some(one_line(&values)?.parse()?),
                 "Description" => description = Some(joined(&values)),
 
@@ -286,6 +291,10 @@ impl Package {
             }
         }
 
+        for warning in warnings {
+            eprintln!("warning in {:?} {:?}: {}", name, version, warning);
+        }
+
         Ok(Package {
             name: name.ok_or("missing name")?.to_string(),
             version: version.ok_or("missing version")?.to_string(),
@@ -297,7 +306,8 @@ impl Package {
                 file,
                 essential: essential.unwrap_or(false),
                 build_essential: build_essential.unwrap_or(false),
-                installed_size: installed_size.ok_or("missing installed_size")?,
+                // TODO: this is missing in a couple of cases in dpkg/status; pretty crap
+                installed_size: installed_size.unwrap_or(0),
                 description: description.ok_or("missing description")?,
                 depends,
                 recommends,

@@ -107,15 +107,7 @@ mod tests {
     #[test]
     fn lazy() {
         use super::read;
-        use super::Identity;
-
-        assert_eq!(
-            vec![Identity {
-                name: String::new(),
-                email: "bar".to_string(),
-            }],
-            read("just@email.com").unwrap()
-        );
+        assert!(read("just@email.com").is_err());
     }
 
     #[test]
