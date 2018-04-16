@@ -1,4 +1,7 @@
+use std::cmp;
 use std::collections::HashMap;
+
+use deb_version::compare_versions;
 
 use deps;
 use errors::*;
@@ -303,5 +306,38 @@ impl Constraint {
             operator,
             version: version.to_string(),
         }
+    }
+
+    pub fn satisfied_by<S: AsRef<str>>(&self, version: S) -> bool {
+        self.operator
+            .satisfied_by(compare_versions(version.as_ref(), &self.version))
+    }
+}
+
+impl ConstraintOperator {
+    fn satisfied_by(&self, ordering: cmp::Ordering) -> bool {
+        use self::ConstraintOperator::*;
+        use std::cmp::Ordering::*;
+
+        match *self {
+            Eq => Equal == ordering,
+            Ge => Less != ordering,
+            Le => Greater != ordering,
+            Lt => Less == ordering,
+            Gt => Greater == ordering,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Constraint;
+    use super::ConstraintOperator;
+
+    #[test]
+    fn version() {
+        let cons = Constraint::new(ConstraintOperator::Gt, "1.0");
+        assert!(cons.satisfied_by("2.0"));
+        assert!(!cons.satisfied_by("1.0"));
     }
 }

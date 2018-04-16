@@ -3,6 +3,7 @@ use std::collections::HashSet;
 
 use fapt_parse::types::Package;
 use fapt_parse::types::PackageType;
+use fapt_parse::types::SingleDependency;
 
 use errors::*;
 
@@ -41,6 +42,15 @@ pub struct Leaves {
     pub recommended: HashSet<String>,
 }
 
+type Edge = (Id, Vec<Id>);
+
+#[cfg(never)]
+struct Node {
+    depends: Vec<Id>,
+    recommends: Vec<Id>,
+    suggests: Vec<Id>,
+}
+
 impl DepGraph {
     pub fn new() -> DepGraph {
         DepGraph {
@@ -54,6 +64,30 @@ impl DepGraph {
         self.lookup.insert((&package).into(), id);
         self.packages.push(package);
         Ok(())
+    }
+
+    pub fn what_kinda(&self) -> () {
+        let mut edges: Vec<Edge> = Vec::with_capacity(self.packages.len());
+
+        for p in &self.packages {
+            let bin = match p.style {
+                PackageType::Binary(ref bin) => bin,
+                PackageType::Source(_) => unreachable!(),
+            };
+            let id = self.lookup[&p.into()];
+            for d in &bin.depends {
+                edges.push((id, d.alternate.iter().flat_map(|d| self.ids(d)).collect()));
+            }
+        }
+    }
+
+    // Can't return impl Iterator due to BORROW CHECKER
+    fn ids(&self, d: &SingleDependency) -> Vec<Id> {
+        self.packages
+            .iter()
+            .filter(|p| satisfies(p, d))
+            .map(|p| self.lookup[&p.into()])
+            .collect()
     }
 
     pub fn sloppy_leaves(&self) -> Leaves {
@@ -117,4 +151,49 @@ impl DepGraph {
     pub fn iter(&self) -> impl Iterator<Item = &Package> {
         self.packages.iter()
     }
+}
+
+fn satisfies(p: &Package, d: &SingleDependency) -> bool {
+    if !name_matches(p, d) {
+        return false;
+    }
+
+    if !harmless_arch_constraint(&d.arch) || !d.arch_filter.is_empty() || !d.stage_filter.is_empty()
+    {
+        unimplemented!("package {:?} may satisfy {:?}", p, d)
+    }
+
+    for v in &d.version_constraints {
+        if !v.satisfied_by(&p.version) {
+            return false;
+        }
+    }
+
+    true
+}
+
+fn harmless_arch_constraint(arch: &Option<String>) -> bool {
+    match arch {
+        None => true,
+        Some(s) if "any" == s => true,
+        _ => false,
+    }
+}
+
+fn name_matches(p: &Package, d: &SingleDependency) -> bool {
+    if p.name == d.package {
+        return true;
+    }
+
+    match &p.style {
+        PackageType::Binary(bin) => for provides in &bin.provides {
+            assert_eq!(1, provides.alternate.len());
+            if d.package == provides.alternate[0].package {
+                return true;
+            }
+        },
+        PackageType::Source(_) => (),
+    }
+
+    false
 }

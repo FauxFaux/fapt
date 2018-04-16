@@ -1,3 +1,5 @@
+extern crate deb_version;
+
 #[macro_use]
 extern crate error_chain;
 

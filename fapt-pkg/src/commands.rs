@@ -152,6 +152,7 @@ impl System {
         let mut alt_depended = Vec::with_capacity(100);
         let mut only_recommended = Vec::with_capacity(100);
 
+        dep_graph.what_kinda();
         let leaves = dep_graph.sloppy_leaves();
 
         'packages: for p in dep_graph.iter() {
