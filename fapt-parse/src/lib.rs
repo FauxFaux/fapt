@@ -16,10 +16,7 @@ pub mod types;
 mod vcs;
 
 pub use errors::*;
-use types::Dependency;
-use types::Identity;
 use types::Priority;
-use types::SingleDependency;
 
 fn parse_priority(string: &str) -> Result<Priority> {
     Ok(match string {
