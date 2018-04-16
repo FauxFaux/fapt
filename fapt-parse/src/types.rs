@@ -3,34 +3,7 @@ use std::collections::HashMap;
 use errors::*;
 use rfc822;
 
-// Everything deals with streams of Items.
-
-pub enum Item {
-    End,
-    Raw(RawPackage),
-    Index(RawIndex),
-    Package(Package),
-}
-
-// An unparsed, raw package
-
-pub struct RawPackage {
-    type_: RawPackageType,
-    entries: Vec<Entry>,
-}
-
-pub enum RawPackageType {
-    Source,
-    Binary,
-}
-
-pub struct Entry {
-    key: String,
-    value: String,
-}
-
-// An unparsed, raw index
-
+/// An unparsed, raw index
 pub struct RawIndex {
     archive: String,
     version: String,

@@ -1,8 +1,4 @@
-use std::collections::HashMap;
-
-use as_u32;
 use errors::*;
-
 use types::VcsTag;
 use types::VcsType;
 
