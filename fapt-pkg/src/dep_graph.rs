@@ -1,39 +1,21 @@
-use fapt_parse::deps;
-use fapt_parse::types::Dependency as Dep;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use fapt_parse::rfc822::mandatory_single_line;
+use fapt_parse::types::Package;
+use fapt_parse::types::PackageType;
 
 use errors::*;
 
 type VersionNumber = String;
 
-// TODO: this is very close to fapt_parse::types
-
 #[derive(Debug)]
-struct Deps {
-    pre_depends: Vec<Dep>,
-    depends: Vec<Dep>,
-    recommends: Vec<Dep>,
-    suggests: Vec<Dep>,
-    provides: Vec<Dep>,
-}
-
-#[derive(Debug)]
-struct Version {
-    essential: bool,
-    deps: Deps,
-}
-
-#[derive(Debug)]
-pub struct Package {
-    versions: HashMap<VersionNumber, Version>,
+pub struct NamedPackage {
+    versions: HashMap<VersionNumber, Package>,
 }
 
 #[derive(Debug)]
 pub struct DepGraph {
-    packages: HashMap<String, Package>,
+    packages: HashMap<String, NamedPackage>,
 }
 
 #[derive(Debug)]
@@ -44,9 +26,9 @@ pub struct Leaves {
     pub recommended: HashSet<String>,
 }
 
-impl Package {
-    fn new() -> Package {
-        Package {
+impl NamedPackage {
+    fn new() -> NamedPackage {
+        NamedPackage {
             versions: HashMap::new(),
         }
     }
@@ -59,26 +41,12 @@ impl DepGraph {
         }
     }
 
-    pub fn read(&mut self, row: &HashMap<&str, Vec<&str>>) -> Result<()> {
-        // this is totally going to be reusable or already written
-        let name = mandatory_single_line(row, "Package")?;
-        let version: VersionNumber = mandatory_single_line(row, "Version")?;
-        let deps = Deps {
-            pre_depends: parse_dep(row.get("Pre-Depends"))?,
-            depends: parse_dep(row.get("Depends"))?,
-            recommends: parse_dep(row.get("Recommends"))?,
-            suggests: parse_dep(row.get("Suggests"))?,
-            provides: parse_dep(row.get("Provides"))?,
-        };
-
-        // TODO: not technically correct
-        let essential = row.contains_key("Essential");
-
+    pub fn read(&mut self, package: Package) -> Result<()> {
         self.packages
-            .entry(name)
-            .or_insert_with(Package::new)
+            .entry(package.name.to_string())
+            .or_insert_with(NamedPackage::new)
             .versions
-            .insert(version, Version { deps, essential });
+            .insert(package.version.to_string(), package);
         Ok(())
     }
 
@@ -91,11 +59,16 @@ impl DepGraph {
 
         for (name, p) in &self.packages {
             for v in p.versions.values() {
-                if v.essential {
+                let bin = match v.style {
+                    PackageType::Binary(ref bin) => bin,
+                    PackageType::Source(_) => unreachable!(),
+                };
+
+                if bin.essential {
                     direct_dep.insert(name.to_string());
                 }
 
-                for p in &v.deps.provides {
+                for p in &bin.provides {
                     assert_eq!(1, p.alternate.len());
                     let p = &p.alternate[0];
                     assert_eq!(None, p.arch);
@@ -105,7 +78,7 @@ impl DepGraph {
                         .insert(name.to_string());
                 }
 
-                for d in &v.deps.depends {
+                for d in &bin.depends {
                     match d.alternate.len() {
                         0 => unreachable!(),
                         1 => {
@@ -117,7 +90,7 @@ impl DepGraph {
                     }
                 }
 
-                for d in &v.deps.recommends {
+                for d in &bin.recommends {
                     // probably always one, does it matter?
                     for a in &d.alternate {
                         recommended.insert(a.package.to_string());
@@ -134,14 +107,7 @@ impl DepGraph {
         }
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&String, &Package)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &NamedPackage)> {
         self.packages.iter()
     }
-}
-
-fn parse_dep(multi_str: Option<&Vec<&str>>) -> Result<Vec<Dep>> {
-    Ok(match multi_str {
-        Some(v) => deps::read(&v.join(" "))?,
-        None => Vec::new(),
-    })
 }

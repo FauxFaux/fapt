@@ -45,25 +45,28 @@ pub struct RawIndex {
 
 // The parsed top-level types for package
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PackageType {
     Source(Source),
     Binary(Binary),
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Package {
-    name: String,
-    version: String,
-    priority: Priority,
-    arch: Vec<String>,
+    pub name: String,
+    pub version: String,
+    pub priority: Priority,
+    pub arch: Vec<String>,
 
-    maintainer: Vec<Identity>,
-    original_maintainer: Vec<Identity>,
+    pub maintainer: Vec<Identity>,
+    pub original_maintainer: Vec<Identity>,
 
-    unparsed: HashMap<String, Vec<String>>,
+    pub unparsed: HashMap<String, Vec<String>>,
 
-    style: PackageType,
+    pub style: PackageType,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Source {
     format: SourceFormat,
 
@@ -81,28 +84,29 @@ pub struct Source {
     uploaders: Vec<Identity>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Binary {
     // "File" is missing in e.g. dpkg/status, but never in Packages as far as I've seen
     file: Option<File>,
 
-    essential: bool,
+    pub essential: bool,
     build_essential: bool,
 
     installed_size: u64,
 
     description: String,
 
-    depends: Vec<Dependency>,
-    recommends: Vec<Dependency>,
-    suggests: Vec<Dependency>,
-    enhances: Vec<Dependency>,
-    pre_depends: Vec<Dependency>,
+    pub depends: Vec<Dependency>,
+    pub recommends: Vec<Dependency>,
+    pub suggests: Vec<Dependency>,
+    pub enhances: Vec<Dependency>,
+    pub pre_depends: Vec<Dependency>,
 
-    breaks: Vec<Dependency>,
-    conflicts: Vec<Dependency>,
-    replaces: Vec<Dependency>,
+    pub breaks: Vec<Dependency>,
+    pub conflicts: Vec<Dependency>,
+    pub replaces: Vec<Dependency>,
 
-    provides: Vec<Dependency>,
+    pub provides: Vec<Dependency>,
 }
 
 // The dependency chain types
@@ -139,6 +143,7 @@ pub enum ConstraintOperator {
 
 // Other types
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct File {
     name: String,
     size: u64,
@@ -148,13 +153,14 @@ pub struct File {
     sha512: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Vcs {
     description: String,
     type_: VcsType,
     tag: VcsTag,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum VcsType {
     Browser,
     Arch,
@@ -167,7 +173,7 @@ pub enum VcsType {
     Svn,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum VcsTag {
     Vcs,
     Orig,
@@ -175,6 +181,7 @@ pub enum VcsTag {
     Upstream,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SourceBinary {
     name: String,
     style: String,
@@ -185,6 +192,7 @@ pub struct SourceBinary {
 }
 
 // https://www.debian.org/doc/debian-policy/#priorities
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Priority {
     Unknown,
     Required,
@@ -206,6 +214,7 @@ pub struct Identity {
     pub email: String,
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum SourceFormat {
     Unknown,
     Original,

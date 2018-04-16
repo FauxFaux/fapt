@@ -138,15 +138,14 @@ impl System {
         for section in lists::sections_in_reader(fs::File::open(status)?)? {
             // BORROW CHECKER
             let section = section?;
-            Package::parse_bin(rfc822::scan(&section))?;
-            let section = rfc822::map(&section)?;
+            let package = Package::parse_bin(rfc822::scan(&section))?;
 
             // TODO: panic?
-            if "install ok installed" != one_line(&section["Status"])? {
+            if "install ok installed" != package.unparsed["Status"].join(" ") {
                 continue;
             }
 
-            dep_graph.read(&section)?;
+            dep_graph.read(package)?;
         }
 
         let mut unexplained = Vec::with_capacity(100);
