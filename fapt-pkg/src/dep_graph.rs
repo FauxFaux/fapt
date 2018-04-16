@@ -67,7 +67,9 @@ impl DepGraph {
     }
 
     pub fn what_kinda(&self) -> () {
-        let mut edges: Vec<Edge> = Vec::with_capacity(self.packages.len());
+        let mut dep: Vec<Edge> = Vec::with_capacity(self.packages.len());
+        let mut recommends: Vec<Edge> = Vec::with_capacity(self.packages.len());
+        let mut suggests: Vec<Edge> = Vec::with_capacity(self.packages.len());
 
         for p in &self.packages {
             let bin = match p.style {
@@ -76,9 +78,21 @@ impl DepGraph {
             };
             let id = self.lookup[&p.into()];
             for d in &bin.depends {
-                edges.push((id, d.alternate.iter().flat_map(|d| self.ids(d)).collect()));
+                dep.push((id, self.flatten(&d.alternate)));
+            }
+
+            for d in &bin.recommends {
+                recommends.push((id, self.flatten(&d.alternate)));
+            }
+
+            for d in &bin.suggests {
+                suggests.push((id, self.flatten(&d.alternate)));
             }
         }
+    }
+
+    fn flatten(&self, d: &[SingleDependency]) -> Vec<Id> {
+        d.into_iter().flat_map(|d| self.ids(d)).collect()
     }
 
     // Can't return impl Iterator due to BORROW CHECKER
