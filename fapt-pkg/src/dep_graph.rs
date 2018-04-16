@@ -6,16 +6,31 @@ use fapt_parse::types::PackageType;
 
 use errors::*;
 
-type VersionNumber = String;
+type Id = usize;
 
-#[derive(Debug)]
-pub struct NamedPackage {
-    versions: HashMap<VersionNumber, Package>,
+#[derive(Clone, Debug, Ord, PartialOrd, PartialEq, Eq, Hash)]
+struct IdKey {
+    name: String,
+    version: String,
+    arches: Vec<String>,
+}
+
+impl<'a> From<&'a Package> for IdKey {
+    fn from(p: &'a Package) -> Self {
+        let mut arches = p.arch.clone();
+        arches.sort_unstable();
+        IdKey {
+            name: p.name.clone(),
+            version: p.version.clone(),
+            arches,
+        }
+    }
 }
 
 #[derive(Debug)]
 pub struct DepGraph {
-    packages: HashMap<String, NamedPackage>,
+    packages: Vec<Package>,
+    lookup: HashMap<IdKey, Id>,
 }
 
 #[derive(Debug)]
@@ -26,27 +41,18 @@ pub struct Leaves {
     pub recommended: HashSet<String>,
 }
 
-impl NamedPackage {
-    fn new() -> NamedPackage {
-        NamedPackage {
-            versions: HashMap::new(),
-        }
-    }
-}
-
 impl DepGraph {
     pub fn new() -> DepGraph {
         DepGraph {
-            packages: HashMap::with_capacity(200),
+            packages: Vec::with_capacity(200),
+            lookup: HashMap::with_capacity(200),
         }
     }
 
-    pub fn read(&mut self, package: Package) -> Result<()> {
-        self.packages
-            .entry(package.name.to_string())
-            .or_insert_with(NamedPackage::new)
-            .versions
-            .insert(package.version.to_string(), package);
+    pub fn insert(&mut self, package: Package) -> Result<()> {
+        let id = self.packages.len();
+        self.lookup.insert((&package).into(), id);
+        self.packages.push(package);
         Ok(())
     }
 
@@ -57,8 +63,9 @@ impl DepGraph {
         let mut recommended = HashSet::with_capacity(num_packages / 4);
         let mut aliases = HashMap::with_capacity(num_packages / 10);
 
-        for (name, p) in &self.packages {
-            for v in p.versions.values() {
+        for v in &self.packages {
+            let name = &v.name;
+            {
                 let bin = match v.style {
                     PackageType::Binary(ref bin) => bin,
                     PackageType::Source(_) => unreachable!(),
@@ -107,7 +114,7 @@ impl DepGraph {
         }
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&String, &NamedPackage)> {
+    pub fn iter(&self) -> impl Iterator<Item = &Package> {
         self.packages.iter()
     }
 }

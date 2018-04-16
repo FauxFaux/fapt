@@ -145,7 +145,7 @@ impl System {
                 continue;
             }
 
-            dep_graph.read(package)?;
+            dep_graph.insert(package)?;
         }
 
         let mut unexplained = Vec::with_capacity(100);
@@ -154,7 +154,8 @@ impl System {
 
         let leaves = dep_graph.sloppy_leaves();
 
-        'packages: for (name, _p) in dep_graph.iter() {
+        'packages: for p in dep_graph.iter() {
+            let name = &p.name;
             let mut all_names = vec![name];
 
             if let Some(aliases) = leaves.aliases.get(name) {

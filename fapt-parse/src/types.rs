@@ -242,7 +242,7 @@ impl Package {
                 "Description" => description = Some(joined(&values)),
 
                 "Depends" => depends.extend(parse_dep(&values)?),
-                "Recomends" => recommends.extend(parse_dep(&values)?),
+                "Recommends" => recommends.extend(parse_dep(&values)?),
                 "Suggests" => suggests.extend(parse_dep(&values)?),
                 "Enhances" => enhances.extend(parse_dep(&values)?),
                 "Pre-Depends" => pre_depends.extend(parse_dep(&values)?),
