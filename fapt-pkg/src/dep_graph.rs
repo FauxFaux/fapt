@@ -171,7 +171,14 @@ fn satisfies(p: &Package, d: &SingleDependency) -> bool {
         return false;
     }
 
-    if !harmless_arch_constraint(&d.arch) || !d.arch_filter.is_empty() || !d.stage_filter.is_empty()
+    if let Some(arch) = d.arch {
+        // TODO: no idea what this logic should be
+        if Arch::Any != arch && !p.arches.contains(&arch) {
+            return false;
+        }
+    }
+
+    if !d.arch_filter.is_empty() || !d.stage_filter.is_empty()
     {
         unimplemented!("package\n{:?}\n\nmay satisfy:\n{:?}", p, d)
     }
@@ -183,13 +190,6 @@ fn satisfies(p: &Package, d: &SingleDependency) -> bool {
     }
 
     true
-}
-
-fn harmless_arch_constraint(arch: &Option<Arch>) -> bool {
-    match arch {
-        None => true,
-        Some(_) => false,
-    }
 }
 
 fn name_matches(p: &Package, d: &SingleDependency) -> bool {
