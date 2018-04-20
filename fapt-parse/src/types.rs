@@ -108,7 +108,7 @@ pub enum ConstraintOperator {
 
 // Other types
 
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Ord, PartialOrd)]
 pub enum Arch {
     Any,
     All,

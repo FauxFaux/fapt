@@ -19,10 +19,13 @@ struct IdKey {
 
 impl<'a> From<&'a Package> for IdKey {
     fn from(p: &'a Package) -> Self {
+        let mut arches: Vec<Arch> = p.arches.iter().cloned().collect();
+        arches.sort_unstable();
+
         IdKey {
             name: p.name.clone(),
             version: p.version.clone(),
-            arches: p.arches.iter().cloned().collect(),
+            arches,
         }
     }
 }
