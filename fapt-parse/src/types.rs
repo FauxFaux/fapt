@@ -19,7 +19,7 @@ pub struct Package {
     pub name: String,
     pub version: String,
     pub priority: Priority,
-    pub arch: Vec<String>,
+    pub arches: Arches,
 
     pub maintainer: Vec<Identity>,
     pub original_maintainer: Vec<Identity>,
@@ -105,6 +105,67 @@ pub enum ConstraintOperator {
 }
 
 // Other types
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+enum Arch {
+    Amd64,
+    Armel,
+    Armhf,
+    Arm64,
+    I386,
+    Mips,
+    Mipsel,
+    Mips64,
+    Mips64El,
+    Ppc64El,
+    S390X,
+}
+
+bitflags! {
+    /// Having any/all as part of this is a bit of a cop-out, I think.
+    /// I'm pretty sure it's okay to list "any amd64" as an arch. I should find a spec.
+    pub struct Arches: u16 {
+        const ANY      = 1 << 0;
+        const ALL      = 1 << 1;
+        const AMD64    = 1 << (Arch::Amd64    as usize + 2);
+        const ARMEL    = 1 << (Arch::Armel    as usize + 2);
+        const ARMHF    = 1 << (Arch::Armhf    as usize + 2);
+        const ARM64    = 1 << (Arch::Arm64    as usize + 2);
+        const I386     = 1 << (Arch::I386     as usize + 2);
+        const MIPS     = 1 << (Arch::Mips     as usize + 2);
+        const MIPSEL   = 1 << (Arch::Mipsel   as usize + 2);
+        const MIPS64   = 1 << (Arch::Mips64   as usize + 2);
+        const MIPS64EL = 1 << (Arch::Mips64El as usize + 2);
+        const PPC64EL  = 1 << (Arch::Ppc64El  as usize + 2);
+        const S390X    = 1 << (Arch::S390X    as usize + 2);
+    }
+}
+
+impl Arches {
+    fn parse<'a, I: IntoIterator<Item = &'a str>>(list: I) -> Result<Arches> {
+        let mut val = Arches::empty();
+
+        for part in list {
+            val |= match part {
+                "amd64" => Arches::AMD64,
+                "armel" => Arches::ARMEL,
+                "armhf" => Arches::ARMHF,
+                "arm64" => Arches::ARM64,
+                "i386" => Arches::I386,
+                "mips" => Arches::MIPS,
+                "mipsel" => Arches::MIPSEL,
+                "mips64el" => Arches::MIPS64EL,
+                "ppc64el" => Arches::PPC64EL,
+                "s390x" => Arches::S390X,
+                "any" => Arches::ANY,
+                "all" => Arches::ALL,
+                other => bail!("unsupported architecture: {}", other),
+            };
+        }
+
+        Ok(val)
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct File {
@@ -226,11 +287,9 @@ impl Package {
                 "Version" => version = Some(one_line(&values)?),
                 "Architecture" => {
                     arch = Some(
-                        one_line(&values)?
+                        Arches::parse(one_line(&values)?
                             // TODO: alternate splitting rules?
-                            .split_whitespace()
-                            .map(|s| s.to_string())
-                            .collect(),
+                            .split_whitespace())?,
                     )
                 }
 
@@ -271,7 +330,7 @@ impl Package {
             name: name.ok_or("missing name")?.to_string(),
             version: version.ok_or("missing version")?.to_string(),
             priority: priority.ok_or("missing priority")?,
-            arch: arch.ok_or("missing arch")?,
+            arches: arch.ok_or("missing arch")?,
             maintainer,
             original_maintainer,
             style: PackageType::Binary(Binary {

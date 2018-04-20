@@ -4,11 +4,12 @@ name = "fapt-parse"
 version = "0.1.0"
 
 [dependencies]
+bitflags = "1"
+deb-version = "0.1"
 error-chain = "0.11"
 mailparse = "0.6"
 md-5 = "0.7"
 nom = "4.0.0-beta2"
-deb-version = "0.1"
 
 [dependencies.digest]
 features = ["std"]

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+use fapt_parse::types::Arches;
 use fapt_parse::types::Package;
 use fapt_parse::types::PackageType;
 use fapt_parse::types::SingleDependency;
@@ -13,17 +14,15 @@ type Id = usize;
 struct IdKey {
     name: String,
     version: String,
-    arches: Vec<String>,
+    arches: Arches,
 }
 
 impl<'a> From<&'a Package> for IdKey {
     fn from(p: &'a Package) -> Self {
-        let mut arches = p.arch.clone();
-        arches.sort_unstable();
         IdKey {
             name: p.name.clone(),
             version: p.version.clone(),
-            arches,
+            arches: p.arches,
         }
     }
 }
@@ -174,7 +173,7 @@ fn satisfies(p: &Package, d: &SingleDependency) -> bool {
 
     if !harmless_arch_constraint(&d.arch) || !d.arch_filter.is_empty() || !d.stage_filter.is_empty()
     {
-        unimplemented!("package {:?} may satisfy {:?}", p, d)
+        unimplemented!("package\n{:?}\n\nmay satisfy:\n{:?}", p, d)
     }
 
     for v in &d.version_constraints {
