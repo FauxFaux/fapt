@@ -1,5 +1,4 @@
 use nom::types::CompleteStr;
-use result::ResultOptionExt;
 
 use errors;
 use errors::*;

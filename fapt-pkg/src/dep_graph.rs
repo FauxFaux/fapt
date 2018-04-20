@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use fapt_parse::types::Arch;
-use fapt_parse::types::Arches;
 use fapt_parse::types::Package;
 use fapt_parse::types::PackageType;
 use fapt_parse::types::SingleDependency;
@@ -11,11 +10,11 @@ use errors::*;
 
 type Id = usize;
 
-#[derive(Clone, Debug, Ord, PartialOrd, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 struct IdKey {
     name: String,
     version: String,
-    arches: Arches,
+    arches: Vec<Arch>,
 }
 
 impl<'a> From<&'a Package> for IdKey {
@@ -23,7 +22,7 @@ impl<'a> From<&'a Package> for IdKey {
         IdKey {
             name: p.name.clone(),
             version: p.version.clone(),
-            arches: p.arches,
+            arches: p.arches.iter().cloned().collect(),
         }
     }
 }

@@ -1,6 +1,6 @@
 use std::cmp;
 use std::collections::HashMap;
-use std::iter::FromIterator;
+use std::collections::HashSet;
 use std::str::FromStr;
 
 use deb_version::compare_versions;
@@ -108,7 +108,7 @@ pub enum ConstraintOperator {
 
 // Other types
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum Arch {
     Any,
     All,
@@ -123,53 +123,19 @@ pub enum Arch {
     Mips64El,
     Ppc64El,
     S390X,
+    LinuxAny,
+    X32,
 }
 
-bitflags! {
-    /// Having any/all as part of this is a bit of a cop-out, I think.
-    /// I'm pretty sure it's okay to list "any amd64" as an arch. I should find a spec.
-    pub struct Arches: u16 {
-        const ANY      = 1 << Arch::Any      as usize;
-        const ALL      = 1 << Arch::All      as usize;
-        const AMD64    = 1 << Arch::Amd64    as usize;
-        const ARMEL    = 1 << Arch::Armel    as usize;
-        const ARMHF    = 1 << Arch::Armhf    as usize;
-        const ARM64    = 1 << Arch::Arm64    as usize;
-        const I386     = 1 << Arch::I386     as usize;
-        const MIPS     = 1 << Arch::Mips     as usize;
-        const MIPSEL   = 1 << Arch::Mipsel   as usize;
-        const MIPS64   = 1 << Arch::Mips64   as usize;
-        const MIPS64EL = 1 << Arch::Mips64El as usize;
-        const PPC64EL  = 1 << Arch::Ppc64El  as usize;
-        const S390X    = 1 << Arch::S390X    as usize;
-    }
-}
-
-impl Arch {
-    fn as_flag(&self) -> Arches {
-        match *self {
-            Arch::Any => Arches::ANY,
-            Arch::All => Arches::ALL,
-            Arch::Amd64 => Arches::AMD64,
-            Arch::Armel => Arches::ARMEL,
-            Arch::Armhf => Arches::ARMHF,
-            Arch::Arm64 => Arches::ARM64,
-            Arch::I386 => Arches::I386,
-            Arch::Mips => Arches::MIPS,
-            Arch::Mipsel => Arches::MIPSEL,
-            Arch::Mips64 => Arches::MIPS64,
-            Arch::Mips64El => Arches::MIPS64EL,
-            Arch::Ppc64El => Arches::PPC64EL,
-            Arch::S390X => Arches::S390X,
-        }
-    }
-}
+pub type Arches = HashSet<Arch>;
 
 impl FromStr for Arch {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
         Ok(match s {
+            "all" => Arch::All,
+            "any" => Arch::Any,
             "amd64" => Arch::Amd64,
             "armel" => Arch::Armel,
             "armhf" => Arch::Armhf,
@@ -181,45 +147,10 @@ impl FromStr for Arch {
             "mips64el" => Arch::Mips64El,
             "ppc64el" => Arch::Ppc64El,
             "s390x" => Arch::S390X,
+            "linux-any" => Arch::LinuxAny,
+            "x32" => Arch::X32,
             other => bail!("unrecognised arch: {:?}", s),
         })
-    }
-}
-
-impl FromIterator<Arch> for Arches {
-    fn from_iter<T: IntoIterator<Item = Arch>>(iter: T) -> Self {
-        let mut arches = Arches::empty();
-        for i in iter {
-            arches |= i.as_flag()
-        }
-
-        arches
-    }
-}
-
-impl Arches {
-    fn parse<'a, I: IntoIterator<Item = &'a str>>(list: I) -> Result<Arches> {
-        let mut val = Arches::empty();
-
-        for part in list {
-            val |= match part {
-                "amd64" => Arches::AMD64,
-                "armel" => Arches::ARMEL,
-                "armhf" => Arches::ARMHF,
-                "arm64" => Arches::ARM64,
-                "i386" => Arches::I386,
-                "mips" => Arches::MIPS,
-                "mipsel" => Arches::MIPSEL,
-                "mips64el" => Arches::MIPS64EL,
-                "ppc64el" => Arches::PPC64EL,
-                "s390x" => Arches::S390X,
-                "any" => Arches::ANY,
-                "all" => Arches::ALL,
-                other => bail!("unsupported architecture: {}", other),
-            };
-        }
-
-        Ok(val)
     }
 }
 
@@ -312,7 +243,7 @@ impl Package {
         let mut name = None;
         let mut version = None;
         let mut priority = None;
-        let mut arch = None;
+        let mut arches = None;
         let mut maintainer = Vec::new();
         let mut original_maintainer = Vec::new();
 
@@ -342,9 +273,11 @@ impl Package {
                 "Package" => name = Some(one_line(&values)?),
                 "Version" => version = Some(one_line(&values)?),
                 "Architecture" => {
-                    arch = Some(Arches::parse(one_line(&values)?
+                    arches = Some(one_line(&values)?
                             // TODO: alternate splitting rules?
-                            .split_whitespace())?)
+                            .split_whitespace()
+                        .map(|s| s.parse())
+                        .collect::<Result<HashSet<Arch>>>()?)
                 }
 
                 "Essential" => essential = Some(::yes_no(one_line(&values)?)?),
@@ -384,7 +317,7 @@ impl Package {
             name: name.ok_or("missing name")?.to_string(),
             version: version.ok_or("missing version")?.to_string(),
             priority: priority.ok_or("missing priority")?,
-            arches: arch.ok_or("missing arch")?,
+            arches: arches.ok_or("missing arches")?,
             maintainer,
             original_maintainer,
             style: PackageType::Binary(Binary {
