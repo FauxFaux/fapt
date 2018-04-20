@@ -94,7 +94,18 @@ impl DepGraph {
     }
 
     fn flatten(&self, d: &[SingleDependency]) -> Vec<Id> {
-        d.into_iter().flat_map(|d| self.ids(d)).collect()
+        let mut v: Vec<Id> = d.into_iter().flat_map(|d| self.ids(d)).collect();
+
+        // e.g.
+        // "Depends: java-runtime | openjdk-8-jdk";
+        // "Package openjdk-8-djk; Provides: java-runtime"?
+        v.sort_unstable();
+        v.dedup_by_key(|v| *v);
+        v.shrink_to_fit();
+
+        // Maybe we should use HashSet<> here? I imagine a tiny Vec is way smaller,
+        // and can be used as a map key etc.
+        v
     }
 
     // Can't return impl Iterator due to BORROW CHECKER
