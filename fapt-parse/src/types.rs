@@ -1,5 +1,7 @@
 use std::cmp;
 use std::collections::HashMap;
+use std::iter::FromIterator;
+use std::str::FromStr;
 
 use deb_version::compare_versions;
 
@@ -82,10 +84,10 @@ pub struct Dependency {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SingleDependency {
     pub package: String,
-    pub arch: Option<String>,
+    pub arch: Option<Arch>,
     /// Note: It's possible Debian only supports a single version constraint.
     pub version_constraints: Vec<Constraint>,
-    pub arch_filter: Vec<String>,
+    pub arch_filter: Arches,
     pub stage_filter: Vec<String>,
 }
 
@@ -107,7 +109,9 @@ pub enum ConstraintOperator {
 // Other types
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-enum Arch {
+pub enum Arch {
+    Any,
+    All,
     Amd64,
     Armel,
     Armhf,
@@ -125,19 +129,71 @@ bitflags! {
     /// Having any/all as part of this is a bit of a cop-out, I think.
     /// I'm pretty sure it's okay to list "any amd64" as an arch. I should find a spec.
     pub struct Arches: u16 {
-        const ANY      = 1 << 0;
-        const ALL      = 1 << 1;
-        const AMD64    = 1 << (Arch::Amd64    as usize + 2);
-        const ARMEL    = 1 << (Arch::Armel    as usize + 2);
-        const ARMHF    = 1 << (Arch::Armhf    as usize + 2);
-        const ARM64    = 1 << (Arch::Arm64    as usize + 2);
-        const I386     = 1 << (Arch::I386     as usize + 2);
-        const MIPS     = 1 << (Arch::Mips     as usize + 2);
-        const MIPSEL   = 1 << (Arch::Mipsel   as usize + 2);
-        const MIPS64   = 1 << (Arch::Mips64   as usize + 2);
-        const MIPS64EL = 1 << (Arch::Mips64El as usize + 2);
-        const PPC64EL  = 1 << (Arch::Ppc64El  as usize + 2);
-        const S390X    = 1 << (Arch::S390X    as usize + 2);
+        const ANY      = 1 << Arch::Any      as usize;
+        const ALL      = 1 << Arch::All      as usize;
+        const AMD64    = 1 << Arch::Amd64    as usize;
+        const ARMEL    = 1 << Arch::Armel    as usize;
+        const ARMHF    = 1 << Arch::Armhf    as usize;
+        const ARM64    = 1 << Arch::Arm64    as usize;
+        const I386     = 1 << Arch::I386     as usize;
+        const MIPS     = 1 << Arch::Mips     as usize;
+        const MIPSEL   = 1 << Arch::Mipsel   as usize;
+        const MIPS64   = 1 << Arch::Mips64   as usize;
+        const MIPS64EL = 1 << Arch::Mips64El as usize;
+        const PPC64EL  = 1 << Arch::Ppc64El  as usize;
+        const S390X    = 1 << Arch::S390X    as usize;
+    }
+}
+
+impl Arch {
+    fn as_flag(&self) -> Arches {
+        match *self {
+            Arch::Any => Arches::ANY,
+            Arch::All => Arches::ALL,
+            Arch::Amd64 => Arches::AMD64,
+            Arch::Armel => Arches::ARMEL,
+            Arch::Armhf => Arches::ARMHF,
+            Arch::Arm64 => Arches::ARM64,
+            Arch::I386 => Arches::I386,
+            Arch::Mips => Arches::MIPS,
+            Arch::Mipsel => Arches::MIPSEL,
+            Arch::Mips64 => Arches::MIPS64,
+            Arch::Mips64El => Arches::MIPS64EL,
+            Arch::Ppc64El => Arches::PPC64EL,
+            Arch::S390X => Arches::S390X,
+        }
+    }
+}
+
+impl FromStr for Arch {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        Ok(match s {
+            "amd64" => Arch::Amd64,
+            "armel" => Arch::Armel,
+            "armhf" => Arch::Armhf,
+            "arm64" => Arch::Arm64,
+            "i386" => Arch::I386,
+            "mips" => Arch::Mips,
+            "mipsel" => Arch::Mipsel,
+            "mips64" => Arch::Mips64,
+            "mips64el" => Arch::Mips64El,
+            "ppc64el" => Arch::Ppc64El,
+            "s390x" => Arch::S390X,
+            other => bail!("unrecognised arch: {:?}", s),
+        })
+    }
+}
+
+impl FromIterator<Arch> for Arches {
+    fn from_iter<T: IntoIterator<Item = Arch>>(iter: T) -> Self {
+        let mut arches = Arches::empty();
+        for i in iter {
+            arches |= i.as_flag()
+        }
+
+        arches
     }
 }
 
@@ -286,11 +342,9 @@ impl Package {
                 "Package" => name = Some(one_line(&values)?),
                 "Version" => version = Some(one_line(&values)?),
                 "Architecture" => {
-                    arch = Some(
-                        Arches::parse(one_line(&values)?
+                    arch = Some(Arches::parse(one_line(&values)?
                             // TODO: alternate splitting rules?
-                            .split_whitespace())?,
-                    )
+                            .split_whitespace())?)
                 }
 
                 "Essential" => essential = Some(::yes_no(one_line(&values)?)?),

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+use fapt_parse::types::Arch;
 use fapt_parse::types::Arches;
 use fapt_parse::types::Package;
 use fapt_parse::types::PackageType;
@@ -185,11 +186,10 @@ fn satisfies(p: &Package, d: &SingleDependency) -> bool {
     true
 }
 
-fn harmless_arch_constraint(arch: &Option<String>) -> bool {
+fn harmless_arch_constraint(arch: &Option<Arch>) -> bool {
     match arch {
         None => true,
-        Some(s) if "any" == s => true,
-        _ => false,
+        Some(_) => false,
     }
 }
 

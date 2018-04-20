@@ -1,6 +1,9 @@
 use nom::types::CompleteStr;
+use result::ResultOptionExt;
 
+use errors;
 use errors::*;
+use types::Arch;
 use types::Constraint;
 use types::ConstraintOperator;
 use types::Dependency;
@@ -77,9 +80,14 @@ named!(single<CompleteStr, SingleDependency>,
         stage_filter: ws!(many0!(complete!(stage_filter))) >>
         ( SingleDependency {
             package: package.0.to_string(),
-            arch: arch.map(|x| x.0.to_string()),
+            // TODO: should either validate this at the parser,
+            // TODO: or work out how to propagate the error up,
+            // TODO: or work out how to explain to nom that it's an error,
+            // TODO: every one of these options suck
+            arch: arch.map(|a| a.parse().unwrap()),
             version_constraints,
-            arch_filter: arch_filter.into_iter().map(|x| x.0.to_string()).collect(),
+            // TODO: and here
+            arch_filter: arch_filter.into_iter().map(|x| x.0.parse::<Arch>().unwrap()).collect(),
             stage_filter: stage_filter.into_iter().map(|x| x.0.to_string()).collect(),
         } )
     ))

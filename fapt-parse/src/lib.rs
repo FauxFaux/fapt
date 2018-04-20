@@ -10,6 +10,7 @@ extern crate md5;
 
 #[macro_use]
 extern crate nom;
+extern crate result;
 
 pub mod deps;
 mod errors;
