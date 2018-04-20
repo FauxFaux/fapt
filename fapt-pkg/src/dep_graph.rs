@@ -178,8 +178,7 @@ fn satisfies(p: &Package, d: &SingleDependency) -> bool {
         }
     }
 
-    if !d.arch_filter.is_empty() || !d.stage_filter.is_empty()
-    {
+    if !d.arch_filter.is_empty() || !d.stage_filter.is_empty() {
         unimplemented!("package\n{:?}\n\nmay satisfy:\n{:?}", p, d)
     }
 
