@@ -346,6 +346,13 @@ impl Package {
             unparsed,
         })
     }
+
+    pub fn bin(&self) -> Option<&Binary> {
+        match &self.style {
+            PackageType::Binary(bin) => Some(&bin),
+            _ => None,
+        }
+    }
 }
 
 fn parse_dep(multi_str: &[&str]) -> Result<Vec<Dependency>> {

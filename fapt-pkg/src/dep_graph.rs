@@ -2,6 +2,8 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use fapt_parse::types::Arch;
+use fapt_parse::types::Arches;
+use fapt_parse::types::ConstraintOperator;
 use fapt_parse::types::Package;
 use fapt_parse::types::PackageType;
 use fapt_parse::types::SingleDependency;
@@ -192,46 +194,70 @@ impl DepGraph {
 }
 
 fn satisfies(p: &Package, d: &SingleDependency) -> bool {
-    if !name_matches(p, d) {
+    if !satisfies_values(d, &p.name, &p.arches, &p.version) && !provides_satisfies(d, p) {
         return false;
-    }
-
-    if let Some(arch) = d.arch {
-        // TODO: no idea what this logic should be
-        if Arch::Any != arch && !p.arches.contains(&arch) {
-            return false;
-        }
     }
 
     if !d.arch_filter.is_empty() || !d.stage_filter.is_empty() {
         unimplemented!("package\n{:?}\n\nmay satisfy:\n{:?}", p, d)
     }
 
+    true
+}
+
+fn provides_satisfies(d: &SingleDependency, package: &Package) -> bool {
+    for p in &package.bin().expect("must be bin").provides {
+        assert_eq!(
+            1,
+            p.alternate.len(),
+            "no idea what a Provides with an alternate means"
+        );
+        let p = &p.alternate[0];
+        assert!(
+            p.arch.is_none(),
+            "no idea what a Provides with an arch means"
+        );
+
+        let version = match p.version_constraints.len() {
+            0 => &package.version,
+            1 => {
+                let v = &p.version_constraints[0];
+                assert_eq!(
+                    ConstraintOperator::Eq,
+                    v.operator,
+                    "no idea what a provides with non-equal means"
+                );
+                &v.version
+            }
+            _ => unimplemented!("no idea what a Provides with multiple version constraints means"),
+        };
+        if satisfies_values(d, &p.package, &package.arches, version) {
+            return true;
+        }
+    }
+
+    false
+}
+
+fn satisfies_values(d: &SingleDependency, name: &str, arches: &Arches, version: &str) -> bool {
+    if d.package != name {
+        return false;
+    }
+
+    if let Some(arch) = d.arch {
+        // TODO: no idea what this logic should be
+        if Arch::Any != arch && !arches.contains(&arch) {
+            return false;
+        }
+    }
+
     for v in &d.version_constraints {
-        if !v.satisfied_by(&p.version) {
+        if !v.satisfied_by(version) {
             return false;
         }
     }
 
     true
-}
-
-fn name_matches(p: &Package, d: &SingleDependency) -> bool {
-    if p.name == d.package {
-        return true;
-    }
-
-    match &p.style {
-        PackageType::Binary(bin) => for provides in &bin.provides {
-            assert_eq!(1, provides.alternate.len());
-            if d.package == provides.alternate[0].package {
-                return true;
-            }
-        },
-        PackageType::Source(_) => (),
-    }
-
-    false
 }
 
 #[cfg(test)]
@@ -257,7 +283,7 @@ mod tests {
                     alternate: vec![SingleDependency {
                         package: "bar".to_string(),
                         version_constraints: vec![Constraint {
-                            version: "0.9".to_string(),
+                            version: "100".to_string(),
                             operator: ConstraintOperator::Eq,
                         }],
                         ..Default::default()
@@ -271,7 +297,7 @@ mod tests {
         let mut d = SingleDependency {
             package: "bar".to_string(),
             version_constraints: vec![Constraint {
-                version: "0.8".to_string(),
+                version: "90".to_string(),
                 operator: ConstraintOperator::Ge,
             }],
             ..Default::default()
