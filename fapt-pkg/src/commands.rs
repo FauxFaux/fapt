@@ -148,42 +148,32 @@ impl System {
             dep_graph.insert(package)?;
         }
 
-        let mut unexplained = Vec::with_capacity(100);
-        let mut alt_depended = Vec::with_capacity(100);
-        let mut only_recommended = Vec::with_capacity(100);
+        let mut unexplained: Vec<usize> = Vec::with_capacity(100);
+        let mut depended: Vec<usize> = Vec::with_capacity(100);
+        let mut alt_depended: Vec<usize> = Vec::with_capacity(100);
+        let mut only_recommended: Vec<usize> = Vec::with_capacity(100);
 
-        dep_graph.what_kinda();
-        let leaves = dep_graph.sloppy_leaves();
+        let leaves = dep_graph.what_kinda();
 
         'packages: for p in dep_graph.iter() {
-            let name = &p.name;
-            let mut all_names = vec![name];
-
-            if let Some(aliases) = leaves.aliases.get(name) {
-                all_names.extend(aliases);
-            }
-
-            for alias in &all_names {
-                if leaves.direct_dep.contains(*alias) {
-                    continue 'packages;
+            for (_src, dest) in &leaves.depends {
+                assert!(!dest.is_empty());
+                if dest.contains(&p) {
+                    match dest.len() {
+                        0 => unreachable!(),
+                        1 => {
+                            depended.push(p);
+                            continue 'packages;
+                        }
+                        _ => {
+                            alt_depended.push(p);
+                            continue 'packages;
+                        }
+                    }
                 }
             }
 
-            for alias in &all_names {
-                if leaves.maybe_dep.contains(*alias) {
-                    alt_depended.push(name.to_string());
-                    continue 'packages;
-                }
-            }
-
-            for alias in &all_names {
-                if leaves.recommended.contains(*alias) {
-                    only_recommended.push(name.to_string());
-                    continue 'packages;
-                }
-            }
-
-            unexplained.push(name);
+            unexplained.push(p);
         }
 
         alt_depended.sort_unstable();

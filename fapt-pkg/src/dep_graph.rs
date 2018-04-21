@@ -44,13 +44,12 @@ pub struct Leaves {
     pub recommended: HashSet<String>,
 }
 
-type Edge = (Id, Vec<Id>);
+pub type Edge = (Id, Vec<Id>);
 
-#[cfg(never)]
-struct Node {
-    depends: Vec<Id>,
-    recommends: Vec<Id>,
-    suggests: Vec<Id>,
+pub struct WhatKindaLeaves {
+    pub depends: Vec<Edge>,
+    pub recommends: Vec<Edge>,
+    pub suggests: Vec<Edge>,
 }
 
 impl DepGraph {
@@ -68,8 +67,8 @@ impl DepGraph {
         Ok(())
     }
 
-    pub fn what_kinda(&self) -> () {
-        let mut dep: Vec<Edge> = Vec::with_capacity(self.packages.len());
+    pub fn what_kinda(&self) -> WhatKindaLeaves {
+        let mut depends: Vec<Edge> = Vec::with_capacity(self.packages.len());
         let mut recommends: Vec<Edge> = Vec::with_capacity(self.packages.len());
         let mut suggests: Vec<Edge> = Vec::with_capacity(self.packages.len());
 
@@ -80,7 +79,13 @@ impl DepGraph {
             };
             let id = self.lookup[&p.into()];
             for d in &bin.depends {
-                dep.push((id, self.flatten(&d.alternate)));
+                let flat = self.flatten(&d.alternate);
+                assert!(
+                    !flat.is_empty(),
+                    "depends should find something, right? {:?}",
+                    d.alternate
+                );
+                depends.push((id, flat));
             }
 
             for d in &bin.recommends {
@@ -90,6 +95,12 @@ impl DepGraph {
             for d in &bin.suggests {
                 suggests.push((id, self.flatten(&d.alternate)));
             }
+        }
+
+        WhatKindaLeaves {
+            depends,
+            recommends,
+            suggests,
         }
     }
 
@@ -175,8 +186,8 @@ impl DepGraph {
         }
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &Package> {
-        self.packages.iter()
+    pub fn iter(&self) -> impl Iterator<Item = usize> {
+        (0..self.packages.len())
     }
 }
 
@@ -221,4 +232,51 @@ fn name_matches(p: &Package, d: &SingleDependency) -> bool {
     }
 
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use fapt_parse::types::Binary;
+    use fapt_parse::types::Constraint;
+    use fapt_parse::types::ConstraintOperator;
+    use fapt_parse::types::Dependency;
+    use fapt_parse::types::Package;
+    use fapt_parse::types::PackageType;
+    use fapt_parse::types::Priority;
+    use fapt_parse::types::SingleDependency;
+
+    #[test]
+    fn cant_get_no() {
+        let mut p = Package {
+            name: "foo".to_string(),
+            version: "1.0".to_string(),
+            style: PackageType::Binary(Binary {
+                provides: vec![Dependency {
+                    alternate: vec![SingleDependency {
+                        package: "bar".to_string(),
+                        version_constraints: vec![Constraint {
+                            version: "0.9".to_string(),
+                            operator: ConstraintOperator::Eq,
+                        }],
+                        ..Default::default()
+                    }],
+                }],
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+
+        let mut d = SingleDependency {
+            package: "foo".to_string(),
+            version_constraints: vec![Constraint {
+                version: "0.8".to_string(),
+                operator: ConstraintOperator::Ge,
+            }],
+            ..Default::default()
+        };
+
+        assert!(super::satisfies(&p, &d));
+    }
 }

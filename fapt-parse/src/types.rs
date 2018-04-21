@@ -16,7 +16,7 @@ pub enum PackageType {
     Binary(Binary),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Package {
     pub name: String,
     pub version: String,
@@ -49,7 +49,7 @@ pub struct Source {
     pub uploaders: Vec<Identity>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Binary {
     // "File" is missing in e.g. dpkg/status, but never in Packages as far as I've seen
     pub file: Option<File>,
@@ -81,7 +81,7 @@ pub struct Dependency {
     pub alternate: Vec<SingleDependency>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct SingleDependency {
     pub package: String,
     pub arch: Option<Arch>,
@@ -212,6 +212,12 @@ pub enum Priority {
     Optional,
     Extra,
     Source,
+}
+
+impl Default for Priority {
+    fn default() -> Self {
+        Priority::Unknown
+    }
 }
 
 pub struct Description {
@@ -372,6 +378,12 @@ impl ConstraintOperator {
             Lt => Less == ordering,
             Gt => Greater == ordering,
         }
+    }
+}
+
+impl Default for PackageType {
+    fn default() -> Self {
+        PackageType::Binary(Binary::default())
     }
 }
 
