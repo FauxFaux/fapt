@@ -391,11 +391,49 @@ impl Default for PackageType {
 mod tests {
     use super::Constraint;
     use super::ConstraintOperator;
+    use super::PackageType;
+
+    const PROVIDES_EXAMPLE: &str = r#"Package: python3-cffi-backend
+Status: install ok installed
+Priority: optional
+Section: python
+Installed-Size: 190
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+Architecture: amd64
+Source: python-cffi
+Version: 1.11.5-1
+Replaces: python3-cffi (<< 1)
+Provides: python3-cffi-backend-api-9729, python3-cffi-backend-api-max (= 10495), python3-cffi-backend-api-min (= 9729)
+Depends: python3 (<< 3.7), python3 (>= 3.6~), python3:any (>= 3.1~), libc6 (>= 2.14), libffi6 (>= 3.0.4)
+Breaks: python3-cffi (<< 1)
+Description: Foreign Function Interface for Python 3 calling C code - runtime
+ Convenient and reliable way of calling C code from Python 3.
+ .
+ The aim of this project is to provide a convenient and reliable way of calling
+ C code from Python. It keeps Python logic in Python, and minimises the C
+ required. It is able to work at either the C API or ABI level, unlike most
+ other approaches, that only support the ABI level.
+ .
+ This package contains the runtime support for pre-built cffi modules.
+Original-Maintainer: Debian Python Modules Team <python-modules-team@lists.alioth.debian.org>
+Homepage: http://cffi.readthedocs.org/
+"#;
 
     #[test]
     fn version() {
         let cons = Constraint::new(ConstraintOperator::Gt, "1.0");
         assert!(cons.satisfied_by("2.0"));
         assert!(!cons.satisfied_by("1.0"));
+    }
+
+    #[test]
+    fn parse_provides() {
+        let p = super::Package::parse_bin(::rfc822::scan(PROVIDES_EXAMPLE)).unwrap();
+        assert_eq!("python3-cffi-backend", p.name.as_str());
+        let bin = match p.style {
+            PackageType::Binary(bin) => bin,
+            _ => panic!("wrong type!"),
+        };
+        assert_eq!(3, bin.provides.len());
     }
 }

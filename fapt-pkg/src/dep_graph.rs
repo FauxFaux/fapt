@@ -269,7 +269,7 @@ mod tests {
         };
 
         let mut d = SingleDependency {
-            package: "foo".to_string(),
+            package: "bar".to_string(),
             version_constraints: vec![Constraint {
                 version: "0.8".to_string(),
                 operator: ConstraintOperator::Ge,
