@@ -176,15 +176,11 @@ impl System {
             unexplained.push(p);
         }
 
-        alt_depended.sort_unstable();
-        only_recommended.sort_unstable();
-        unexplained.sort_unstable();
-
         println!("Packages may sometimes be required");
         println!("==================================");
         println!();
 
-        for p in alt_depended {
+        for p in stringify_package_list(&dep_graph, alt_depended) {
             println!("{}", p);
         }
 
@@ -193,7 +189,7 @@ impl System {
         println!("=====================================");
         println!();
 
-        for p in only_recommended {
+        for p in stringify_package_list(&dep_graph, only_recommended) {
             println!("{}", p);
         }
 
@@ -202,7 +198,7 @@ impl System {
         println!("====================");
         println!();
 
-        for p in unexplained {
+        for p in stringify_package_list(&dep_graph, unexplained) {
             println!("{}", p);
         }
 
@@ -218,6 +214,17 @@ impl System {
             }
         })
     }
+}
+
+fn stringify_package_list<I: IntoIterator<Item = usize>>(
+    dep_graph: &DepGraph,
+    it: I,
+) -> impl Iterator<Item = String> {
+    let mut vec: Vec<String> = it.into_iter()
+        .map(|id| format!("{}", dep_graph.get(id)))
+        .collect();
+    vec.sort_unstable();
+    vec.into_iter()
 }
 
 // Sigh, I've already written this.

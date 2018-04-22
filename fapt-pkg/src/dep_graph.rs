@@ -69,6 +69,10 @@ impl DepGraph {
         Ok(())
     }
 
+    pub fn get(&self, id: Id) -> &Package {
+        &self.packages[id]
+    }
+
     pub fn what_kinda(&self) -> WhatKindaLeaves {
         let mut depends: Vec<Edge> = Vec::with_capacity(self.packages.len());
         let mut recommends: Vec<Edge> = Vec::with_capacity(self.packages.len());

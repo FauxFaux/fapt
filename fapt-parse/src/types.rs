@@ -1,6 +1,7 @@
 use std::cmp;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fmt;
 use std::str::FromStr;
 
 use deb_version::compare_versions;
@@ -149,8 +150,34 @@ impl FromStr for Arch {
             "s390x" => Arch::S390X,
             "linux-any" => Arch::LinuxAny,
             "x32" => Arch::X32,
-            other => bail!("unrecognised arch: {:?}", s),
+            other => bail!("unrecognised arch: {:?}", other),
         })
+    }
+}
+
+impl fmt::Display for Arch {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Arch::All => "all",
+                Arch::Any => "any",
+                Arch::Amd64 => "amd64",
+                Arch::Armel => "armel",
+                Arch::Armhf => "armhf",
+                Arch::Arm64 => "arm64",
+                Arch::I386 => "i386",
+                Arch::Mips => "mips",
+                Arch::Mipsel => "mipsel",
+                Arch::Mips64 => "mips64",
+                Arch::Mips64El => "mips64el",
+                Arch::Ppc64El => "ppc64el",
+                Arch::S390X => "s390x",
+                Arch::LinuxAny => "linux-any",
+                Arch::X32 => "x32",
+            }
+        )
     }
 }
 
@@ -352,6 +379,18 @@ impl Package {
             PackageType::Binary(bin) => Some(&bin),
             _ => None,
         }
+    }
+}
+
+impl fmt::Display for Package {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.name)?;
+        match self.arches.len() {
+            0 => (),
+            1 => write!(f, ":{}", self.arches.iter().next().unwrap())?,
+            _ => unimplemented!("Don't know how to format multiple arches:\n{:?}", self),
+        }
+        write!(f, "={}", self.version)
     }
 }
 
