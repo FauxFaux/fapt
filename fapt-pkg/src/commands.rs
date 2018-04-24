@@ -173,9 +173,26 @@ impl System {
                 }
             }
 
+            for (_src, dest) in &leaves.recommends {
+                if dest.contains(&p) {
+                    only_recommended.push(p);
+                    continue 'packages;
+                }
+            }
+
             unexplained.push(p);
         }
 
+        println!("Packages are clearly required");
+        println!("=============================");
+        println!();
+
+        for p in stringify_package_list(&dep_graph, depended) {
+            println!("{}", p);
+        }
+
+        println!();
+        println!();
         println!("Packages may sometimes be required");
         println!("==================================");
         println!();
@@ -185,6 +202,7 @@ impl System {
         }
 
         println!();
+        println!();
         println!("Packages are recommended by something");
         println!("=====================================");
         println!();
@@ -193,6 +211,7 @@ impl System {
             println!("{}", p);
         }
 
+        println!();
         println!();
         println!("Unexplained packages");
         println!("====================");
