@@ -1,3 +1,4 @@
+extern crate deb_version;
 #[macro_use]
 extern crate error_chain;
 extern crate fapt_parse;

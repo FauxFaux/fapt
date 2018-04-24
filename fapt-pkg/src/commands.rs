@@ -153,7 +153,14 @@ impl System {
         let mut alt_depended: Vec<usize> = Vec::with_capacity(100);
         let mut only_recommended: Vec<usize> = Vec::with_capacity(100);
 
-        let leaves = dep_graph.what_kinda();
+        let mut leaves = dep_graph.what_kinda();
+
+        leaves
+            .depends
+            .extend(vec![
+                (0, vec![dep_graph.find_named("ubuntu-minimal")]),
+                (0, vec![dep_graph.find_named("ubuntu-standard")]),
+            ]);
 
         'packages: for p in dep_graph.iter() {
             for (_src, dest) in &leaves.depends {
@@ -183,39 +190,41 @@ impl System {
             unexplained.push(p);
         }
 
-        println!("Packages are clearly required");
-        println!("=============================");
-        println!();
+        if false {
+            println!("Packages are clearly required");
+            println!("=============================");
+            println!();
 
-        for p in stringify_package_list(&dep_graph, depended) {
-            println!("{}", p);
+            for p in stringify_package_list(&dep_graph, depended) {
+                println!("{}", p);
+            }
+
+            println!();
+            println!();
+            println!("Packages may sometimes be required");
+            println!("==================================");
+            println!();
+
+            for p in stringify_package_list(&dep_graph, alt_depended) {
+                println!("{}", p);
+            }
+
+            println!();
+            println!();
+            println!("Packages are recommended by something");
+            println!("=====================================");
+            println!();
+
+            for p in stringify_package_list(&dep_graph, only_recommended) {
+                println!("{}", p);
+            }
+
+            println!();
+            println!();
+            println!("Unexplained packages");
+            println!("====================");
+            println!();
         }
-
-        println!();
-        println!();
-        println!("Packages may sometimes be required");
-        println!("==================================");
-        println!();
-
-        for p in stringify_package_list(&dep_graph, alt_depended) {
-            println!("{}", p);
-        }
-
-        println!();
-        println!();
-        println!("Packages are recommended by something");
-        println!("=====================================");
-        println!();
-
-        for p in stringify_package_list(&dep_graph, only_recommended) {
-            println!("{}", p);
-        }
-
-        println!();
-        println!();
-        println!("Unexplained packages");
-        println!("====================");
-        println!();
 
         for p in stringify_package_list(&dep_graph, unexplained) {
             println!("{}", p);
@@ -240,7 +249,7 @@ fn stringify_package_list<I: IntoIterator<Item = usize>>(
     it: I,
 ) -> impl Iterator<Item = String> {
     let mut vec: Vec<String> = it.into_iter()
-        .map(|id| format!("{}", dep_graph.get(id)))
+        .map(|id| format!("{}", dep_graph.get(id).name))
         .collect();
     vec.sort_unstable();
     vec.into_iter()

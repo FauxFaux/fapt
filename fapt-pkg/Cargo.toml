@@ -10,6 +10,7 @@ version = "0.1.0"
 repository = "FauxFaux/fapt"
 
 [dependencies]
+deb-version = "0.1"
 error-chain = "0.11"
 filetime = "0.2"
 gpgme = "0.7"

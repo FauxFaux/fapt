@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+use deb_version::compare_versions;
 use fapt_parse::types::Arch;
 use fapt_parse::types::Arches;
 use fapt_parse::types::ConstraintOperator;
@@ -108,6 +109,16 @@ impl DepGraph {
             recommends,
             suggests,
         }
+    }
+
+    pub fn find_named(&self, name: &str) -> Id {
+        self.packages
+            .iter()
+            .enumerate()
+            .filter(|&(_, p)| p.name == name)
+            .max_by(|&(_, l), &(_, r)| compare_versions(&l.version, &r.version))
+            .map(|(id, _)| id)
+            .expect("no such package")
     }
 
     fn flatten(&self, d: &[SingleDependency]) -> Vec<Id> {
