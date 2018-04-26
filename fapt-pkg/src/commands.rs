@@ -138,7 +138,8 @@ impl System {
         for section in lists::sections_in_reader(fs::File::open(status)?)? {
             // BORROW CHECKER
             let section = section?;
-            let package = Package::parse_bin(rfc822::scan(&section))?;
+            let package = Package::parse_bin(rfc822::scan(&section))
+                .chain_err(|| format!("parsing:\n{}", section))?;
 
             // TODO: panic?
             if "install ok installed" != package.unparsed["Status"].join(" ") {
