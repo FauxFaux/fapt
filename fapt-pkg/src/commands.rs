@@ -5,8 +5,10 @@ use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 
+use fapt_parse;
 use fapt_parse::rfc822;
 use fapt_parse::rfc822::one_line;
+use fapt_parse::rfc822::Line;
 use fapt_parse::types::Package;
 use reqwest;
 use serde_json;
@@ -138,11 +140,19 @@ impl System {
         for section in lists::sections_in_reader(fs::File::open(status)?)? {
             // BORROW CHECKER
             let section = section?;
-            let package = Package::parse_bin(rfc822::scan(&section))
-                .chain_err(|| format!("parsing:\n{}", section))?;
+            let installed_msg = "install ok installed";
+
+            let package = match Package::parse_bin(rfc822::scan(&section)) {
+                Ok(package) => package,
+                Err(e) => if !status_is(rfc822::scan(&section), installed_msg)? {
+                    continue;
+                } else {
+                    bail!(e.chain_err(|| format!("parsing:\n{}", section)))
+                },
+            };
 
             // TODO: panic?
-            if "install ok installed" != package.unparsed["Status"].join(" ") {
+            if installed_msg != package.unparsed["Status"].join(" ") {
                 continue;
             }
 
@@ -156,12 +166,10 @@ impl System {
 
         let mut leaves = dep_graph.what_kinda();
 
-        leaves
-            .depends
-            .extend(vec![
-                (0, vec![dep_graph.find_named("ubuntu-minimal")]),
-                (0, vec![dep_graph.find_named("ubuntu-standard")]),
-            ]);
+        leaves.depends.extend(vec![
+            (0, vec![dep_graph.find_named("ubuntu-minimal")]),
+            (0, vec![dep_graph.find_named("ubuntu-standard")]),
+        ]);
 
         'packages: for p in dep_graph.iter() {
             for (_src, dest) in &leaves.depends {
@@ -243,6 +251,22 @@ impl System {
             }
         })
     }
+}
+
+fn status_is<'l, I: Iterator<Item = fapt_parse::Result<Line<'l>>>>(
+    it: I,
+    what: &str,
+) -> Result<bool> {
+    for line in it {
+        let (k, v) = line?;
+        if "Status" != k {
+            continue;
+        }
+
+        return Ok(what == one_line(&v)?);
+    }
+
+    Ok(false)
 }
 
 fn stringify_package_list<I: IntoIterator<Item = usize>>(
