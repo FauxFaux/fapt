@@ -118,7 +118,7 @@ impl DepGraph {
             .filter(|&(_, p)| p.name == name)
             .max_by(|&(_, l), &(_, r)| compare_versions(&l.version, &r.version))
             .map(|(id, _)| id)
-            .expect("no such package")
+            .expect(&format!("no such package: {}", name))
     }
 
     fn flatten(&self, d: &[SingleDependency]) -> Vec<Id> {
