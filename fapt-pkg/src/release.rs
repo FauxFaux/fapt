@@ -1,21 +1,19 @@
 use std::collections::hash_map;
 use std::collections::HashMap;
-
 use std::fmt;
 use std::fs;
 use std::io;
 use std::io::Read;
-
 use std::path::Path;
 use std::path::PathBuf;
 
+use failure::Error;
+use failure::ResultExt;
 use hex::FromHex;
-
 use reqwest;
 use reqwest::Url;
 
 use classic_sources_list::Entry;
-use errors::*;
 use fapt_parse::rfc822;
 use fapt_parse::rfc822::mandatory_single_line;
 use fapt_parse::rfc822::mandatory_whitespace_list;
@@ -79,15 +77,17 @@ impl fmt::Debug for ReleaseContent {
 }
 
 impl RequestedRelease {
-    pub fn dists(&self) -> Result<Url> {
-        Ok(self.mirror
+    pub fn dists(&self) -> Result<Url, Error> {
+        Ok(self
+            .mirror
             .join("dists/")?
             .join(&format!("{}/", self.codename))?)
     }
 
     pub fn filesystem_safe(&self) -> String {
         let u = &self.mirror;
-        let underscore_path = u.path_segments()
+        let underscore_path = u
+            .path_segments()
             .map(|parts| parts.collect::<Vec<&str>>().join("_"))
             .unwrap_or_else(String::new);
         format!(
@@ -122,7 +122,7 @@ impl RequestedReleases {
     pub fn from_sources_lists(
         sources_list: &[Entry],
         arches: &[String],
-    ) -> Result<RequestedReleases> {
+    ) -> Result<RequestedReleases, Error> {
         let mut ret = HashMap::with_capacity(sources_list.len() / 2);
 
         for entry in sources_list {
@@ -153,7 +153,7 @@ impl RequestedReleases {
         lists_dir: P,
         keyring_paths: &[Q],
         client: &reqwest::Client,
-    ) -> Result<()> {
+    ) -> Result<(), Error> {
         let lists_dir = lists_dir.as_ref();
 
         let mut gpg = GpgClient::new(keyring_paths)?;
@@ -188,13 +188,13 @@ impl RequestedReleases {
                     )?;
                     gpg.verify_detached(&dest, detatched_signature, verified)
                 }
-            }.chain_err(|| format!("verifying {:?} at {:?}", release, dest))?;
+            }.with_context(|_| format_err!("verifying {:?} at {:?}", release, dest))?;
         }
 
         Ok(())
     }
 
-    pub fn parse<P: AsRef<Path>>(self, lists_dir: P) -> Result<Vec<Release>> {
+    pub fn parse<P: AsRef<Path>>(self, lists_dir: P) -> Result<Vec<Release>, Error> {
         self.releases
             .into_iter()
             .map(|(req, sources_entries)| {
@@ -204,20 +204,21 @@ impl RequestedReleases {
                     sources_entries,
                 })
             })
-            .collect::<Result<Vec<Release>>>()
+            .collect::<Result<Vec<Release>, Error>>()
     }
 }
 
-pub fn parse_release_file<P: AsRef<Path>>(path: P) -> Result<ReleaseFile> {
+pub fn parse_release_file<P: AsRef<Path>>(path: P) -> Result<ReleaseFile, Error> {
     let mut file = String::with_capacity(100 * 1024);
-    io::BufReader::new(fs::File::open(path.as_ref())
-        .chain_err(|| format!("finding release file: {:?}", path.as_ref()))?)
-        .read_to_string(&mut file)
-        .chain_err(|| format!("reading release file: {:?}", path.as_ref()))?;
-    parse_release(&file).chain_err(|| format!("parsing {:?}", path.as_ref()))
+    io::BufReader::new(
+        fs::File::open(path.as_ref())
+            .with_context(|_| format_err!("finding release file: {:?}", path.as_ref()))?,
+    ).read_to_string(&mut file)
+        .with_context(|_| format_err!("reading release file: {:?}", path.as_ref()))?;
+    Ok(parse_release(&file).with_context(|_| format_err!("parsing {:?}", path.as_ref()))?)
 }
 
-fn parse_release(release: &str) -> Result<ReleaseFile> {
+fn parse_release(release: &str) -> Result<ReleaseFile, Error> {
     let data = rfc822::map(release)?;
     Ok(ReleaseFile {
         origin: mandatory_single_line(&data, "Origin")?,
@@ -239,10 +240,10 @@ fn parse_release(release: &str) -> Result<ReleaseFile> {
     })
 }
 
-fn load_contents(data: &HashMap<&str, Vec<&str>>) -> Result<Vec<ReleaseContent>> {
+fn load_contents(data: &HashMap<&str, Vec<&str>>) -> Result<Vec<ReleaseContent>, Error> {
     let md5s = take_checksums(data, "MD5Sum")?;
     let sha256s = take_checksums(data, "SHA256")?
-        .ok_or("sha256sums missing from release file; refusing to process")?;
+        .ok_or_else(|| format_err!("sha256sums missing from release file; refusing to process"))?;
 
     let mut ret = Vec::with_capacity(sha256s.len());
 
@@ -288,14 +289,14 @@ fn load_contents(data: &HashMap<&str, Vec<&str>>) -> Result<Vec<ReleaseContent>>
 fn take_checksums<'a>(
     data: &HashMap<&str, Vec<&'a str>>,
     key: &str,
-) -> Result<Option<HashMap<(&'a str, u64), &'a str>>> {
+) -> Result<Option<HashMap<(&'a str, u64), &'a str>>, Error> {
     Ok(match data.get(key) {
         Some(s) => Some(parse_checksums(s)?),
         None => None,
     })
 }
 
-fn parse_checksums<'s>(lines: &[&'s str]) -> Result<HashMap<(&'s str, u64), &'s str>> {
+fn parse_checksums<'s>(lines: &[&'s str]) -> Result<HashMap<(&'s str, u64), &'s str>, Error> {
     let mut ret = HashMap::new();
     for line in lines {
         let parts: Vec<&str> = line.trim().split_whitespace().collect();

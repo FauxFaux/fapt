@@ -1,10 +1,10 @@
+use failure::Error;
 use nom::types::CompleteStr;
 use nom::Err;
 
-use errors::*;
 use types::Identity;
 
-named!(ident<CompleteStr, Result<Identity>>,
+named!(ident<CompleteStr, Result<Identity, Error>>,
     do_parse!(
         name: take_until_and_consume_s!(" <") >>
         email: take_until_and_consume_s!(">") >>
@@ -17,7 +17,7 @@ named!(ident<CompleteStr, Result<Identity>>,
     )
 );
 
-named!(parse<CompleteStr, Vec<Result<Identity>>>,
+named!(parse<CompleteStr, Vec<Result<Identity, Error>>>,
     ws!(
         terminated!(
             separated_list!(
@@ -29,9 +29,9 @@ named!(parse<CompleteStr, Vec<Result<Identity>>>,
     )
 );
 
-pub fn read(from: &str) -> Result<Vec<Identity>> {
+pub fn read(from: &str) -> Result<Vec<Identity>, Error> {
     match parse(CompleteStr(from)) {
-        Ok((CompleteStr(""), vec)) => vec.into_iter().collect::<Result<Vec<Identity>>>(),
+        Ok((CompleteStr(""), vec)) => vec.into_iter().collect::<Result<Vec<Identity>, Error>>(),
         Ok((tailing, _)) => bail!(
             "parsing {:?} finished early, trailing garbage: {:?}",
             from,
@@ -42,7 +42,7 @@ pub fn read(from: &str) -> Result<Vec<Identity>> {
     }
 }
 
-fn process_escapes(from: &str) -> Result<String> {
+fn process_escapes(from: &str) -> Result<String, Error> {
     let mut bytes = from.bytes();
     let mut result = Vec::with_capacity(bytes.len());
     loop {
@@ -50,8 +50,12 @@ fn process_escapes(from: &str) -> Result<String> {
             Some(c) if b'\\' == c => match bytes.next() {
                 Some(c) if [b'\'', b'"'].contains(&c) => result.push(c),
                 Some(c) if b'x' == c => result.push(parse_ascii_hex(
-                    bytes.next().ok_or("\\x must be followed by a character")?,
-                    bytes.next().ok_or("\\xX must be followed")?,
+                    bytes
+                        .next()
+                        .ok_or_else(|| format_err!("\\x must be followed by a character"))?,
+                    bytes
+                        .next()
+                        .ok_or_else(|| format_err!("\\xX must be followed"))?,
                 )?),
                 Some(c) => bail!("unsupported escape: {:?}", c),
                 None => bail!("\\ at end of string"),
@@ -62,7 +66,7 @@ fn process_escapes(from: &str) -> Result<String> {
     }
 }
 
-fn parse_ascii_hex(first: u8, second: u8) -> Result<u8> {
+fn parse_ascii_hex(first: u8, second: u8) -> Result<u8, Error> {
     // Bit ugly, but at least it doesn't involve any code
     Ok(u8::from_str_radix(
         &String::from_utf8(vec![first, second])?,

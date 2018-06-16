@@ -1,11 +1,9 @@
 #[macro_use]
-extern crate error_chain;
+extern crate failure;
 
 extern crate fapt_pkg;
 
-use errors::*;
-
-fn run() -> Result<()> {
+fn main() -> Result<(), failure::Error> {
     let mut fapt = fapt_pkg::System::cache_dirs_only(".fapt-lists")?;
     fapt.add_sources_entry_line("deb-src http://deb.debian.org/debian sid main contrib")
         .expect("parsing static data");
@@ -13,20 +11,12 @@ fn run() -> Result<()> {
     fapt.update()?;
 
     fapt.walk_sections(|map| {
-        let pkg = map.get_if_one_line("Package").ok_or("invalid Package")?;
+        let pkg = map
+            .get_if_one_line("Package")
+            .ok_or_else(|| format_err!("invalid Package"))?;
         println!("{}", pkg);
         Ok(())
     })?;
 
     Ok(())
-}
-
-quick_main!(run);
-
-mod errors {
-    error_chain!{
-        links {
-            FaptPkg(::fapt_pkg::Error, ::fapt_pkg::ErrorKind);
-        }
-    }
 }

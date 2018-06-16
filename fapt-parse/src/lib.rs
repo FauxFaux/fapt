@@ -3,7 +3,7 @@ extern crate bitflags;
 extern crate deb_version;
 
 #[macro_use]
-extern crate error_chain;
+extern crate failure;
 
 extern crate mailparse;
 extern crate md5;
@@ -13,17 +13,17 @@ extern crate nom;
 extern crate result;
 
 pub mod deps;
-mod errors;
 mod ident;
 pub mod rfc822;
 mod src;
 pub mod types;
 mod vcs;
 
-pub use errors::*;
+use failure::Error;
+
 use types::Priority;
 
-fn parse_priority(string: &str) -> Result<Priority> {
+fn parse_priority(string: &str) -> Result<Priority, Error> {
     Ok(match string {
         "required" => Priority::Required,
         "important" => Priority::Important,
@@ -36,7 +36,7 @@ fn parse_priority(string: &str) -> Result<Priority> {
     })
 }
 
-fn yes_no(value: &str) -> Result<bool> {
+fn yes_no(value: &str) -> Result<bool, Error> {
     match value {
         "yes" => Ok(true),
         "no" => Ok(false),

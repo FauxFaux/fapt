@@ -6,6 +6,8 @@ use std::io::SeekFrom;
 use std::io::Write;
 use std::path::Path;
 
+use failure::Error;
+use failure::ResultExt;
 use fapt_parse::rfc822;
 use flate2::bufread::GzDecoder;
 use hex;
@@ -19,8 +21,6 @@ use fetch;
 use release::Release;
 use release::ReleaseContent;
 use Hashes;
-
-use errors::*;
 
 #[derive(Debug)]
 pub enum Compression {
@@ -69,11 +69,11 @@ pub fn download_files<P: AsRef<Path>>(
     client: &Client,
     lists_dir: P,
     releases: &[Release],
-) -> Result<()> {
-    let lists = extract_downloads(releases).chain_err(|| "filtering releases")?;
+) -> Result<(), Error> {
+    let lists = extract_downloads(releases).with_context(|_| format_err!("filtering releases"))?;
 
-    let temp_dir =
-        TempDir::new_in(&lists_dir, ".fapt-lists").chain_err(|| "creating temporary directory")?;
+    let temp_dir = TempDir::new_in(&lists_dir, ".fapt-lists")
+        .with_context(|_| format_err!("creating temporary directory"))?;
 
     let downloads: Vec<fetch::Download> = lists
         .iter()
@@ -91,7 +91,7 @@ pub fn download_files<P: AsRef<Path>>(
         })
         .collect();
 
-    fetch::fetch(client, &downloads).chain_err(|| "downloading listed files")?;
+    fetch::fetch(client, &downloads).with_context(|_| format_err!("downloading listed files"))?;
 
     for list in lists {
         store_list_item(&list, &temp_dir, &lists_dir)?;
@@ -104,7 +104,7 @@ fn store_list_item<P: AsRef<Path>, Q: AsRef<Path>>(
     list: &DownloadableListing,
     temp_dir: P,
     lists_dir: Q,
-) -> Result<()> {
+) -> Result<(), Error> {
     let local_name = list.local_name();
     let destination_path = lists_dir.as_ref().join(&local_name);
     if destination_path.exists() {
@@ -112,26 +112,27 @@ fn store_list_item<P: AsRef<Path>, Q: AsRef<Path>>(
     }
 
     let temp_path = temp_dir.as_ref().join(&local_name);
-    let mut temp =
-        fs::File::open(&temp_path).chain_err(|| "opening a temp file we just downloaded")?;
+    let mut temp = fs::File::open(&temp_path)
+        .with_context(|_| format_err!("opening a temp file we just downloaded"))?;
 
     checksum::validate(&mut temp, list.compressed_hashes)
-        .chain_err(|| format!("validating downloaded file: {:?}", temp_path))?;
+        .with_context(|_| format_err!("validating downloaded file: {:?}", temp_path))?;
 
     match list.codec {
         Compression::None => fs::rename(temp_path, destination_path)?,
         Compression::Gz => {
             temp.seek(SeekFrom::Start(0))?;
-            let mut uncompressed_temp = PersistableTempFile::new_in(&lists_dir)
-                .chain_err(|| format!("making temporary file in {:?}", lists_dir.as_ref()))?;
+            let mut uncompressed_temp = PersistableTempFile::new_in(&lists_dir).with_context(
+                |_| format_err!("making temporary file in {:?}", lists_dir.as_ref()),
+            )?;
 
             decompress_gz(temp, &mut uncompressed_temp, list.decompressed_hashes)
-                .chain_err(|| format!("decomressing {:?}", temp_path))?;
+                .with_context(|_| format_err!("decomressing {:?}", temp_path))?;
 
             uncompressed_temp
                 .persist_by_rename(destination_path)
                 .map_err(|e| e.error)
-                .chain_err(|| "storing decompressed file")?;
+                .with_context(|_| format_err!("storing decompressed file"))?;
         }
     }
 
@@ -142,18 +143,18 @@ fn decompress_gz<R: Read, F: Read + Write + Seek>(
     mut compressed: R,
     mut uncompressed: F,
     decompressed_hashes: Hashes,
-) -> Result<()> {
+) -> Result<(), Error> {
     io::copy(
         &mut GzDecoder::new(io::BufReader::new(&mut compressed)),
         &mut uncompressed,
-    ).chain_err(|| "decomressing")?;
+    ).with_context(|_| format_err!("decomressing"))?;
 
     uncompressed
         .seek(SeekFrom::Start(0))
-        .chain_err(|| "rewinding")?;
+        .with_context(|_| format_err!("rewinding"))?;
 
     checksum::validate(&mut uncompressed, decompressed_hashes)
-        .chain_err(|| "validating decompressed file")?;
+        .with_context(|_| format_err!("validating decompressed file"))?;
 
     Ok(())
 }
@@ -199,7 +200,7 @@ pub fn selected_listings(release: &Release) -> Vec<Listing> {
     ret
 }
 
-pub fn extract_downloads(releases: &[Release]) -> Result<Vec<DownloadableListing>> {
+pub fn extract_downloads(releases: &[Release]) -> Result<Vec<DownloadableListing>, Error> {
     releases
         .iter()
         .flat_map(|rel| {
@@ -214,40 +215,45 @@ pub fn sections_in<'i, P: AsRef<Path> + 'i>(
     release: &'i Release,
     listing: &'i Listing,
     lists_dir: P,
-) -> Result<Box<Iterator<Item = Result<String>> + 'i>> {
+) -> Result<Box<Iterator<Item = Result<String, Error>> + 'i>, Error> {
     sections_in_reader(open_listing(release, listing, lists_dir)?)
 }
 
 pub fn sections_in_reader<'r, R: 'r + Read>(
     input: R,
-) -> Result<Box<Iterator<Item = Result<String>> + 'r>> {
-    Ok(Box::new(
-        rfc822::Section::new(input).map(|v| decode_vec(v.chain_err(|| "decoding"))),
-    ))
+) -> Result<Box<Iterator<Item = Result<String, Error>> + 'r>, Error> {
+    Ok(Box::new(rfc822::Section::new(input).map(|v| {
+        decode_vec(v.context(format_err!("decoding")).map_err(|e| e.into()))
+    })))
 }
 
-fn decode_vec(from: Result<Vec<u8>>) -> Result<String> {
-    from.and_then(|vec| String::from_utf8(vec).chain_err(|| "decoding string"))
+fn decode_vec(from: Result<Vec<u8>, Error>) -> Result<String, Error> {
+    Ok(from
+        .and_then(|vec| String::from_utf8(vec).map_err(|e| e.into()))
+        .with_context(|_| format_err!("decoding string"))?)
 }
 
 pub fn open_listing<P: AsRef<Path>>(
     release: &Release,
     listing: &Listing,
     lists_dir: P,
-) -> Result<fs::File> {
+) -> Result<fs::File, Error> {
     let local_path = lists_dir
         .as_ref()
         .join(find_file_easy(release, listing)?.local_name());
-    fs::File::open(&local_path).chain_err(|| format!("Couldn't open {:?}", local_path))
+    Ok(
+        fs::File::open(&local_path)
+            .with_context(|_| format_err!("Couldn't open {:?}", local_path))?,
+    )
 }
 
-pub fn find_file_easy(release: &Release, listing: &Listing) -> Result<DownloadableListing> {
-    find_file(
+pub fn find_file_easy(release: &Release, listing: &Listing) -> Result<DownloadableListing, Error> {
+    Ok(find_file(
         &release.req.dists()?,
         &release.file.contents,
         release.file.acquire_by_hash,
         &listing,
-    ).chain_err(|| format!("finding {:?} in {:?}", listing, release))
+    ).with_context(|_| format_err!("finding {:?} in {:?}", listing, release))?)
 }
 
 pub fn find_file(
@@ -255,7 +261,7 @@ pub fn find_file(
     contents: &[ReleaseContent],
     acquire_by_hash: bool,
     listing: &Listing,
-) -> Result<DownloadableListing> {
+) -> Result<DownloadableListing, Error> {
     let directory = listing
         .arch
         .as_ref()
@@ -277,7 +283,7 @@ pub fn find_file(
         }
     }
 
-    let raw_hashes = raw_hashes.ok_or_else(|| format!("file {:?} not found in release", base))?;
+    let raw_hashes = raw_hashes.ok_or_else(|| format_err!("file {:?} not found in release", base))?;
 
     let url = base_url.join(&if acquire_by_hash {
         format!(

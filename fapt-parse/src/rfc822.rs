@@ -5,13 +5,12 @@ use std::io::Read;
 use std::iter::Peekable;
 use std::str::Lines;
 
+use failure::Error;
 use mailparse::dateparse;
-
-use errors::*;
 
 pub type Line<'s> = (&'s str, Vec<&'s str>);
 
-pub fn scan(block: &str) -> impl Iterator<Item = Result<Line>> {
+pub fn scan(block: &str) -> impl Iterator<Item = Result<Line, Error>> {
     Scanner {
         it: block.lines().peekable(),
     }
@@ -22,7 +21,7 @@ struct Scanner<'a> {
 }
 
 impl<'a> Iterator for Scanner<'a> {
-    type Item = Result<Line<'a>>;
+    type Item = Result<Line<'a>, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let line = match self.it.next() {
@@ -32,7 +31,7 @@ impl<'a> Iterator for Scanner<'a> {
 
         let colon = match line.find(':') {
             Some(colon) => colon,
-            None => return Some(Err(format!("expected a key: in {:?}", line).into())),
+            None => return Some(Err(format_err!("expected a key: in {:?}", line))),
         };
 
         let (key, first_val) = line.split_at(colon);
@@ -57,24 +56,24 @@ impl<'a> Iterator for Scanner<'a> {
     }
 }
 
-pub fn map(block: &str) -> Result<HashMap<&str, Vec<&str>>> {
+pub fn map(block: &str) -> Result<HashMap<&str, Vec<&str>>, Error> {
     // Vec collect() hack doesn't seem to apply to map; super lazy solution
     Ok(scan(block)
-        .collect::<Result<Vec<Line>>>()?
+        .collect::<Result<Vec<Line>, Error>>()?
         .into_iter()
         .collect())
 }
 
 #[cfg(rage)]
-pub fn parse_date(date: &str) -> Result<time::Instant> {
+pub fn parse_date(date: &str) -> Result<time::Instant, Error> {
     let epochs = dateparse(date)?;
     ensure!(epochs >= 0, "no times before the epoch");
     let secs = time::Duration::new(epochs as u64, 0);
     Ok((time::UNIX_EPOCH + secs).into())
 }
 
-pub fn parse_date(date: &str) -> Result<i64> {
-    Ok(dateparse(date)?)
+pub fn parse_date(date: &str) -> Result<i64, Error> {
+    dateparse(date).map_err(|e| format_err!("dateparse error: {}", e))
 }
 
 pub struct Section<R: Read> {
@@ -90,7 +89,7 @@ impl<R: Read> Section<R> {
 }
 
 impl<R: Read> Iterator for Section<R> {
-    type Item = Result<Vec<u8>>;
+    type Item = Result<Vec<u8>, Error>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -115,23 +114,24 @@ impl<R: Read> Iterator for Section<R> {
     }
 }
 
-pub fn mandatory_single_line(data: &HashMap<&str, Vec<&str>>, key: &str) -> Result<String> {
-    Ok(data.get(key)
-        .ok_or_else(|| format!("{} is mandatory", key))?
+pub fn mandatory_single_line(data: &HashMap<&str, Vec<&str>>, key: &str) -> Result<String, Error> {
+    Ok(data
+        .get(key)
+        .ok_or_else(|| format_err!("{} is mandatory", key))?
         .join(" "))
 }
 
 pub fn mandatory_whitespace_list(
     data: &HashMap<&str, Vec<&str>>,
     key: &str,
-) -> Result<Vec<String>> {
+) -> Result<Vec<String>, Error> {
     Ok(mandatory_single_line(data, key)?
         .split_whitespace()
         .map(|x| x.to_string())
         .collect())
 }
 
-pub fn one_line<'a>(lines: &[&'a str]) -> Result<&'a str> {
+pub fn one_line<'a>(lines: &[&'a str]) -> Result<&'a str, Error> {
     ensure!(1 == lines.len(), "{:?} isn't exactly one line", lines);
     Ok(lines[0])
 }
@@ -142,15 +142,18 @@ pub fn joined(lines: &[&str]) -> String {
 
 #[cfg(test)]
 mod tests {
+    use failure::Error;
+
     use super::scan;
     use super::Line;
-    use errors::*;
 
     #[test]
     fn single_line_header() {
         assert_eq!(
             vec![("Foo", vec!["bar"])],
-            scan("Foo: bar\n").collect::<Result<Vec<Line>>>().unwrap()
+            scan("Foo: bar\n")
+                .collect::<Result<Vec<Line>, Error>>()
+                .unwrap()
         );
     }
 
@@ -159,7 +162,7 @@ mod tests {
         assert_eq!(
             vec![("Foo", vec!["bar", "baz"])],
             scan("Foo:\n bar\n baz\n")
-                .collect::<Result<Vec<Line>>>()
+                .collect::<Result<Vec<Line>, Error>>()
                 .unwrap()
         );
     }
@@ -169,7 +172,7 @@ mod tests {
         assert_eq!(
             vec![("Foo", vec!["bar", "baz", "quux"])],
             scan("Foo: bar\n baz\n quux\n")
-                .collect::<Result<Vec<Line>>>()
+                .collect::<Result<Vec<Line>, Error>>()
                 .unwrap()
         );
     }
@@ -177,10 +180,9 @@ mod tests {
     #[test]
     fn walkies() {
         use super::Section;
-        use errors::*;
         use std::io;
 
-        let parts: Result<Vec<Vec<u8>>> =
+        let parts: Result<Vec<Vec<u8>>, Error> =
             Section::new(io::Cursor::new(b"foo\nbar\n\nbaz\n")).collect();
         assert_eq!(
             vec![b"foo\nbar\n".to_vec(), b"baz\n".to_vec()],

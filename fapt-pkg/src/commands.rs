@@ -5,6 +5,8 @@ use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 
+use failure::Error;
+use failure::ResultExt;
 use fapt_parse;
 use fapt_parse::rfc822;
 use fapt_parse::rfc822::one_line;
@@ -18,8 +20,6 @@ use dep_graph::DepGraph;
 use lists;
 use release;
 
-use errors::*;
-
 pub struct System {
     lists_dir: PathBuf,
     dpkg_database: Option<PathBuf>,
@@ -30,7 +30,7 @@ pub struct System {
 }
 
 impl System {
-    pub fn cache_dirs_only<P: AsRef<Path>>(lists_dir: P) -> Result<Self> {
+    pub fn cache_dirs_only<P: AsRef<Path>>(lists_dir: P) -> Result<Self, Error> {
         fs::create_dir_all(lists_dir.as_ref())?;
 
         let client = if let Ok(proxy) = env::var("http_proxy") {
@@ -51,7 +51,7 @@ impl System {
         })
     }
 
-    pub fn add_sources_entry_line(&mut self, src: &str) -> Result<()> {
+    pub fn add_sources_entry_line(&mut self, src: &str) -> Result<(), Error> {
         self.add_sources_entries(::classic_sources_list::read(src)?);
         Ok(())
     }
@@ -71,40 +71,40 @@ impl System {
     pub fn add_keyring_paths<P: AsRef<Path>, I: IntoIterator<Item = P>>(
         &mut self,
         keyrings: I,
-    ) -> Result<()> {
+    ) -> Result<(), Error> {
         self.keyring_paths
             .extend(keyrings.into_iter().map(|x| x.as_ref().to_path_buf()));
         Ok(())
     }
 
-    pub fn update(&self) -> Result<()> {
+    pub fn update(&self) -> Result<(), Error> {
         let requested =
             release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
-                .chain_err(|| "parsing sources entries")?;
+                .with_context(|_| format_err!("parsing sources entries"))?;
 
         requested
             .download(&self.lists_dir, &self.keyring_paths, &self.client)
-            .chain_err(|| "downloading releases")?;
+            .with_context(|_| format_err!("downloading releases"))?;
 
         let releases = requested
             .parse(&self.lists_dir)
-            .chain_err(|| "parsing releases")?;
+            .with_context(|_| format_err!("parsing releases"))?;
 
         lists::download_files(&self.client, &self.lists_dir, &releases)
-            .chain_err(|| "downloading release content")?;
+            .with_context(|_| format_err!("downloading release content"))?;
 
         Ok(())
     }
 
-    pub fn walk_sections<F>(&self, mut walker: F) -> Result<()>
+    pub fn walk_sections<F>(&self, mut walker: F) -> Result<(), Error>
     where
-        F: FnMut(StringSection) -> Result<()>,
+        F: FnMut(StringSection) -> Result<(), Error>,
     {
         let releases =
             release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
-                .chain_err(|| "parsing sources entries")?
+                .with_context(|_| format_err!("parsing sources entries"))?
                 .parse(&self.lists_dir)
-                .chain_err(|| "parsing releases")?;
+                .with_context(|_| format_err!("parsing releases"))?;
 
         for release in releases {
             for listing in lists::selected_listings(&release) {
@@ -112,15 +112,15 @@ impl System {
                     let section = section?;
                     walker(StringSection {
                         inner: rfc822::map(&section)
-                            .chain_err(|| format!("loading section: {:?}", section))?,
-                    }).chain_err(|| "processing section")?;
+                            .with_context(|_| format_err!("loading section: {:?}", section))?,
+                    }).with_context(|_| format_err!("processing section"))?;
                 }
             }
         }
         Ok(())
     }
 
-    pub fn export(&self) -> Result<()> {
+    pub fn export(&self) -> Result<(), Error> {
         self.walk_sections(|section| {
             serde_json::to_writer(io::stdout(), &section.joined_lines())?;
             println!();
@@ -128,10 +128,11 @@ impl System {
         })
     }
 
-    pub fn list_installed(&self) -> Result<()> {
-        let mut status = self.dpkg_database
+    pub fn list_installed(&self) -> Result<(), Error> {
+        let mut status = self
+            .dpkg_database
             .as_ref()
-            .ok_or("dpkg database not set")?
+            .ok_or_else(|| format_err!("dpkg database not set"))?
             .to_path_buf();
         status.push("status");
 
@@ -147,7 +148,7 @@ impl System {
                 Err(e) => if !status_is(rfc822::scan(&section), installed_msg)? {
                     continue;
                 } else {
-                    bail!(e.chain_err(|| format!("parsing:\n{}", section)))
+                    bail!(e.context(format_err!("parsing:\n{}", section)))
                 },
             };
 
@@ -242,7 +243,7 @@ impl System {
         Ok(())
     }
 
-    pub fn source_ninja(&self) -> Result<()> {
+    pub fn source_ninja(&self) -> Result<(), Error> {
         self.walk_sections(|map| {
             if map.as_ref().contains_key("Files") {
                 print_ninja_source(map.as_ref())
@@ -253,10 +254,10 @@ impl System {
     }
 }
 
-fn status_is<'l, I: Iterator<Item = fapt_parse::Result<Line<'l>>>>(
+fn status_is<'l, I: Iterator<Item = Result<Line<'l>, Error>>>(
     it: I,
     what: &str,
-) -> Result<bool> {
+) -> Result<bool, Error> {
     for line in it {
         let (k, v) = line?;
         if "Status" != k {
@@ -273,7 +274,8 @@ fn stringify_package_list<I: IntoIterator<Item = usize>>(
     dep_graph: &DepGraph,
     it: I,
 ) -> impl Iterator<Item = String> {
-    let mut vec: Vec<String> = it.into_iter()
+    let mut vec: Vec<String> = it
+        .into_iter()
         .map(|id| format!("{}", dep_graph.get(id).name))
         .collect();
     vec.sort_unstable();
@@ -347,7 +349,7 @@ impl<'i> Iterator for Sections<'i> {
     }
 }
 
-fn print_ninja_source(map: &HashMap<&str, Vec<&str>>) -> Result<()> {
+fn print_ninja_source(map: &HashMap<&str, Vec<&str>>) -> Result<(), Error> {
     let pkg = one_line(&map["Package"])?;
     let version = one_line(&map["Version"])?.replace(':', "$:");
     let dir = one_line(&map["Directory"])?;
@@ -391,7 +393,7 @@ fn print_ninja_source(map: &HashMap<&str, Vec<&str>>) -> Result<()> {
     Ok(())
 }
 
-fn print_ninja_binary(map: &HashMap<&str, Vec<&str>>) -> Result<()> {
+fn print_ninja_binary(map: &HashMap<&str, Vec<&str>>) -> Result<(), Error> {
     let pkg = one_line(&map["Package"])?;
     let source = one_line(&map.get("Source").unwrap_or_else(|| &map["Package"]))?
         .split_whitespace()

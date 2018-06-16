@@ -2,14 +2,13 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use deb_version::compare_versions;
+use failure::Error;
 use fapt_parse::types::Arch;
 use fapt_parse::types::Arches;
 use fapt_parse::types::ConstraintOperator;
 use fapt_parse::types::Package;
 use fapt_parse::types::PackageType;
 use fapt_parse::types::SingleDependency;
-
-use errors::*;
 
 type Id = usize;
 
@@ -63,7 +62,7 @@ impl DepGraph {
         }
     }
 
-    pub fn insert(&mut self, package: Package) -> Result<()> {
+    pub fn insert(&mut self, package: Package) -> Result<(), Error> {
         let id = self.packages.len();
         self.lookup.insert((&package).into(), id);
         self.packages.push(package);

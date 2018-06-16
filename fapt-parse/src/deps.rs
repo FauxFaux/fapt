@@ -1,20 +1,19 @@
+use failure::Error;
 use nom::types::CompleteStr;
 
-use errors;
-use errors::*;
 use types::Arch;
 use types::Constraint;
 use types::ConstraintOperator;
 use types::Dependency;
 use types::SingleDependency;
 
-pub fn read(val: &str) -> Result<Vec<Dependency>> {
+pub fn read(val: &str) -> Result<Vec<Dependency>, Error> {
     use nom::Err as NomErr;
     match parse(CompleteStr(val)) {
         Ok((CompleteStr(""), val)) => Ok(val),
         Err(NomErr::Incomplete(_)) => unreachable!(),
-        Ok((trailing, _)) => Err(format!("trailing data: '{:?}'", trailing).into()),
-        other => Err(format!("nom error: {:?}", other).into()),
+        Ok((trailing, _)) => Err(format_err!("trailing data: '{:?}'", trailing)),
+        other => Err(format_err!("nom error: {:?}", other)),
     }
 }
 

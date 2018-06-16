@@ -1,6 +1,6 @@
 extern crate deb_version;
 #[macro_use]
-extern crate error_chain;
+extern crate failure;
 extern crate fapt_parse;
 extern crate filetime;
 extern crate flate2;
@@ -13,23 +13,18 @@ extern crate sha2;
 extern crate tempdir;
 extern crate tempfile_fast;
 
-#[cfg(intellij_type_hinting)]
-extern crate error_chain_for_dumb_ides;
-
 use std::fmt;
 
 mod checksum;
 pub mod classic_sources_list;
 mod commands;
 mod dep_graph;
-mod errors;
 mod fetch;
 mod lists;
 mod release;
 mod signing;
 
 pub use commands::System;
-pub use errors::*;
 
 #[derive(Copy, Clone)]
 pub struct Hashes {

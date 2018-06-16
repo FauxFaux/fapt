@@ -5,9 +5,9 @@ use std::fmt;
 use std::str::FromStr;
 
 use deb_version::compare_versions;
+use failure::Error;
 
 use deps;
-use errors::*;
 use rfc822;
 
 /// The parsed top-level types for package
@@ -133,7 +133,7 @@ pub type Arches = HashSet<Arch>;
 impl FromStr for Arch {
     type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self> {
+    fn from_str(s: &str) -> Result<Self, Error> {
         Ok(match s {
             "all" => Arch::All,
             "any" => Arch::Any,
@@ -268,7 +268,9 @@ pub enum SourceFormat {
 }
 
 impl Package {
-    pub fn parse_bin<'i, I: Iterator<Item = Result<rfc822::Line<'i>>>>(it: I) -> Result<Package> {
+    pub fn parse_bin<'i, I: Iterator<Item = Result<rfc822::Line<'i>, Error>>>(
+        it: I,
+    ) -> Result<Package, Error> {
         use rfc822::joined;
         use rfc822::one_line;
 
@@ -306,11 +308,13 @@ impl Package {
                 "Package" => name = Some(one_line(&values)?),
                 "Version" => version = Some(one_line(&values)?),
                 "Architecture" => {
-                    arches = Some(one_line(&values)?
+                    arches = Some(
+                        one_line(&values)?
                             // TODO: alternate splitting rules?
                             .split_whitespace()
                         .map(|s| s.parse())
-                        .collect::<Result<HashSet<Arch>>>()?)
+                        .collect::<Result<HashSet<Arch>, Error>>()?,
+                    )
                 }
 
                 "Essential" => essential = Some(::yes_no(one_line(&values)?)?),
@@ -347,10 +351,12 @@ impl Package {
         }
 
         Ok(Package {
-            name: name.ok_or("missing name")?.to_string(),
-            version: version.ok_or("missing version")?.to_string(),
-            priority: priority.ok_or("missing priority")?,
-            arches: arches.ok_or("missing arches")?,
+            name: name.ok_or_else(|| format_err!("missing name"))?.to_string(),
+            version: version
+                .ok_or_else(|| format_err!("missing version"))?
+                .to_string(),
+            priority: priority.ok_or_else(|| format_err!("missing priority"))?,
+            arches: arches.ok_or_else(|| format_err!("missing arches"))?,
             maintainer,
             original_maintainer,
             style: PackageType::Binary(Binary {
@@ -359,7 +365,7 @@ impl Package {
                 build_essential: build_essential.unwrap_or(false),
                 // TODO: this is missing in a couple of cases in dpkg/status; pretty crap
                 installed_size: installed_size.unwrap_or(0),
-                description: description.ok_or("missing description")?,
+                description: description.ok_or_else(|| format_err!("missing description"))?,
                 depends,
                 recommends,
                 suggests,
@@ -394,7 +400,7 @@ impl fmt::Display for Package {
     }
 }
 
-fn parse_dep(multi_str: &[&str]) -> Result<Vec<Dependency>> {
+fn parse_dep(multi_str: &[&str]) -> Result<Vec<Dependency>, Error> {
     deps::read(&rfc822::joined(multi_str))
 }
 

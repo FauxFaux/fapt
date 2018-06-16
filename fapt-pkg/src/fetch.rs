@@ -5,15 +5,13 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
+use failure::Error;
+use failure::ResultExt;
 use filetime;
-
 use reqwest;
 use reqwest::header;
 use reqwest::header::IfModifiedSince;
-
 use tempfile_fast::PersistableTempFile;
-
-use errors::*;
 
 pub struct Download {
     from: reqwest::Url,
@@ -29,27 +27,29 @@ impl Download {
     }
 }
 
-pub fn fetch(client: &reqwest::Client, downloads: &[Download]) -> Result<()> {
+pub fn fetch(client: &reqwest::Client, downloads: &[Download]) -> Result<(), Error> {
     // TODO: reqwest parallel API, when it's stable
 
     for download in downloads {
         write!(io::stderr(), "Downloading: {} ... ", download.from)?;
         io::stderr().flush()?;
         fetch_single(client, download)
-            .chain_err(|| format!("downloading {} to {:?}", download.from, download.to))?;
+            .with_context(|_| format_err!("downloading {} to {:?}", download.from, download.to))?;
     }
 
     Ok(())
 }
 
-fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<()> {
+fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<(), Error> {
     let mut req = client.get(download.from.as_ref());
 
     if download.to.exists() {
         req.header(IfModifiedSince(download.to.metadata()?.modified()?.into()));
     }
 
-    let mut resp = req.send().chain_err(|| "initiating request")?;
+    let mut resp = req
+        .send()
+        .with_context(|_| format_err!("initiating request"))?;
 
     let status = resp.status();
     if reqwest::StatusCode::NotModified == status {
@@ -62,23 +62,26 @@ fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<()> {
             status
         );
     }
-    let parent = download.to.parent().ok_or("path must have parent")?;
+    let parent = download
+        .to
+        .parent()
+        .ok_or_else(|| format_err!("path must have parent"))?;
 
-    fs::create_dir_all(parent).chain_err(|| format!("creating directories: {:?}", parent))?;
+    fs::create_dir_all(parent).with_context(|_| format_err!("creating directories: {:?}", parent))?;
 
-    let mut tmp =
-        PersistableTempFile::new_in(parent).chain_err(|| "couldn't create temporary file")?;
+    let mut tmp = PersistableTempFile::new_in(parent)
+        .with_context(|_| format_err!("couldn't create temporary file"))?;
 
     if let Some(len) = resp.headers().get::<header::ContentLength>() {
         tmp.set_len(**len)
-            .chain_err(|| "pretending to allocate space")?;
+            .with_context(|_| format_err!("pretending to allocate space"))?;
     }
 
-    io::copy(&mut resp, &mut tmp).chain_err(|| "copying data")?;
+    io::copy(&mut resp, &mut tmp).with_context(|_| format_err!("copying data"))?;
 
     tmp.persist_by_rename(&download.to)
         .map_err(|e| e.error)
-        .chain_err(|| "persisting result")?;
+        .with_context(|_| format_err!("persisting result"))?;
 
     if let Some(modified) = resp.headers().get::<header::LastModified>() {
         let file_time = filetime::FileTime::from_system_time(SystemTime::from(**modified));

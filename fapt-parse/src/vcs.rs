@@ -1,4 +1,5 @@
-use errors::*;
+use failure::Error;
+
 use types::VcsTag;
 use types::VcsType;
 

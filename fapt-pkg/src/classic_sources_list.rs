@@ -1,10 +1,10 @@
-use errors::*;
-
 use std::fs;
 use std::io;
+use std::io::BufRead;
 use std::path;
 
-use std::io::BufRead;
+use failure::Error;
+use failure::ResultExt;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Entry {
@@ -15,7 +15,7 @@ pub struct Entry {
     pub arch: Option<String>,
 }
 
-fn read_single_line(line: &str) -> Result<Vec<Entry>> {
+fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
     let line = match line.find('#') {
         Some(comment) => &line[..comment],
         None => line,
@@ -27,7 +27,9 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>> {
 
     let mut parts = line.split_whitespace().peekable();
 
-    let src = parts.next().ok_or("deb{,s,-src} section required")?;
+    let src = parts
+        .next()
+        .ok_or_else(|| format_err!("deb{{,s,-src}} section required"))?;
     let arch = match parts.peek() {
         Some(&val) if val.starts_with("[") => {
             parts.next();
@@ -37,8 +39,12 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>> {
         None => bail!("unexpected end of line looking for arch or url"),
     };
 
-    let url = parts.next().ok_or("url section required")?;
-    let suite = parts.next().ok_or("suite section required")?;
+    let url = parts
+        .next()
+        .ok_or_else(|| format_err!("url section required"))?;
+    let suite = parts
+        .next()
+        .ok_or_else(|| format_err!("suite section required"))?;
 
     let components: Vec<&str> = parts.collect();
 
@@ -68,27 +74,27 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>> {
     Ok(ret)
 }
 
-fn read_single_line_number(line: &str, no: usize) -> Result<Vec<Entry>> {
-    read_single_line(line).chain_err(|| format!("parsing line {}", no + 1))
+fn read_single_line_number(line: &str, no: usize) -> Result<Vec<Entry>, Error> {
+    Ok(read_single_line(line).with_context(|_| format_err!("parsing line {}", no + 1))?)
 }
 
-pub fn read(from: &str) -> Result<Vec<Entry>> {
+pub fn read(from: &str) -> Result<Vec<Entry>, Error> {
     from.lines()
         .enumerate()
         .map(|(no, line)| read_single_line_number(line, no))
-        .collect::<Result<Vec<Vec<Entry>>>>()
+        .collect::<Result<Vec<Vec<Entry>>, Error>>()
         .map(|vec_vec| vec_vec.into_iter().flat_map(|x| x).collect())
 }
 
-pub fn load<P: AsRef<path::Path>>(path: P) -> Result<Vec<Entry>> {
+pub fn load<P: AsRef<path::Path>>(path: P) -> Result<Vec<Entry>, Error> {
     io::BufReader::new(fs::File::open(path)?)
         .lines()
         .enumerate()
         .map(|(no, line)| match line {
             Ok(line) => read_single_line_number(&line, no),
-            Err(e) => Err(Error::with_chain(e, format!("reading around line {}", no))),
+            Err(e) => Err(format_err!("reading around line {}: {:?}", no, e)),
         })
-        .collect::<Result<Vec<Vec<Entry>>>>()
+        .collect::<Result<Vec<Vec<Entry>>, Error>>()
         .map(|vec_vec| vec_vec.into_iter().flat_map(|x| x).collect())
 }
 

@@ -1,6 +1,6 @@
 extern crate clap;
 #[macro_use]
-extern crate error_chain;
+extern crate failure;
 extern crate fapt_pkg;
 
 use std::fs;
@@ -8,14 +8,11 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use clap::{App, AppSettings, Arg, SubCommand};
+use failure::Error;
+use failure::ResultExt;
 use fapt_pkg::classic_sources_list;
 
-mod errors;
-use errors::*;
-
-quick_main!(run);
-
-fn run() -> Result<()> {
+fn main() -> Result<(), failure::Error> {
     let matches = App::new("Faux' apt")
         .setting(AppSettings::SubcommandRequired)
         .arg(
@@ -110,21 +107,24 @@ fn run() -> Result<()> {
         cache_dir = Some(PathBuf::from(cache));
     }
 
-    let cache_dir = cache_dir
-        .ok_or("A --cache-dir is required, please set it explicitly, or provide a --root-dir")?;
+    let cache_dir = cache_dir.ok_or_else(|| {
+        format_err!("A --cache-dir is required, please set it explicitly, or provide a --root-dir")
+    })?;
 
     let mut sources_entries = Vec::new();
     if let Some(prefix) = sources_list_prefix {
         for prefix in expand_dot_d(prefix)? {
-            sources_entries.extend(classic_sources_list::load(&prefix)
-                .chain_err(|| format!("loading sources.list: {:?}", prefix))?);
+            sources_entries.extend(
+                classic_sources_list::load(&prefix)
+                    .with_context(|_| format_err!("loading sources.list: {:?}", prefix))?,
+            );
         }
     }
 
     if let Some(lines) = matches.values_of("release-url") {
         for line in lines {
             let entries = classic_sources_list::read(line)
-                .chain_err(|| format!("parsing command line: {:?}", line))?;
+                .with_context(|_| format_err!("parsing command line: {:?}", line))?;
 
             ensure!(
                 !entries.is_empty(),
@@ -185,7 +185,7 @@ fn run() -> Result<()> {
     Ok(())
 }
 
-fn expand_dot_d<P: AsRef<Path>>(path: P) -> Result<Vec<PathBuf>> {
+fn expand_dot_d<P: AsRef<Path>>(path: P) -> Result<Vec<PathBuf>, Error> {
     let mut ret = Vec::new();
 
     let path = path.as_ref();
