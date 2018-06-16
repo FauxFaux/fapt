@@ -9,7 +9,7 @@ deb-version = "0.1"
 failure = "0.1"
 mailparse = "0.6"
 md-5 = "0.7"
-nom = "4.0.0-beta2"
+nom = "4"
 result = "1"
 
 [dependencies.digest]
