@@ -1,6 +1,6 @@
 use std::io;
-use std::io::Write;
 use std::io::Read;
+use std::io::Write;
 
 use failure::Error;
 use hex;

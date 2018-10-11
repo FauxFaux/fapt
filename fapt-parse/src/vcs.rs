@@ -38,7 +38,8 @@ pub fn extract(
         ("Hg", VcsType::Hg),
         ("Mtn", VcsType::Mtn),
         ("Svn", VcsType::Svn),
-    ].into_iter()
+    ]
+        .into_iter()
     {
         // Simplest form: Vcs-Git
         if let Some(x) = map.remove(format!("Vcs-{}", vcs_token).as_str()) {
@@ -50,7 +51,8 @@ pub fn extract(
             ("Original", VcsTag::Orig),
             ("Debian", VcsTag::Debian),
             ("Upstream", VcsTag::Upstream),
-        ].into_iter()
+        ]
+            .into_iter()
         {
             // Common form: Debian-Vcs-Git, Orig-Vcs-Browser, Original-Vcs-Bzr, Upstream-Vcs-Bzr
             if let Some(x) = map.remove(format!("{}-Vcs-{}", tag_token, vcs_token).as_str()) {

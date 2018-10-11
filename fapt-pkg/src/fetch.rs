@@ -67,7 +67,8 @@ fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<(), Err
         .parent()
         .ok_or_else(|| format_err!("path must have parent"))?;
 
-    fs::create_dir_all(parent).with_context(|_| format_err!("creating directories: {:?}", parent))?;
+    fs::create_dir_all(parent)
+        .with_context(|_| format_err!("creating directories: {:?}", parent))?;
 
     let mut tmp = PersistableTempFile::new_in(parent)
         .with_context(|_| format_err!("couldn't create temporary file"))?;

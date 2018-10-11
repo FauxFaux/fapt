@@ -188,7 +188,8 @@ impl RequestedReleases {
                     )?;
                     gpg.verify_detached(&dest, detatched_signature, verified)
                 }
-            }.with_context(|_| format_err!("verifying {:?} at {:?}", release, dest))?;
+            }
+            .with_context(|_| format_err!("verifying {:?} at {:?}", release, dest))?;
         }
 
         Ok(())
@@ -213,8 +214,9 @@ pub fn parse_release_file<P: AsRef<Path>>(path: P) -> Result<ReleaseFile, Error>
     io::BufReader::new(
         fs::File::open(path.as_ref())
             .with_context(|_| format_err!("finding release file: {:?}", path.as_ref()))?,
-    ).read_to_string(&mut file)
-        .with_context(|_| format_err!("reading release file: {:?}", path.as_ref()))?;
+    )
+    .read_to_string(&mut file)
+    .with_context(|_| format_err!("reading release file: {:?}", path.as_ref()))?;
     Ok(parse_release(&file).with_context(|_| format_err!("parsing {:?}", path.as_ref()))?)
 }
 

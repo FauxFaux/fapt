@@ -179,9 +179,11 @@ impl DepGraph {
                         1 => {
                             direct_dep.insert(d.alternate[0].package.to_string());
                         }
-                        _ => for a in &d.alternate {
-                            maybe_dep.insert(a.package.to_string());
-                        },
+                        _ => {
+                            for a in &d.alternate {
+                                maybe_dep.insert(a.package.to_string());
+                            }
+                        }
                     }
                 }
 

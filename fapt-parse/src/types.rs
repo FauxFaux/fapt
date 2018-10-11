@@ -312,8 +312,8 @@ impl Package {
                         one_line(&values)?
                             // TODO: alternate splitting rules?
                             .split_whitespace()
-                        .map(|s| s.parse())
-                        .collect::<Result<HashSet<Arch>, Error>>()?,
+                            .map(|s| s.parse())
+                            .collect::<Result<HashSet<Arch>, Error>>()?,
                     )
                 }
 

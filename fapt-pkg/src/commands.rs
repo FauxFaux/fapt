@@ -113,7 +113,8 @@ impl System {
                     walker(StringSection {
                         inner: rfc822::map(&section)
                             .with_context(|_| format_err!("loading section: {:?}", section))?,
-                    }).with_context(|_| format_err!("processing section"))?;
+                    })
+                    .with_context(|_| format_err!("processing section"))?;
                 }
             }
         }
@@ -145,11 +146,13 @@ impl System {
 
             let package = match Package::parse_bin(rfc822::scan(&section)) {
                 Ok(package) => package,
-                Err(e) => if !status_is(rfc822::scan(&section), installed_msg)? {
-                    continue;
-                } else {
-                    bail!(e.context(format_err!("parsing:\n{}", section)))
-                },
+                Err(e) => {
+                    if !status_is(rfc822::scan(&section), installed_msg)? {
+                        continue;
+                    } else {
+                        bail!(e.context(format_err!("parsing:\n{}", section)))
+                    }
+                }
             };
 
             // TODO: panic?

@@ -19,7 +19,8 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
     let line = match line.find('#') {
         Some(comment) => &line[..comment],
         None => line,
-    }.trim();
+    }
+    .trim();
 
     if line.is_empty() {
         return Ok(Vec::new());
@@ -127,7 +128,8 @@ mod tests {
 deb     http://foo  bar  baz quux
 deb-src http://foo  bar  baz quux
 ",
-            ).unwrap()
+            )
+            .unwrap()
         );
     }
 }

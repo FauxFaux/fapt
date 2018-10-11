@@ -33,7 +33,8 @@ impl GpgClient {
             dir.as_ref()
                 .to_str()
                 .ok_or_else(|| format_err!("tmpdir must be valid utf-8 for no real reason"))?,
-        ).with_context(|_| format_err!("informing gpg about our temporary directory"))?;
+        )
+        .with_context(|_| format_err!("informing gpg about our temporary directory"))?;
 
         Ok(GpgClient { ctx, _root: dir })
     }
@@ -48,7 +49,8 @@ impl GpgClient {
             dest.as_ref()
                 .parent()
                 .ok_or_else(|| format_err!("full path please"))?,
-        ).with_context(|_| format_err!("creating temporary file"))?;
+        )
+        .with_context(|_| format_err!("creating temporary file"))?;
 
         let result = self
             .ctx

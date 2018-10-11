@@ -122,9 +122,10 @@ fn store_list_item<P: AsRef<Path>, Q: AsRef<Path>>(
         Compression::None => fs::rename(temp_path, destination_path)?,
         Compression::Gz => {
             temp.seek(SeekFrom::Start(0))?;
-            let mut uncompressed_temp = PersistableTempFile::new_in(&lists_dir).with_context(
-                |_| format_err!("making temporary file in {:?}", lists_dir.as_ref()),
-            )?;
+            let mut uncompressed_temp =
+                PersistableTempFile::new_in(&lists_dir).with_context(|_| {
+                    format_err!("making temporary file in {:?}", lists_dir.as_ref())
+                })?;
 
             decompress_gz(temp, &mut uncompressed_temp, list.decompressed_hashes)
                 .with_context(|_| format_err!("decomressing {:?}", temp_path))?;
@@ -147,7 +148,8 @@ fn decompress_gz<R: Read, F: Read + Write + Seek>(
     io::copy(
         &mut GzDecoder::new(io::BufReader::new(&mut compressed)),
         &mut uncompressed,
-    ).with_context(|_| format_err!("decomressing"))?;
+    )
+    .with_context(|_| format_err!("decomressing"))?;
 
     uncompressed
         .seek(SeekFrom::Start(0))
@@ -241,10 +243,8 @@ pub fn open_listing<P: AsRef<Path>>(
     let local_path = lists_dir
         .as_ref()
         .join(find_file_easy(release, listing)?.local_name());
-    Ok(
-        fs::File::open(&local_path)
-            .with_context(|_| format_err!("Couldn't open {:?}", local_path))?,
-    )
+    Ok(fs::File::open(&local_path)
+        .with_context(|_| format_err!("Couldn't open {:?}", local_path))?)
 }
 
 pub fn find_file_easy(release: &Release, listing: &Listing) -> Result<DownloadableListing, Error> {
@@ -253,7 +253,8 @@ pub fn find_file_easy(release: &Release, listing: &Listing) -> Result<Downloadab
         &release.file.contents,
         release.file.acquire_by_hash,
         &listing,
-    ).with_context(|_| format_err!("finding {:?} in {:?}", listing, release))?)
+    )
+    .with_context(|_| format_err!("finding {:?} in {:?}", listing, release))?)
 }
 
 pub fn find_file(
@@ -283,7 +284,8 @@ pub fn find_file(
         }
     }
 
-    let raw_hashes = raw_hashes.ok_or_else(|| format_err!("file {:?} not found in release", base))?;
+    let raw_hashes =
+        raw_hashes.ok_or_else(|| format_err!("file {:?} not found in release", base))?;
 
     let url = base_url.join(&if acquire_by_hash {
         format!(
