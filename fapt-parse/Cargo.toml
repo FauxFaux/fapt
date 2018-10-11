@@ -8,10 +8,10 @@ bitflags = "1"
 deb-version = "0.1"
 failure = "0.1"
 mailparse = "0.6"
-md-5 = "0.7"
+md-5 = "0.8"
 nom = "4"
 result = "1"
 
 [dependencies.digest]
 features = ["std"]
-version = "0.7"
+version = "0.8"

@@ -1,3 +1,5 @@
+use std::io;
+use std::io::Write;
 use std::io::Read;
 
 use failure::Error;
@@ -9,7 +11,9 @@ use Hashes;
 
 // TODO: also check the md5?
 pub fn validate<R: Read>(mut file: R, checksum: Hashes) -> Result<(), Error> {
-    let result = Sha256::digest_reader(&mut file)?;
+    let mut func = Sha256::default();
+    io::copy(&mut file, &mut func)?;
+    let result = func.result();
     ensure!(
         checksum.sha256 == result.as_slice(),
         "checksum mismatch: expected: {}, actual: {}",
