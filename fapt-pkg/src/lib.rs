@@ -1,3 +1,4 @@
+extern crate chrono;
 extern crate deb_version;
 #[macro_use]
 extern crate failure;

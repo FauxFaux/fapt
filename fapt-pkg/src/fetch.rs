@@ -3,14 +3,14 @@ use std::io;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
-use std::time::SystemTime;
 
+use chrono::DateTime;
+use chrono::Utc;
 use failure::Error;
 use failure::ResultExt;
 use filetime;
 use reqwest;
 use reqwest::header;
-use reqwest::header::IfModifiedSince;
 use tempfile_fast::PersistableTempFile;
 
 pub struct Download {
@@ -44,7 +44,8 @@ fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<(), Err
     let mut req = client.get(download.from.as_ref());
 
     if download.to.exists() {
-        req.header(IfModifiedSince(download.to.metadata()?.modified()?.into()));
+        let when: DateTime<Utc> = ::chrono::DateTime::from(download.to.metadata()?.modified()?);
+        req = req.header(header::IF_MODIFIED_SINCE, when.to_rfc2822());
     }
 
     let mut resp = req
@@ -52,7 +53,7 @@ fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<(), Err
         .with_context(|_| format_err!("initiating request"))?;
 
     let status = resp.status();
-    if reqwest::StatusCode::NotModified == status {
+    if reqwest::StatusCode::NOT_MODIFIED == status {
         writeln!(io::stderr(), "already up to date.")?;
         return Ok(());
     } else if !status.is_success() {
@@ -73,8 +74,8 @@ fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<(), Err
     let mut tmp = PersistableTempFile::new_in(parent)
         .with_context(|_| format_err!("couldn't create temporary file"))?;
 
-    if let Some(len) = resp.headers().get::<header::ContentLength>() {
-        tmp.set_len(**len)
+    if let Some(len) = resp.headers().get(header::CONTENT_LENGTH) {
+        tmp.set_len(len.to_str()?.parse()?)
             .with_context(|_| format_err!("pretending to allocate space"))?;
     }
 
@@ -84,8 +85,9 @@ fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<(), Err
         .map_err(|e| e.error)
         .with_context(|_| format_err!("persisting result"))?;
 
-    if let Some(modified) = resp.headers().get::<header::LastModified>() {
-        let file_time = filetime::FileTime::from_system_time(SystemTime::from(**modified));
+    if let Some(modified) = resp.headers().get(header::LAST_MODIFIED) {
+        let date = DateTime::parse_from_rfc2822(modified.to_str()?)?;
+        let file_time = filetime::FileTime::from_unix_time(date.timestamp(), 0);
         filetime::set_file_times(&download.to, file_time, file_time)?;
     }
 
