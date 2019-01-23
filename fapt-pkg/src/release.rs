@@ -7,21 +7,24 @@ use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 
+use failure::bail;
+use failure::ensure;
+use failure::format_err;
 use failure::Error;
 use failure::ResultExt;
 use hex::FromHex;
 use reqwest;
 use reqwest::Url;
 
-use classic_sources_list::Entry;
-use parse::rfc822;
-use parse::rfc822::mandatory_single_line;
-use parse::rfc822::mandatory_whitespace_list;
-use fetch::fetch;
-use fetch::Download;
-use signing::GpgClient;
+use crate::classic_sources_list::Entry;
+use crate::fetch::fetch;
+use crate::fetch::Download;
+use crate::parse::rfc822;
+use crate::parse::rfc822::mandatory_single_line;
+use crate::parse::rfc822::mandatory_whitespace_list;
+use crate::signing::GpgClient;
 
-use Hashes;
+use crate::Hashes;
 
 pub struct RequestedReleases {
     releases: Vec<(RequestedRelease, Vec<Entry>)>,

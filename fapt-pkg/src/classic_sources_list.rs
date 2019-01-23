@@ -3,6 +3,8 @@ use std::io;
 use std::io::BufRead;
 use std::path;
 
+use failure::bail;
+use failure::format_err;
 use failure::Error;
 use failure::ResultExt;
 

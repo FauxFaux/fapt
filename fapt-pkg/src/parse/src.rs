@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use failure::bail;
+use failure::ensure;
 use failure::Error;
 
 use super::types::SourceFormat;

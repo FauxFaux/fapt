@@ -1,13 +1,13 @@
 use std::io;
 use std::io::Read;
-use std::io::Write;
 
+use failure::ensure;
 use failure::Error;
 use hex;
 use sha2::Digest;
 use sha2::Sha256;
 
-use Hashes;
+use crate::Hashes;
 
 // TODO: also check the md5?
 pub fn validate<R: Read>(mut file: R, checksum: Hashes) -> Result<(), Error> {

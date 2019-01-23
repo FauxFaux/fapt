@@ -5,6 +5,8 @@ use std::io::Read;
 use std::iter::Peekable;
 use std::str::Lines;
 
+use failure::ensure;
+use failure::format_err;
 use failure::Error;
 use mailparse::dateparse;
 

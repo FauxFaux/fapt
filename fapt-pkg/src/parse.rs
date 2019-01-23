@@ -5,6 +5,7 @@ mod src;
 pub mod types;
 mod vcs;
 
+use failure::bail;
 use failure::Error;
 
 use self::types::Priority;

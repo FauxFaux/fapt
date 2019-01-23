@@ -1,5 +1,3 @@
-use failure::Error;
-
 use super::types::VcsTag;
 use super::types::VcsType;
 

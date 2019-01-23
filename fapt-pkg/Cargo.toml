@@ -6,6 +6,8 @@ name = "fapt-pkg"
 repository = "https://github.com/FauxFaux/fapt"
 version = "0.1.0"
 
+edition = "2018"
+
 [badges.travis-ci]
 repository = "FauxFaux/fapt"
 

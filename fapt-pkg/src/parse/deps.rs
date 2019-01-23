@@ -1,3 +1,4 @@
+use failure::format_err;
 use failure::Error;
 use nom::types::CompleteStr;
 

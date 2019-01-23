@@ -5,19 +5,21 @@ use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 
+use failure::bail;
+use failure::format_err;
 use failure::Error;
 use failure::ResultExt;
 use reqwest;
 use serde_json;
 
-use parse::rfc822;
-use parse::rfc822::one_line;
-use parse::rfc822::Line;
-use parse::types::Package;
-use classic_sources_list::Entry;
-use dep_graph::DepGraph;
-use lists;
-use release;
+use crate::classic_sources_list::Entry;
+use crate::dep_graph::DepGraph;
+use crate::lists;
+use crate::parse::rfc822;
+use crate::parse::rfc822::one_line;
+use crate::parse::rfc822::Line;
+use crate::parse::types::Package;
+use crate::release;
 
 pub struct System {
     lists_dir: PathBuf,
@@ -51,7 +53,7 @@ impl System {
     }
 
     pub fn add_sources_entry_line(&mut self, src: &str) -> Result<(), Error> {
-        self.add_sources_entries(::classic_sources_list::read(src)?);
+        self.add_sources_entries(crate::classic_sources_list::read(src)?);
         Ok(())
     }
 

@@ -5,6 +5,8 @@ use std::fmt;
 use std::str::FromStr;
 
 use deb_version::compare_versions;
+use failure::bail;
+use failure::format_err;
 use failure::Error;
 
 use super::deps;
@@ -280,10 +282,10 @@ impl Package {
         let mut priority = None;
         let mut arches = None;
         let mut maintainer = Vec::new();
-        let mut original_maintainer = Vec::new();
+        let original_maintainer = Vec::new();
 
         // Binary
-        let mut file = None;
+        let file = None;
         let mut essential = None;
         let mut build_essential = None;
         let mut installed_size = None;

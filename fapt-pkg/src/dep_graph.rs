@@ -1,14 +1,14 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+use crate::parse::types::Arch;
+use crate::parse::types::Arches;
+use crate::parse::types::ConstraintOperator;
+use crate::parse::types::Package;
+use crate::parse::types::PackageType;
+use crate::parse::types::SingleDependency;
 use deb_version::compare_versions;
 use failure::Error;
-use parse::types::Arch;
-use parse::types::Arches;
-use parse::types::ConstraintOperator;
-use parse::types::Package;
-use parse::types::PackageType;
-use parse::types::SingleDependency;
 
 type Id = usize;
 
@@ -278,20 +278,18 @@ fn satisfies_values(d: &SingleDependency, name: &str, arches: &Arches, version: 
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use parse::types::Binary;
-    use parse::types::Constraint;
-    use parse::types::ConstraintOperator;
-    use parse::types::Dependency;
-    use parse::types::Package;
-    use parse::types::PackageType;
-    use parse::types::Priority;
-    use parse::types::SingleDependency;
+    use crate::parse::types::Binary;
+    use crate::parse::types::Constraint;
+    use crate::parse::types::ConstraintOperator;
+    use crate::parse::types::Dependency;
+    use crate::parse::types::Package;
+    use crate::parse::types::PackageType;
+    use crate::parse::types::Priority;
+    use crate::parse::types::SingleDependency;
 
     #[test]
     fn cant_get_no() {
-        let mut p = Package {
+        let p = Package {
             name: "foo".to_string(),
             version: "1.0".to_string(),
             style: PackageType::Binary(Binary {
@@ -310,7 +308,7 @@ mod tests {
             ..Default::default()
         };
 
-        let mut d = SingleDependency {
+        let d = SingleDependency {
             package: "bar".to_string(),
             version_constraints: vec![Constraint {
                 version: "90".to_string(),

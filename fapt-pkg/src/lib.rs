@@ -1,20 +1,5 @@
-extern crate chrono;
-extern crate deb_version;
-#[macro_use]
-extern crate failure;
-extern crate filetime;
-extern crate flate2;
-extern crate gpgme;
-extern crate hex;
-extern crate mailparse;
-extern crate md5;
 #[macro_use]
 extern crate nom;
-extern crate reqwest;
-extern crate serde_json;
-extern crate sha2;
-extern crate tempdir;
-extern crate tempfile_fast;
 
 use std::fmt;
 
@@ -28,7 +13,7 @@ mod parse;
 mod release;
 mod signing;
 
-pub use commands::System;
+pub use crate::commands::System;
 
 #[derive(Copy, Clone)]
 pub struct Hashes {

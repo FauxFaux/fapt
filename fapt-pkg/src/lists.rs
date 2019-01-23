@@ -6,9 +6,10 @@ use std::io::SeekFrom;
 use std::io::Write;
 use std::path::Path;
 
+use crate::parse::rfc822;
+use failure::format_err;
 use failure::Error;
 use failure::ResultExt;
-use parse::rfc822;
 use flate2::bufread::GzDecoder;
 use hex;
 use reqwest::Client;
@@ -16,11 +17,11 @@ use reqwest::Url;
 use tempdir::TempDir;
 use tempfile_fast::PersistableTempFile;
 
-use checksum;
-use fetch;
-use release::Release;
-use release::ReleaseContent;
-use Hashes;
+use crate::checksum;
+use crate::fetch;
+use crate::release::Release;
+use crate::release::ReleaseContent;
+use crate::Hashes;
 
 #[derive(Debug)]
 pub enum Compression {

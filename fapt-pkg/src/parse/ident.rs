@@ -1,3 +1,5 @@
+use failure::bail;
+use failure::format_err;
 use failure::Error;
 use nom::types::CompleteStr;
 use nom::Err;

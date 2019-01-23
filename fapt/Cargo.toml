@@ -3,6 +3,8 @@ authors = ["Chris West (Faux) <git@goeswhere.com>"]
 name = "fapt"
 version = "0.1.0"
 
+edition = "2018"
+
 [dependencies]
 clap = "2"
 failure = "0.1"

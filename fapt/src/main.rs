@@ -1,13 +1,11 @@
-extern crate clap;
-#[macro_use]
-extern crate failure;
-extern crate fapt_pkg;
-
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
 use clap::{App, AppSettings, Arg, SubCommand};
+use failure::bail;
+use failure::ensure;
+use failure::format_err;
 use failure::Error;
 use failure::ResultExt;
 use fapt_pkg::classic_sources_list;

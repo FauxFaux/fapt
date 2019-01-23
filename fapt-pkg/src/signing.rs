@@ -3,6 +3,9 @@ use std::io;
 use std::io::Write;
 use std::path::Path;
 
+use failure::bail;
+use failure::ensure;
+use failure::format_err;
 use failure::Error;
 use failure::ResultExt;
 use gpgme::context::Context;
