@@ -12,7 +12,7 @@ use gpgme::context::Context;
 use gpgme::results::VerificationResult;
 use gpgme::Data;
 use gpgme::Protocol;
-use tempdir::TempDir;
+use tempfile::TempDir;
 use tempfile_fast::PersistableTempFile;
 
 pub struct GpgClient {
@@ -22,7 +22,9 @@ pub struct GpgClient {
 
 impl GpgClient {
     pub fn new<P: AsRef<Path>>(keyring_paths: &[P]) -> Result<Self, Error> {
-        let dir = TempDir::new("fapt-gpgme")
+        let dir = tempfile::Builder::new()
+            .prefix("fapt-gpgme")
+            .tempdir()
             .with_context(|_| format_err!("creating temporary directory"))?;
         let pubring = fs::File::create(dir.as_ref().join("pubring.gpg"))
             .with_context(|_| format_err!("populating temporary directory"))?;

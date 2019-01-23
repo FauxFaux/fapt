@@ -14,7 +14,7 @@ use flate2::bufread::GzDecoder;
 use hex;
 use reqwest::Client;
 use reqwest::Url;
-use tempdir::TempDir;
+use tempfile::TempDir;
 use tempfile_fast::PersistableTempFile;
 
 use crate::checksum;
@@ -73,7 +73,9 @@ pub fn download_files<P: AsRef<Path>>(
 ) -> Result<(), Error> {
     let lists = extract_downloads(releases).with_context(|_| format_err!("filtering releases"))?;
 
-    let temp_dir = TempDir::new_in(&lists_dir, ".fapt-lists")
+    let temp_dir = tempfile::Builder::new()
+        .prefix(".fapt-lists")
+        .tempdir_in(&lists_dir)
         .with_context(|_| format_err!("creating temporary directory"))?;
 
     let downloads: Vec<fetch::Download> = lists
