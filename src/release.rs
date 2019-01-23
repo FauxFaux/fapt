@@ -7,6 +7,8 @@ use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 
+use chrono::DateTime;
+use chrono::Utc;
 use failure::bail;
 use failure::ensure;
 use failure::format_err;
@@ -47,8 +49,8 @@ pub struct ReleaseFile {
     suite: Option<String>,
     codename: Option<String>,
     changelogs: Option<String>,
-    date: i64,
-    valid_until: Option<i64>,
+    date: DateTime<Utc>,
+    valid_until: Option<DateTime<Utc>>,
     pub acquire_by_hash: bool,
     pub arches: Vec<String>,
     components: Vec<String>,

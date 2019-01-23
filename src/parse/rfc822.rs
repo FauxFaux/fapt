@@ -5,10 +5,11 @@ use std::io::Read;
 use std::iter::Peekable;
 use std::str::Lines;
 
+use chrono::DateTime;
+use chrono::Utc;
 use failure::ensure;
 use failure::format_err;
 use failure::Error;
-use mailparse::dateparse;
 
 pub type Line<'s> = (&'s str, Vec<&'s str>);
 
@@ -66,16 +67,9 @@ pub fn map(block: &str) -> Result<HashMap<&str, Vec<&str>>, Error> {
         .collect())
 }
 
-#[cfg(rage)]
-pub fn parse_date(date: &str) -> Result<time::Instant, Error> {
-    let epochs = dateparse(date)?;
-    ensure!(epochs >= 0, "no times before the epoch");
-    let secs = time::Duration::new(epochs as u64, 0);
-    Ok((time::UNIX_EPOCH + secs).into())
-}
-
-pub fn parse_date(date: &str) -> Result<i64, Error> {
-    dateparse(date).map_err(|e| format_err!("dateparse error: {}", e))
+pub fn parse_date(date: &str) -> Result<DateTime<Utc>, Error> {
+    Ok(chrono::DateTime::<chrono::FixedOffset>::parse_from_rfc2822(date)?
+        .with_timezone(&chrono::offset::Utc))
 }
 
 pub struct Section<R: Read> {
