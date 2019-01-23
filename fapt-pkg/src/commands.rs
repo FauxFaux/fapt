@@ -7,14 +7,13 @@ use std::path::PathBuf;
 
 use failure::Error;
 use failure::ResultExt;
-use fapt_parse;
-use fapt_parse::rfc822;
-use fapt_parse::rfc822::one_line;
-use fapt_parse::rfc822::Line;
-use fapt_parse::types::Package;
 use reqwest;
 use serde_json;
 
+use parse::rfc822;
+use parse::rfc822::one_line;
+use parse::rfc822::Line;
+use parse::types::Package;
 use classic_sources_list::Entry;
 use dep_graph::DepGraph;
 use lists;

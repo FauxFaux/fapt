@@ -7,8 +7,8 @@ use std::str::FromStr;
 use deb_version::compare_versions;
 use failure::Error;
 
-use deps;
-use rfc822;
+use super::deps;
+use super::rfc822;
 
 /// The parsed top-level types for package
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -271,8 +271,8 @@ impl Package {
     pub fn parse_bin<'i, I: Iterator<Item = Result<rfc822::Line<'i>, Error>>>(
         it: I,
     ) -> Result<Package, Error> {
-        use rfc822::joined;
-        use rfc822::one_line;
+        use super::rfc822::joined;
+        use super::rfc822::one_line;
 
         // Package
         let mut name = None;
@@ -317,10 +317,10 @@ impl Package {
                     )
                 }
 
-                "Essential" => essential = Some(::yes_no(one_line(&values)?)?),
-                "Build-Essential" => build_essential = Some(::yes_no(one_line(&values)?)?),
-                "Priority" => priority = Some(::parse_priority(one_line(&values)?)?),
-                "Maintainer" => match ::ident::read(one_line(&values)?) {
+                "Essential" => essential = Some(super::yes_no(one_line(&values)?)?),
+                "Build-Essential" => build_essential = Some(super::yes_no(one_line(&values)?)?),
+                "Priority" => priority = Some(super::parse_priority(one_line(&values)?)?),
+                "Maintainer" => match super::ident::read(one_line(&values)?) {
                     Ok(idents) => maintainer.extend(idents),
                     Err(e) => warnings.push(format!("parsing maintainer: {:?}", e)),
                 },
@@ -480,7 +480,7 @@ Homepage: http://cffi.readthedocs.org/
 
     #[test]
     fn parse_provides() {
-        let p = super::Package::parse_bin(::rfc822::scan(PROVIDES_EXAMPLE)).unwrap();
+        let p = super::Package::parse_bin(super::rfc822::scan(PROVIDES_EXAMPLE)).unwrap();
         assert_eq!("python3-cffi-backend", p.name.as_str());
         let bin = match p.style {
             PackageType::Binary(bin) => bin,

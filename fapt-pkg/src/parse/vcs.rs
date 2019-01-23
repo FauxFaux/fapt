@@ -1,7 +1,7 @@
 use failure::Error;
 
-use types::VcsTag;
-use types::VcsType;
+use super::types::VcsTag;
+use super::types::VcsType;
 
 #[derive(Clone)]
 struct Entry {

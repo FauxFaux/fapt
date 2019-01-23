@@ -1,11 +1,11 @@
 use failure::Error;
 use nom::types::CompleteStr;
 
-use types::Arch;
-use types::Constraint;
-use types::ConstraintOperator;
-use types::Dependency;
-use types::SingleDependency;
+use super::types::Arch;
+use super::types::Constraint;
+use super::types::ConstraintOperator;
+use super::types::Dependency;
+use super::types::SingleDependency;
 
 pub fn read(val: &str) -> Result<Vec<Dependency>, Error> {
     use nom::Err as NomErr;

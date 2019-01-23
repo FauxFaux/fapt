@@ -8,7 +8,7 @@ use std::path::Path;
 
 use failure::Error;
 use failure::ResultExt;
-use fapt_parse::rfc822;
+use parse::rfc822;
 use flate2::bufread::GzDecoder;
 use hex;
 use reqwest::Client;

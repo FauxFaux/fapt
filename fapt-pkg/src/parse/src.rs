@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use failure::Error;
 
-use types::SourceFormat;
+use super::types::SourceFormat;
 
 fn parse_format(string: &str) -> Result<SourceFormat, Error> {
     Ok(match string {

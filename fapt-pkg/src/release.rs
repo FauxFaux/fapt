@@ -14,9 +14,9 @@ use reqwest;
 use reqwest::Url;
 
 use classic_sources_list::Entry;
-use fapt_parse::rfc822;
-use fapt_parse::rfc822::mandatory_single_line;
-use fapt_parse::rfc822::mandatory_whitespace_list;
+use parse::rfc822;
+use parse::rfc822::mandatory_single_line;
+use parse::rfc822::mandatory_whitespace_list;
 use fetch::fetch;
 use fetch::Download;
 use signing::GpgClient;

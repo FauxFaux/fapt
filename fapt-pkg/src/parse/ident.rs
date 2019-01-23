@@ -2,7 +2,7 @@ use failure::Error;
 use nom::types::CompleteStr;
 use nom::Err;
 
-use types::Identity;
+use super::types::Identity;
 
 named!(ident<CompleteStr, Result<Identity, Error>>,
     do_parse!(

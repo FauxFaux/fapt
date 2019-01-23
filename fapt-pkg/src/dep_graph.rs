@@ -3,12 +3,12 @@ use std::collections::HashSet;
 
 use deb_version::compare_versions;
 use failure::Error;
-use fapt_parse::types::Arch;
-use fapt_parse::types::Arches;
-use fapt_parse::types::ConstraintOperator;
-use fapt_parse::types::Package;
-use fapt_parse::types::PackageType;
-use fapt_parse::types::SingleDependency;
+use parse::types::Arch;
+use parse::types::Arches;
+use parse::types::ConstraintOperator;
+use parse::types::Package;
+use parse::types::PackageType;
+use parse::types::SingleDependency;
 
 type Id = usize;
 
@@ -280,14 +280,14 @@ fn satisfies_values(d: &SingleDependency, name: &str, arches: &Arches, version: 
 mod tests {
     use std::collections::HashMap;
 
-    use fapt_parse::types::Binary;
-    use fapt_parse::types::Constraint;
-    use fapt_parse::types::ConstraintOperator;
-    use fapt_parse::types::Dependency;
-    use fapt_parse::types::Package;
-    use fapt_parse::types::PackageType;
-    use fapt_parse::types::Priority;
-    use fapt_parse::types::SingleDependency;
+    use parse::types::Binary;
+    use parse::types::Constraint;
+    use parse::types::ConstraintOperator;
+    use parse::types::Dependency;
+    use parse::types::Package;
+    use parse::types::PackageType;
+    use parse::types::Priority;
+    use parse::types::SingleDependency;
 
     #[test]
     fn cant_get_no() {

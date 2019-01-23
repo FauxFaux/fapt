@@ -1,17 +1,3 @@
-#[macro_use]
-extern crate bitflags;
-extern crate deb_version;
-
-#[macro_use]
-extern crate failure;
-
-extern crate mailparse;
-extern crate md5;
-
-#[macro_use]
-extern crate nom;
-extern crate result;
-
 pub mod deps;
 mod ident;
 pub mod rfc822;
@@ -21,7 +7,7 @@ mod vcs;
 
 use failure::Error;
 
-use types::Priority;
+use self::types::Priority;
 
 fn parse_priority(string: &str) -> Result<Priority, Error> {
     Ok(match string {
