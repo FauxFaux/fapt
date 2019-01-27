@@ -19,7 +19,6 @@ deb-version = "0.1"
 chrono = "0.4"
 failure = "0.1"
 filetime = "0.2"
-gpgme = "0.8"
 hex = "0.3"
 md-5 = "0.8"
 nom = "4"
@@ -41,6 +40,11 @@ version = "0.8"
 default-features = false
 features = ["rust_backend"]
 version = "1"
+
+[dependencies.gpgrv]
+git = "https://github.com/FauxFaux/gpgrv"
+# 0.2.0 prerelease
+rev = "42ef82e61bc0706a3dece77e103037df31ac6abc"
 
 [[bin]]
 name = "fapt"

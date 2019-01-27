@@ -153,7 +153,7 @@ impl RequestedReleases {
         })
     }
 
-    pub fn download<P: AsRef<Path>, Q: AsRef<Path>>(
+    pub fn download<P: AsRef<Path>, Q: AsRef<Path> + fmt::Debug>(
         &self,
         lists_dir: P,
         keyring_paths: &[Q],

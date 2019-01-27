@@ -68,8 +68,10 @@ pub fn map(block: &str) -> Result<HashMap<&str, Vec<&str>>, Error> {
 }
 
 pub fn parse_date(date: &str) -> Result<DateTime<Utc>, Error> {
-    Ok(chrono::DateTime::<chrono::FixedOffset>::parse_from_rfc2822(date)?
-        .with_timezone(&chrono::offset::Utc))
+    Ok(
+        chrono::DateTime::<chrono::FixedOffset>::parse_from_rfc2822(date)?
+            .with_timezone(&chrono::offset::Utc),
+    )
 }
 
 pub struct Section<R: Read> {

@@ -1,3 +1,4 @@
+use std::fmt;
 use std::fs;
 use std::io;
 use std::io::Write;
@@ -8,44 +9,30 @@ use failure::ensure;
 use failure::format_err;
 use failure::Error;
 use failure::ResultExt;
-use gpgme::context::Context;
-use gpgme::results::VerificationResult;
-use gpgme::Data;
-use gpgme::Protocol;
+use gpgrv::Keyring;
 use tempfile::TempDir;
 use tempfile_fast::PersistableTempFile;
 
 pub struct GpgClient {
-    ctx: Context,
-    _root: TempDir,
+    keyring: Keyring,
 }
 
 impl GpgClient {
-    pub fn new<P: AsRef<Path>>(keyring_paths: &[P]) -> Result<Self, Error> {
-        let dir = tempfile::Builder::new()
-            .prefix("fapt-gpgme")
-            .tempdir()
-            .with_context(|_| format_err!("creating temporary directory"))?;
-        let pubring = fs::File::create(dir.as_ref().join("pubring.gpg"))
-            .with_context(|_| format_err!("populating temporary directory"))?;
-        concatenate_keyrings_into(keyring_paths, pubring)
-            .with_context(|_| format_err!("generating temporary keyring"))?;
+    pub fn new<P: AsRef<Path> + fmt::Debug>(keyring_paths: &[P]) -> Result<Self, Error> {
+        let mut keyring = Keyring::new();
 
-        let mut ctx = Context::from_protocol(Protocol::OpenPgp)
-            .with_context(|_| format_err!("starting gpg"))?;
+        for keyring_path in keyring_paths {
+            keyring.append_keys_from(
+                fs::File::open(keyring_path)
+                    .with_context(|_| format_err!("opening keyring {:?}", keyring_path))?,
+            )?;
+        }
 
-        ctx.set_engine_home_dir(
-            dir.as_ref()
-                .to_str()
-                .ok_or_else(|| format_err!("tmpdir must be valid utf-8 for no real reason"))?,
-        )
-        .with_context(|_| format_err!("informing gpg about our temporary directory"))?;
-
-        Ok(GpgClient { ctx, _root: dir })
+        Ok(GpgClient { keyring })
     }
 
     pub fn verify_clearsigned<P: AsRef<Path>, Q: AsRef<Path>>(
-        &mut self,
+        &self,
         file: P,
         dest: Q,
     ) -> Result<(), Error> {
@@ -57,17 +44,7 @@ impl GpgClient {
         )
         .with_context(|_| format_err!("creating temporary file"))?;
 
-        let result = self
-            .ctx
-            .verify_opaque(
-                from,
-                Data::from_seekable_stream(to.as_ref())
-                    .map_err(|e| e.error())
-                    .with_context(|_| format_err!("creating output stream"))?,
-            )
-            .with_context(|_| format_err!("verifying"))?;
-
-        validate_signature(&result)?;
+        gpgrv::verify_message(gpgrv::ManyReader::new(from), &to, &self.keyring)?;
 
         to.persist_by_rename(dest)
             .map_err(|e| e.error)
@@ -82,39 +59,12 @@ impl GpgClient {
         signature: Q,
         dest: R,
     ) -> Result<(), Error> {
-        let result = self.ctx.verify_detached(
+        gpgrv::verify_detached(
             fs::File::open(signature).with_context(|_| format_err!("opening signature file"))?,
             fs::File::open(file.as_ref()).with_context(|_| format_err!("opening input file"))?,
+            &self.keyring,
         )?;
-        validate_signature(&result)?;
         fs::copy(file, dest)?;
         Ok(())
     }
-}
-
-/// Oh yes, you read that right. We literally cat the files together and pray.
-/// There's no error handling. Not at all. God be with you.
-fn concatenate_keyrings_into<P: AsRef<Path>, W: Write>(
-    keyring_paths: &[P],
-    mut pubring: W,
-) -> Result<(), Error> {
-    for keyring in keyring_paths {
-        io::copy(&mut fs::File::open(keyring)?, &mut pubring)?;
-    }
-    Ok(())
-}
-
-fn validate_signature(result: &VerificationResult) -> Result<(), Error> {
-    ensure!(
-        result.signatures().next().is_some(),
-        "there are no signatures"
-    );
-
-    for (i, sig) in result.signatures().enumerate() {
-        if !sig.status().is_ok() {
-            bail!("signature {} is invalid: {:?}", i, sig.status());
-        }
-    }
-
-    Ok(())
 }
