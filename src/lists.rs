@@ -14,7 +14,6 @@ use flate2::bufread::GzDecoder;
 use hex;
 use reqwest::Client;
 use reqwest::Url;
-use tempfile::TempDir;
 use tempfile_fast::PersistableTempFile;
 
 use crate::checksum;

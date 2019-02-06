@@ -1,16 +1,11 @@
 use std::fmt;
 use std::fs;
-use std::io;
-use std::io::Write;
 use std::path::Path;
 
-use failure::bail;
-use failure::ensure;
 use failure::format_err;
 use failure::Error;
 use failure::ResultExt;
 use gpgrv::Keyring;
-use tempfile::TempDir;
 use tempfile_fast::PersistableTempFile;
 
 pub struct GpgClient {

@@ -284,7 +284,6 @@ mod tests {
     use crate::parse::types::Dependency;
     use crate::parse::types::Package;
     use crate::parse::types::PackageType;
-    use crate::parse::types::Priority;
     use crate::parse::types::SingleDependency;
 
     #[test]

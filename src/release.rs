@@ -9,7 +9,6 @@ use std::path::PathBuf;
 
 use chrono::DateTime;
 use chrono::Utc;
-use failure::bail;
 use failure::ensure;
 use failure::format_err;
 use failure::Error;
