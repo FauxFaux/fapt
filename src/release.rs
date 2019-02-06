@@ -221,7 +221,8 @@ pub fn parse_release_file<P: AsRef<Path>>(path: P) -> Result<ReleaseFile, Error>
     )
     .read_to_string(&mut file)
     .with_context(|_| format_err!("reading release file: {:?}", path.as_ref()))?;
-    Ok(parse_release(&file).with_context(|_| format_err!("parsing {:?}", path.as_ref()))?)
+    Ok(parse_release(&file)
+        .with_context(|_| format_err!("parsing release file {:?}", path.as_ref()))?)
 }
 
 fn parse_release(release: &str) -> Result<ReleaseFile, Error> {

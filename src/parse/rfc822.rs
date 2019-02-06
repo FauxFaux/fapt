@@ -8,8 +8,10 @@ use std::str::Lines;
 use chrono::DateTime;
 use chrono::Utc;
 use failure::ensure;
+use failure::err_msg;
 use failure::format_err;
 use failure::Error;
+use failure::ResultExt;
 
 pub type Line<'s> = (&'s str, Vec<&'s str>);
 
@@ -62,14 +64,27 @@ impl<'a> Iterator for Scanner<'a> {
 pub fn map(block: &str) -> Result<HashMap<&str, Vec<&str>>, Error> {
     // Vec collect() hack doesn't seem to apply to map; super lazy solution
     Ok(scan(block)
-        .collect::<Result<Vec<Line>, Error>>()?
+        .collect::<Result<Vec<Line>, Error>>()
+        .with_context(|_| err_msg("collecting lines from rfc822 file"))?
         .into_iter()
         .collect())
 }
 
 pub fn parse_date(date: &str) -> Result<DateTime<Utc>, Error> {
+    // TODO: SIGH
+    let fixed;
+    let mut f;
+    if date.ends_with(" UTC") {
+        f = date[..date.len() - " UTC".len()].to_string();
+        f.push_str(" +0000");
+        fixed = f.as_str();
+    } else {
+        fixed = date;
+    }
+
     Ok(
-        chrono::DateTime::<chrono::FixedOffset>::parse_from_rfc2822(date)?
+        chrono::DateTime::<chrono::FixedOffset>::parse_from_rfc2822(fixed)
+            .with_context(|_| format_err!("parsing {:?} as date", date))?
             .with_timezone(&chrono::offset::Utc),
     )
 }
@@ -144,6 +159,7 @@ mod tests {
 
     use super::scan;
     use super::Line;
+    use super::parse_date;
 
     #[test]
     fn single_line_header() {
@@ -186,5 +202,11 @@ mod tests {
             vec![b"foo\nbar\n".to_vec(), b"baz\n".to_vec()],
             parts.unwrap()
         );
+    }
+
+    #[test]
+    fn date_parsing_seriously_it_is_2019() {
+        use chrono::Timelike;
+        assert_eq!(14, parse_date("Wed, 06 Feb 2019 14:29:43 UTC").unwrap().hour());
     }
 }
