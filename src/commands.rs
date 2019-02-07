@@ -1,25 +1,15 @@
 use std::collections::HashMap;
-use std::io;
 
 use failure::bail;
 use failure::err_msg;
 use failure::format_err;
 use failure::Error;
-use serde_json;
 
 use crate::deps::dep_graph::DepGraph;
 use crate::parse::rfc822;
 use crate::parse::rfc822::one_line;
 use crate::parse::types::Package;
 use crate::system::System;
-
-pub fn export(system: &System) -> Result<(), Error> {
-    system.walk_sections(|section| {
-        serde_json::to_writer(io::stdout(), &section.joined_lines())?;
-        println!();
-        Ok(())
-    })
-}
 
 pub fn dodgy_dep_graph(system: &System) -> Result<(), Error> {
     let mut dep_graph = DepGraph::new();
