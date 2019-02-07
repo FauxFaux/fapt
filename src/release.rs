@@ -13,6 +13,7 @@ use failure::ensure;
 use failure::format_err;
 use failure::Error;
 use failure::ResultExt;
+use gpgrv::Keyring;
 use hex::FromHex;
 use reqwest;
 use reqwest::Url;
@@ -151,15 +152,15 @@ impl RequestedReleases {
         })
     }
 
-    pub fn download<P: AsRef<Path>, Q: AsRef<Path> + fmt::Debug>(
+    pub fn download<P: AsRef<Path>>(
         &self,
         lists_dir: P,
-        keyring_paths: &[Q],
+        keyring: &Keyring,
         client: &reqwest::Client,
     ) -> Result<(), Error> {
         let lists_dir = lists_dir.as_ref();
 
-        let mut gpg = GpgClient::new(keyring_paths)?;
+        let mut gpg = GpgClient::new(keyring);
 
         for &(ref release, _) in &self.releases {
             let dest: PathBuf = release.download_path(lists_dir);

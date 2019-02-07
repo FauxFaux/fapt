@@ -1,4 +1,3 @@
-use std::fmt;
 use std::fs;
 use std::path::Path;
 
@@ -8,22 +7,13 @@ use failure::ResultExt;
 use gpgrv::Keyring;
 use tempfile_fast::PersistableTempFile;
 
-pub struct GpgClient {
-    keyring: Keyring,
+pub struct GpgClient<'k> {
+    keyring: &'k Keyring,
 }
 
-impl GpgClient {
-    pub fn new<P: AsRef<Path> + fmt::Debug>(keyring_paths: &[P]) -> Result<Self, Error> {
-        let mut keyring = Keyring::new();
-
-        for keyring_path in keyring_paths {
-            keyring.append_keys_from(
-                fs::File::open(keyring_path)
-                    .with_context(|_| format_err!("opening keyring {:?}", keyring_path))?,
-            )?;
-        }
-
-        Ok(GpgClient { keyring })
+impl<'k> GpgClient<'k> {
+    pub fn new(keyring: &Keyring) -> GpgClient {
+        GpgClient { keyring }
     }
 
     pub fn verify_clearsigned<P: AsRef<Path>, Q: AsRef<Path>>(

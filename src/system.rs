@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::env;
 use std::fs;
+use std::io::Read;
 use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
@@ -8,6 +9,7 @@ use std::path::PathBuf;
 use failure::format_err;
 use failure::Error;
 use failure::ResultExt;
+use gpgrv::Keyring;
 use reqwest;
 
 use crate::classic_sources_list::Entry;
@@ -20,7 +22,7 @@ pub struct System {
     dpkg_database: Option<PathBuf>,
     sources_entries: Vec<Entry>,
     arches: Vec<String>,
-    keyring_paths: Vec<PathBuf>,
+    keyring: Keyring,
     client: reqwest::Client,
 }
 
@@ -41,7 +43,7 @@ impl System {
             dpkg_database: None,
             sources_entries: Vec::new(),
             arches: Vec::new(),
-            keyring_paths: Vec::new(),
+            keyring: Keyring::new(),
             client,
         })
     }
@@ -63,12 +65,8 @@ impl System {
         self.dpkg_database = Some(dpkg.as_ref().to_path_buf());
     }
 
-    pub fn add_keyring_paths<P: AsRef<Path>, I: IntoIterator<Item = P>>(
-        &mut self,
-        keyrings: I,
-    ) -> Result<(), Error> {
-        self.keyring_paths
-            .extend(keyrings.into_iter().map(|x| x.as_ref().to_path_buf()));
+    pub fn add_keys_from<R: Read>(&mut self, source: R) -> Result<(), Error> {
+        self.keyring.append_keys_from(source)?;
         Ok(())
     }
 
@@ -78,7 +76,7 @@ impl System {
                 .with_context(|_| format_err!("parsing sources entries"))?;
 
         requested
-            .download(&self.lists_dir, &self.keyring_paths, &self.client)
+            .download(&self.lists_dir, &self.keyring, &self.client)
             .with_context(|_| format_err!("downloading releases"))?;
 
         let releases = requested
