@@ -13,7 +13,6 @@ fn main() -> Result<(), failure::Error> {
 
     fapt.walk_sections(|map| {
         let files_section = map
-            .as_ref()
             .get("Files")
             .ok_or_else(|| err_msg("no file in package"))?;
         let pkg = map

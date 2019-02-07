@@ -128,10 +128,10 @@ pub fn dodgy_dep_graph(system: &System) -> Result<(), Error> {
 
 pub fn source_ninja(system: &System) -> Result<(), Error> {
     system.walk_sections(|map| {
-        if map.as_ref().contains_key("Files") {
-            print_ninja_source(map.as_ref())
+        if map.contains_key("Files") {
+            print_ninja_source(&map)
         } else {
-            print_ninja_binary(map.as_ref())
+            print_ninja_binary(&map)
         }
     })
 }

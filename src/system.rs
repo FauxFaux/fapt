@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::env;
 use std::fs;
+use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -156,8 +157,10 @@ impl<'s> StringSection<'s> {
     }
 }
 
-impl<'s> AsRef<HashMap<&'s str, Vec<&'s str>>> for StringSection<'s> {
-    fn as_ref(&self) -> &HashMap<&'s str, Vec<&'s str>> {
+impl<'s> Deref for StringSection<'s> {
+    type Target = HashMap<&'s str, Vec<&'s str>>;
+
+    fn deref(&self) -> &HashMap<&'s str, Vec<&'s str>> {
         &self.inner
     }
 }
