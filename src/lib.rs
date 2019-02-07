@@ -2,8 +2,8 @@
 extern crate nom;
 
 mod checksum;
-pub mod classic_sources_list;
-mod commands;
+mod classic_sources_list;
+pub mod commands;
 mod deps;
 mod fetch;
 mod lists;

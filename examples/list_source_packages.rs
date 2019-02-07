@@ -1,14 +1,10 @@
-use std::fs;
-
 use failure::err_msg;
 
 fn main() -> Result<(), failure::Error> {
     let mut fapt = fapt_pkg::System::cache_dirs_only(".fapt-lists")?;
     fapt.add_sources_entry_line("deb-src http://deb.debian.org/debian sid main contrib")
         .expect("parsing static data");
-    fapt.add_keys_from(fs::File::open(
-        "/usr/share/keyrings/debian-archive-keyring.gpg",
-    )?)?;
+    fapt_pkg::commands::add_builtin_keys(&mut fapt);
     fapt.update()?;
 
     fapt.walk_sections(|map| {
