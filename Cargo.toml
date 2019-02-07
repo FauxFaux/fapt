@@ -1,7 +1,7 @@
 [package]
 authors = ["Chris West (Faux) <git@goeswhere.com>"]
 description = "Faux' apt package manager for Debian"
-license = "MIT"
+license = "MIT OR Apache-2.0"
 name = "fapt-pkg"
 repository = "https://github.com/FauxFaux/fapt"
 version = "0.1.0"
