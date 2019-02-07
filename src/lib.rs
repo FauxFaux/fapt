@@ -10,5 +10,6 @@ mod lists;
 mod parse;
 mod release;
 mod signing;
+mod system;
 
-pub use crate::commands::System;
+pub use crate::system::System;

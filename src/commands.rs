@@ -1,277 +1,149 @@
 use std::collections::HashMap;
-use std::env;
-use std::fs;
 use std::io;
-use std::path::Path;
-use std::path::PathBuf;
 
 use failure::bail;
+use failure::err_msg;
 use failure::format_err;
 use failure::Error;
-use failure::ResultExt;
-use reqwest;
 use serde_json;
 
-use crate::classic_sources_list::Entry;
 use crate::deps::dep_graph::DepGraph;
-use crate::lists;
 use crate::parse::rfc822;
 use crate::parse::rfc822::one_line;
-use crate::parse::rfc822::Line;
 use crate::parse::types::Package;
-use crate::release;
+use crate::system::System;
 
-pub struct System {
-    lists_dir: PathBuf,
-    dpkg_database: Option<PathBuf>,
-    sources_entries: Vec<Entry>,
-    arches: Vec<String>,
-    keyring_paths: Vec<PathBuf>,
-    client: reqwest::Client,
+pub fn export(system: &System) -> Result<(), Error> {
+    system.walk_sections(|section| {
+        serde_json::to_writer(io::stdout(), &section.joined_lines())?;
+        println!();
+        Ok(())
+    })
 }
 
-impl System {
-    pub fn cache_dirs_only<P: AsRef<Path>>(lists_dir: P) -> Result<Self, Error> {
-        fs::create_dir_all(lists_dir.as_ref())?;
+pub fn dodgy_dep_graph(system: &System) -> Result<(), Error> {
+    let mut dep_graph = DepGraph::new();
 
-        let client = if let Ok(proxy) = env::var("http_proxy") {
-            reqwest::Client::builder()
-                .proxy(reqwest::Proxy::http(&proxy)?)
-                .build()?
-        } else {
-            reqwest::Client::new()
+    system.walk_status(|section| {
+        // BORROW CHECKER
+        let installed_msg = "install ok installed";
+
+        let package = match Package::parse_bin(rfc822::scan(&section)) {
+            Ok(package) => package,
+            Err(e) => {
+                if rfc822::map(&section)?
+                    .get("Status")
+                    .ok_or_else(|| err_msg("no Status"))?
+                    != &vec![installed_msg]
+                {
+                    return Ok(());
+                } else {
+                    bail!(e.context(format_err!("parsing:\n{}", section)))
+                }
+            }
         };
 
-        Ok(System {
-            lists_dir: lists_dir.as_ref().to_path_buf(),
-            dpkg_database: None,
-            sources_entries: Vec::new(),
-            arches: Vec::new(),
-            keyring_paths: Vec::new(),
-            client,
-        })
-    }
-
-    pub fn add_sources_entry_line(&mut self, src: &str) -> Result<(), Error> {
-        self.add_sources_entries(crate::classic_sources_list::read(src)?);
-        Ok(())
-    }
-
-    pub fn add_sources_entries<I: IntoIterator<Item = Entry>>(&mut self, entries: I) {
-        self.sources_entries.extend(entries);
-    }
-
-    pub fn set_arches(&mut self, arches: &[&str]) {
-        self.arches = arches.iter().map(|x| x.to_string()).collect();
-    }
-
-    pub fn set_dpkg_database<P: AsRef<Path>>(&mut self, dpkg: P) {
-        self.dpkg_database = Some(dpkg.as_ref().to_path_buf());
-    }
-
-    pub fn add_keyring_paths<P: AsRef<Path>, I: IntoIterator<Item = P>>(
-        &mut self,
-        keyrings: I,
-    ) -> Result<(), Error> {
-        self.keyring_paths
-            .extend(keyrings.into_iter().map(|x| x.as_ref().to_path_buf()));
-        Ok(())
-    }
-
-    pub fn update(&self) -> Result<(), Error> {
-        let requested =
-            release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
-                .with_context(|_| format_err!("parsing sources entries"))?;
-
-        requested
-            .download(&self.lists_dir, &self.keyring_paths, &self.client)
-            .with_context(|_| format_err!("downloading releases"))?;
-
-        let releases = requested
-            .parse(&self.lists_dir)
-            .with_context(|_| format_err!("parsing releases"))?;
-
-        lists::download_files(&self.client, &self.lists_dir, &releases)
-            .with_context(|_| format_err!("downloading release content"))?;
-
-        Ok(())
-    }
-
-    pub fn walk_sections<F>(&self, mut walker: F) -> Result<(), Error>
-    where
-        F: FnMut(StringSection) -> Result<(), Error>,
-    {
-        let releases =
-            release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
-                .with_context(|_| format_err!("parsing sources entries"))?
-                .parse(&self.lists_dir)
-                .with_context(|_| format_err!("parsing releases"))?;
-
-        for release in releases {
-            for listing in lists::selected_listings(&release) {
-                for section in lists::sections_in(&release, &listing, &self.lists_dir)? {
-                    let section = section?;
-                    walker(StringSection {
-                        inner: rfc822::map(&section)
-                            .with_context(|_| format_err!("loading section: {:?}", section))?,
-                    })
-                    .with_context(|_| format_err!("processing section"))?;
-                }
-            }
+        // TODO: panic?
+        if installed_msg != package.unparsed["Status"].join(" ") {
+            return Ok(());
         }
+
+        dep_graph.insert(package)?;
+
         Ok(())
-    }
+    })?;
 
-    pub fn export(&self) -> Result<(), Error> {
-        self.walk_sections(|section| {
-            serde_json::to_writer(io::stdout(), &section.joined_lines())?;
-            println!();
-            Ok(())
-        })
-    }
+    let mut unexplained: Vec<usize> = Vec::with_capacity(100);
+    let mut depended: Vec<usize> = Vec::with_capacity(100);
+    let mut alt_depended: Vec<usize> = Vec::with_capacity(100);
+    let mut only_recommended: Vec<usize> = Vec::with_capacity(100);
 
-    pub fn list_installed(&self) -> Result<(), Error> {
-        let mut status = self
-            .dpkg_database
-            .as_ref()
-            .ok_or_else(|| format_err!("dpkg database not set"))?
-            .to_path_buf();
-        status.push("status");
+    let mut leaves = dep_graph.what_kinda();
 
-        let mut dep_graph = DepGraph::new();
+    leaves.depends.extend(vec![
+        (0, vec![dep_graph.find_named("ubuntu-minimal")]),
+        (0, vec![dep_graph.find_named("ubuntu-standard")]),
+    ]);
 
-        for section in lists::sections_in_reader(fs::File::open(status)?)? {
-            // BORROW CHECKER
-            let section = section?;
-            let installed_msg = "install ok installed";
-
-            let package = match Package::parse_bin(rfc822::scan(&section)) {
-                Ok(package) => package,
-                Err(e) => {
-                    if !status_is(rfc822::scan(&section), installed_msg)? {
-                        continue;
-                    } else {
-                        bail!(e.context(format_err!("parsing:\n{}", section)))
+    'packages: for p in dep_graph.iter() {
+        for (_src, dest) in &leaves.depends {
+            assert!(!dest.is_empty());
+            if dest.contains(&p) {
+                match dest.len() {
+                    0 => unreachable!(),
+                    1 => {
+                        depended.push(p);
+                        continue 'packages;
                     }
-                }
-            };
-
-            // TODO: panic?
-            if installed_msg != package.unparsed["Status"].join(" ") {
-                continue;
-            }
-
-            dep_graph.insert(package)?;
-        }
-
-        let mut unexplained: Vec<usize> = Vec::with_capacity(100);
-        let mut depended: Vec<usize> = Vec::with_capacity(100);
-        let mut alt_depended: Vec<usize> = Vec::with_capacity(100);
-        let mut only_recommended: Vec<usize> = Vec::with_capacity(100);
-
-        let mut leaves = dep_graph.what_kinda();
-
-        leaves.depends.extend(vec![
-            (0, vec![dep_graph.find_named("ubuntu-minimal")]),
-            (0, vec![dep_graph.find_named("ubuntu-standard")]),
-        ]);
-
-        'packages: for p in dep_graph.iter() {
-            for (_src, dest) in &leaves.depends {
-                assert!(!dest.is_empty());
-                if dest.contains(&p) {
-                    match dest.len() {
-                        0 => unreachable!(),
-                        1 => {
-                            depended.push(p);
-                            continue 'packages;
-                        }
-                        _ => {
-                            alt_depended.push(p);
-                            continue 'packages;
-                        }
+                    _ => {
+                        alt_depended.push(p);
+                        continue 'packages;
                     }
                 }
             }
-
-            for (_src, dest) in &leaves.recommends {
-                if dest.contains(&p) {
-                    only_recommended.push(p);
-                    continue 'packages;
-                }
-            }
-
-            unexplained.push(p);
         }
 
-        if false {
-            println!("Packages are clearly required");
-            println!("=============================");
-            println!();
-
-            for p in stringify_package_list(&dep_graph, depended) {
-                println!("{}", p);
+        for (_src, dest) in &leaves.recommends {
+            if dest.contains(&p) {
+                only_recommended.push(p);
+                continue 'packages;
             }
-
-            println!();
-            println!();
-            println!("Packages may sometimes be required");
-            println!("==================================");
-            println!();
-
-            for p in stringify_package_list(&dep_graph, alt_depended) {
-                println!("{}", p);
-            }
-
-            println!();
-            println!();
-            println!("Packages are recommended by something");
-            println!("=====================================");
-            println!();
-
-            for p in stringify_package_list(&dep_graph, only_recommended) {
-                println!("{}", p);
-            }
-
-            println!();
-            println!();
-            println!("Unexplained packages");
-            println!("====================");
-            println!();
         }
 
-        for p in stringify_package_list(&dep_graph, unexplained) {
+        unexplained.push(p);
+    }
+
+    if false {
+        println!("Packages are clearly required");
+        println!("=============================");
+        println!();
+
+        for p in stringify_package_list(&dep_graph, depended) {
             println!("{}", p);
         }
 
-        Ok(())
-    }
+        println!();
+        println!();
+        println!("Packages may sometimes be required");
+        println!("==================================");
+        println!();
 
-    pub fn source_ninja(&self) -> Result<(), Error> {
-        self.walk_sections(|map| {
-            if map.as_ref().contains_key("Files") {
-                print_ninja_source(map.as_ref())
-            } else {
-                print_ninja_binary(map.as_ref())
-            }
-        })
-    }
-}
-
-fn status_is<'l, I: Iterator<Item = Result<Line<'l>, Error>>>(
-    it: I,
-    what: &str,
-) -> Result<bool, Error> {
-    for line in it {
-        let (k, v) = line?;
-        if "Status" != k {
-            continue;
+        for p in stringify_package_list(&dep_graph, alt_depended) {
+            println!("{}", p);
         }
 
-        return Ok(what == one_line(&v)?);
+        println!();
+        println!();
+        println!("Packages are recommended by something");
+        println!("=====================================");
+        println!();
+
+        for p in stringify_package_list(&dep_graph, only_recommended) {
+            println!("{}", p);
+        }
+
+        println!();
+        println!();
+        println!("Unexplained packages");
+        println!("====================");
+        println!();
     }
 
-    Ok(false)
+    for p in stringify_package_list(&dep_graph, unexplained) {
+        println!("{}", p);
+    }
+
+    Ok(())
+}
+
+pub fn source_ninja(system: &System) -> Result<(), Error> {
+    system.walk_sections(|map| {
+        if map.as_ref().contains_key("Files") {
+            print_ninja_source(map.as_ref())
+        } else {
+            print_ninja_binary(map.as_ref())
+        }
+    })
 }
 
 fn stringify_package_list<I: IntoIterator<Item = usize>>(
@@ -292,64 +164,6 @@ fn subdir(name: &str) -> &str {
         &name[..4]
     } else {
         &name[..1]
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct StringSection<'s> {
-    inner: HashMap<&'s str, Vec<&'s str>>,
-}
-
-impl<'s> StringSection<'s> {
-    pub fn joined_lines(&self) -> HashMap<&str, String> {
-        self.inner.iter().map(|(&k, v)| (k, v.join("\n"))).collect()
-    }
-
-    pub fn get_if_one_line(&self, key: &str) -> Option<&str> {
-        match self.inner.get(key) {
-            Some(list) => match list.len() {
-                1 => Some(list[0]),
-                _ => None,
-            },
-            None => None,
-        }
-    }
-}
-
-impl<'s> AsRef<HashMap<&'s str, Vec<&'s str>>> for StringSection<'s> {
-    fn as_ref(&self) -> &HashMap<&'s str, Vec<&'s str>> {
-        &self.inner
-    }
-}
-
-#[cfg(never)]
-struct Sections<'i> {
-    lists_dir: PathBuf,
-    releases: Box<Iterator<Item = release::Release> + 'i>,
-    release: release::Release,
-    listings: Box<Iterator<Item = lists::Listing> + 'i>,
-    sections: Box<Iterator<Item = Result<String>>>,
-}
-
-#[cfg(never)]
-impl<'i> Iterator for Sections<'i> {
-    type Item = Result<String>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            if let Some(section) = self.sections.next() {
-                return Some(section);
-            }
-
-            if let Some(listing) = self.listings.next() {
-                // peek() also doesn't live long enough
-                self.sections = match lists::sections_in(&self.release, &listing, self.lists_dir) {
-                    Ok(sections) => sections,
-                    Err(e) => return Some(Err(e)),
-                };
-                continue;
-            }
-        }
     }
 }
 
