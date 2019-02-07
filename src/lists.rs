@@ -17,10 +17,10 @@ use reqwest::Url;
 use tempfile_fast::PersistableTempFile;
 
 use crate::checksum;
+use crate::checksum::Hashes;
 use crate::fetch;
 use crate::release::Release;
 use crate::release::ReleaseContent;
-use crate::Hashes;
 
 #[derive(Debug)]
 pub enum Compression {

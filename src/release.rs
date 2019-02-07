@@ -17,6 +17,7 @@ use hex::FromHex;
 use reqwest;
 use reqwest::Url;
 
+use crate::checksum::Hashes;
 use crate::classic_sources_list::Entry;
 use crate::fetch::fetch;
 use crate::fetch::Download;
@@ -24,8 +25,6 @@ use crate::parse::rfc822;
 use crate::parse::rfc822::mandatory_single_line;
 use crate::parse::rfc822::mandatory_whitespace_list;
 use crate::signing::GpgClient;
-
-use crate::Hashes;
 
 pub struct RequestedReleases {
     releases: Vec<(RequestedRelease, Vec<Entry>)>,
