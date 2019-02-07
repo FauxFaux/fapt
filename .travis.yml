@@ -1,5 +1,5 @@
 sudo: false
-dist: trusty
+dist: xenial
 
 language: rust
 cache: cargo
@@ -12,9 +12,3 @@ rust:
 matrix:
   allow_failures:
     - rust: nightly
-
-addons:
-  apt:
-    packages:
-    - libgpg-error-dev
-    - libgpgme11-dev
