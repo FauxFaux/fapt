@@ -6,7 +6,7 @@ use std::fmt;
 mod checksum;
 pub mod classic_sources_list;
 mod commands;
-mod dep_graph;
+mod deps;
 mod fetch;
 mod lists;
 mod parse;

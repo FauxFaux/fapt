@@ -13,7 +13,7 @@ use reqwest;
 use serde_json;
 
 use crate::classic_sources_list::Entry;
-use crate::dep_graph::DepGraph;
+use crate::deps::dep_graph::DepGraph;
 use crate::lists;
 use crate::parse::rfc822;
 use crate::parse::rfc822::one_line;
