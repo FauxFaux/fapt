@@ -157,9 +157,9 @@ pub fn joined(lines: &[&str]) -> String {
 mod tests {
     use failure::Error;
 
+    use super::parse_date;
     use super::scan;
     use super::Line;
-    use super::parse_date;
 
     #[test]
     fn single_line_header() {
@@ -207,6 +207,9 @@ mod tests {
     #[test]
     fn date_parsing_seriously_it_is_2019() {
         use chrono::Timelike;
-        assert_eq!(14, parse_date("Wed, 06 Feb 2019 14:29:43 UTC").unwrap().hour());
+        assert_eq!(
+            14,
+            parse_date("Wed, 06 Feb 2019 14:29:43 UTC").unwrap().hour()
+        );
     }
 }

@@ -1,7 +1,4 @@
-#[macro_use]
-extern crate failure;
-
-extern crate fapt_pkg;
+use failure::err_msg;
 
 fn main() -> Result<(), failure::Error> {
     let mut fapt = fapt_pkg::System::cache_dirs_only(".fapt-lists")?;
@@ -13,7 +10,7 @@ fn main() -> Result<(), failure::Error> {
     fapt.walk_sections(|map| {
         let pkg = map
             .get_if_one_line("Package")
-            .ok_or_else(|| format_err!("invalid Package"))?;
+            .ok_or_else(|| err_msg("invalid Package"))?;
         println!("{}", pkg);
         Ok(())
     })?;
