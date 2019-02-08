@@ -1,4 +1,5 @@
 use std::fs;
+use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -9,6 +10,7 @@ use failure::format_err;
 use failure::Error;
 use failure::ResultExt;
 use fapt_pkg::classic_sources_list;
+use fapt_pkg::commands;
 
 fn main() -> Result<(), failure::Error> {
     let matches = App::new("Faux' apt")
@@ -71,20 +73,8 @@ fn main() -> Result<(), failure::Error> {
         .subcommand(
             SubCommand::with_name("update").help("just fetch necessary data for specified sources"),
         )
-        .subcommand(SubCommand::with_name("list").help("show some packages"))
-        .subcommand(
-            SubCommand::with_name("export")
-                .help("dump out all packages as json")
-                .arg(Arg::with_name("format").short("f").value_name("FORMAT")),
-        )
         .subcommand(
             SubCommand::with_name("source-ninja").help("dump out all source packages as ninja"),
-        )
-        .subcommand(
-            SubCommand::with_name("yaml")
-                .help("who knows what this could be")
-                .setting(AppSettings::SubcommandRequired)
-                .subcommand(SubCommand::with_name("mirrors")),
         )
         .get_matches();
 
@@ -113,7 +103,7 @@ fn main() -> Result<(), failure::Error> {
     if let Some(prefix) = sources_list_prefix {
         for prefix in expand_dot_d(prefix)? {
             sources_entries.extend(
-                classic_sources_list::load(&prefix)
+                classic_sources_list::read(io::BufReader::new(fs::File::open(&prefix)?))
                     .with_context(|_| format_err!("loading sources.list: {:?}", prefix))?,
             );
         }
@@ -121,7 +111,7 @@ fn main() -> Result<(), failure::Error> {
 
     if let Some(lines) = matches.values_of("release-url") {
         for line in lines {
-            let entries = classic_sources_list::read(line)
+            let entries = classic_sources_list::read(io::Cursor::new(line))
                 .with_context(|_| format_err!("parsing command line: {:?}", line))?;
 
             ensure!(
@@ -148,9 +138,14 @@ fn main() -> Result<(), failure::Error> {
 
     let mut system = fapt_pkg::System::cache_dirs_only(cache_dir.join("lists"))?;
     system.add_sources_entries(sources_entries.clone().into_iter());
-    if let Some(keyrings) = matches.values_of_os("keyring") {
-        for keyring in keyrings {
-            system.add_keyring_paths(expand_dot_d(keyring)?.into_iter())?;
+    if let Some(keyring_paths) = matches.values_of_os("keyring") {
+        for keyring_path in keyring_paths {
+            for path in expand_dot_d(keyring_path)? {
+                system.add_keys_from(
+                    fs::File::open(&path)
+                        .with_context(|_| format_err!("opening key file: {:?}", path))?,
+                )?;
+            }
         }
     }
 
@@ -159,24 +154,12 @@ fn main() -> Result<(), failure::Error> {
     system.set_dpkg_database(matches.value_of("system-dpkg").unwrap());
 
     match matches.subcommand() {
-        ("export", Some(_)) => {
-            system.export()?;
-        }
-        ("list", Some(_)) => {
-            system.list_installed()?;
-        }
         ("source-ninja", Some(_)) => {
-            system.source_ninja()?;
+            commands::source_ninja(&system)?;
         }
         ("update", _) => {
             system.update()?;
         }
-        ("yaml", Some(matches)) => match matches.subcommand() {
-            ("mirrors", _) => {
-                println!("{:?}", sources_entries,);
-            }
-            _ => unreachable!(),
-        },
         _ => unreachable!(),
     }
 

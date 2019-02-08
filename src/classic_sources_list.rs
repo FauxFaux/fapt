@@ -81,18 +81,8 @@ fn read_single_line_number(line: &str, no: usize) -> Result<Vec<Entry>, Error> {
     Ok(read_single_line(line).with_context(|_| format_err!("parsing line {}", no + 1))?)
 }
 
-pub fn read<S: AsRef<str>>(from: S) -> Result<Vec<Entry>, Error> {
-    from.as_ref()
-        .lines()
-        .enumerate()
-        .map(|(no, line)| read_single_line_number(line, no))
-        .collect::<Result<Vec<Vec<Entry>>, Error>>()
-        .map(|vec_vec| vec_vec.into_iter().flat_map(|x| x).collect())
-}
-
-pub fn load<P: AsRef<path::Path>>(path: P) -> Result<Vec<Entry>, Error> {
-    io::BufReader::new(fs::File::open(path)?)
-        .lines()
+pub fn read<R: BufRead>(from: R) -> Result<Vec<Entry>, Error> {
+    from.lines()
         .enumerate()
         .map(|(no, line)| match line {
             Ok(line) => read_single_line_number(&line, no),
@@ -104,6 +94,8 @@ pub fn load<P: AsRef<path::Path>>(path: P) -> Result<Vec<Entry>, Error> {
 
 #[cfg(test)]
 mod tests {
+    use std::io;
+
     use super::read;
     use super::Entry;
 
@@ -126,12 +118,12 @@ mod tests {
                     components: vec!["baz".to_string(), "quux".to_string()],
                 },
             ],
-            read(
+            read(io::Cursor::new(
                 r"
 deb     http://foo  bar  baz quux
 deb-src http://foo  bar  baz quux
 ",
-            )
+            ))
             .unwrap()
         );
     }

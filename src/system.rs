@@ -48,11 +48,6 @@ impl System {
         })
     }
 
-    pub fn add_sources_entries_from_str<S: AsRef<str>>(&mut self, src: S) -> Result<(), Error> {
-        self.add_sources_entries(crate::classic_sources_list::read(src)?);
-        Ok(())
-    }
-
     pub fn add_sources_entries<I: IntoIterator<Item = Entry>>(&mut self, entries: I) {
         self.sources_entries.extend(entries);
     }

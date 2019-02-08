@@ -6,6 +6,7 @@ use failure::err_msg;
 use failure::format_err;
 use failure::Error;
 
+use crate::classic_sources_list;
 use crate::deps::dep_graph::DepGraph;
 use crate::parse::rfc822;
 use crate::parse::rfc822::one_line;
@@ -13,7 +14,19 @@ use crate::parse::types::Package;
 use crate::system::System;
 
 pub fn add_builtin_keys(system: &mut System) {
-    system.add_keys_from(io::Cursor::new(distro_keyring::supported_keys())).expect("static data");
+    system
+        .add_keys_from(io::Cursor::new(distro_keyring::supported_keys()))
+        .expect("static data");
+}
+
+pub fn add_sources_entries_from_str<S: AsRef<str>>(
+    system: &mut System,
+    string: S,
+) -> Result<(), Error> {
+    system.add_sources_entries(classic_sources_list::read(io::Cursor::new(
+        string.as_ref(),
+    ))?);
+    Ok(())
 }
 
 pub fn dodgy_dep_graph(system: &System) -> Result<(), Error> {

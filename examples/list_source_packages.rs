@@ -1,10 +1,14 @@
 use failure::err_msg;
+use fapt_pkg::commands;
 
 fn main() -> Result<(), failure::Error> {
     let mut fapt = fapt_pkg::System::cache_dirs_only(".fapt-lists")?;
-    fapt.add_sources_entries_from_str("deb-src http://deb.debian.org/debian sid main contrib")
-        .expect("parsing static data");
-    fapt_pkg::commands::add_builtin_keys(&mut fapt);
+    commands::add_sources_entries_from_str(
+        &mut fapt,
+        "deb-src http://deb.debian.org/debian sid main contrib",
+    )
+    .expect("parsing static data");
+    commands::add_builtin_keys(&mut fapt);
     fapt.update()?;
 
     fapt.walk_sections(|map| {
