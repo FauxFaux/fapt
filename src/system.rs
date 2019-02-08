@@ -57,8 +57,8 @@ impl System {
         self.sources_entries.extend(entries);
     }
 
-    pub fn set_arches(&mut self, arches: &[&str]) {
-        self.arches = arches.iter().map(|x| x.to_string()).collect();
+    pub fn set_arches<S: ToString, I: IntoIterator<Item = S>>(&mut self, arches: I) {
+        self.arches = arches.into_iter().map(|x| x.to_string()).collect();
     }
 
     pub fn set_dpkg_database<P: AsRef<Path>>(&mut self, dpkg: P) {
