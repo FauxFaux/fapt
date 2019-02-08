@@ -48,7 +48,7 @@ impl System {
         })
     }
 
-    pub fn add_sources_entry_line(&mut self, src: &str) -> Result<(), Error> {
+    pub fn add_sources_entries_from_str<S: AsRef<str>>(&mut self, src: S) -> Result<(), Error> {
         self.add_sources_entries(crate::classic_sources_list::read(src)?);
         Ok(())
     }

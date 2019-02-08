@@ -81,8 +81,9 @@ fn read_single_line_number(line: &str, no: usize) -> Result<Vec<Entry>, Error> {
     Ok(read_single_line(line).with_context(|_| format_err!("parsing line {}", no + 1))?)
 }
 
-pub fn read(from: &str) -> Result<Vec<Entry>, Error> {
-    from.lines()
+pub fn read<S: AsRef<str>>(from: S) -> Result<Vec<Entry>, Error> {
+    from.as_ref()
+        .lines()
         .enumerate()
         .map(|(no, line)| read_single_line_number(line, no))
         .collect::<Result<Vec<Vec<Entry>>, Error>>()
