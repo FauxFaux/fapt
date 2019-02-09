@@ -14,6 +14,7 @@ use failure::Error;
 use failure::ResultExt;
 
 pub type Line<'s> = (&'s str, Vec<&'s str>);
+pub type Map<'s> = HashMap<&'s str, Vec<&'s str>>;
 
 pub fn scan(block: &str) -> Scanner {
     Scanner {
@@ -27,7 +28,7 @@ pub struct Scanner<'a> {
 }
 
 impl<'a> Scanner<'a> {
-    pub fn collect_to_map(self) -> Result<HashMap<&'a str, Vec<&'a str>>, Error> {
+    pub fn collect_to_map(self) -> Result<Map<'a>, Error> {
         let mut ret = HashMap::with_capacity(16);
         for val in self {
             let (key, val) = val?;

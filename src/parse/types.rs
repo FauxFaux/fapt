@@ -271,8 +271,7 @@ pub enum SourceFormat {
 }
 
 impl Package {
-    pub fn parse_bin(it: rfc822::Scanner) -> Result<Package, Error> {
-        let mut it = it.collect_to_map()?;
+    pub fn parse_bin(it: &mut rfc822::Map) -> Result<Package, Error> {
         // TODO: clearly `parse_file` is supposed to be called here somewhere
         let file = None;
 
@@ -461,7 +460,12 @@ Homepage: http://cffi.readthedocs.org/
 
     #[test]
     fn parse_provides() {
-        let p = super::Package::parse_bin(super::rfc822::scan(PROVIDES_EXAMPLE)).unwrap();
+        let p = super::Package::parse_bin(
+            &mut super::rfc822::scan(PROVIDES_EXAMPLE)
+                .collect_to_map()
+                .unwrap(),
+        )
+        .unwrap();
         assert_eq!("python3-cffi-backend", p.name.as_str());
         let bin = match p.style {
             PackageType::Binary(bin) => bin,

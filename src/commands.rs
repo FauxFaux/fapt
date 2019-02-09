@@ -36,7 +36,7 @@ pub fn dodgy_dep_graph(system: &System) -> Result<(), Error> {
         // BORROW CHECKER
         let installed_msg = "install ok installed";
 
-        let package = match Package::parse_bin(rfc822::scan(&section)) {
+        let package = match Package::parse_bin(&mut rfc822::scan(&section).collect_to_map()?) {
             Ok(package) => package,
             Err(e) => {
                 if rfc822::scan(&section)
