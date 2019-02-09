@@ -8,6 +8,7 @@ use deb_version::compare_versions;
 use failure::bail;
 use failure::format_err;
 use failure::Error;
+use insideout::InsideOut;
 
 use super::deps;
 use super::rfc822;
@@ -272,9 +273,6 @@ pub enum SourceFormat {
 impl Package {
     pub fn parse_bin(it: rfc822::Scanner) -> Result<Package, Error> {
         let mut it = it.collect_to_map()?;
-        use super::rfc822::joined;
-        use super::rfc822::one_line;
-
         // TODO: clearly `parse_file` is supposed to be called here somewhere
         let file = None;
 
@@ -291,6 +289,18 @@ impl Package {
             None => 0,
         };
 
+        let essential = it
+            .remove_one_line("Essential")?
+            .map(|line| super::yes_no(line))
+            .inside_out()?
+            .unwrap_or(false);
+
+        let build_essential = it
+            .remove_one_line("Build-Essential")?
+            .map(|line| super::yes_no(line))
+            .inside_out()?
+            .unwrap_or(false);
+
         Ok(Package {
             name: it.take_one_line("Package")?.to_string(),
             version: it.take_one_line("Version")?.to_string(),
@@ -300,8 +310,8 @@ impl Package {
             original_maintainer: super::ident::read(it.take_one_line("Original-Maintainer")?)?,
             style: PackageType::Binary(Binary {
                 file,
-                essential: super::yes_no(it.take_one_line("Essential")?)?,
-                build_essential: super::yes_no(it.take_one_line("Build-Essential")?)?,
+                essential,
+                build_essential,
                 installed_size,
                 description: rfc822::joined(&it.take_err("Description")?),
                 depends: parse_dep(&it.remove("Depends").unwrap_or_else(Vec::new))?,
@@ -335,17 +345,25 @@ impl Package {
 }
 
 trait MapExt {
-    fn take_err(&mut self, key: &str) -> Result<Vec<&str>, Error>;
+    fn remove(&mut self, key: &str) -> Option<Vec<&str>>;
+
+    fn take_err(&mut self, key: &str) -> Result<Vec<&str>, Error> {
+        self.remove(key)
+            .ok_or_else(|| format_err!("missing key: {:?}", key))
+    }
 
     fn take_one_line(&mut self, key: &str) -> Result<&str, Error> {
         rfc822::one_line(&self.take_err(key)?)
     }
+
+    fn remove_one_line(&mut self, key: &str) -> Result<Option<&str>, Error> {
+        self.remove(key).map(|v| rfc822::one_line(&v)).inside_out()
+    }
 }
 
 impl<'s> MapExt for HashMap<&'s str, Vec<&'s str>> {
-    fn take_err(&mut self, key: &str) -> Result<Vec<&str>, Error> {
-        self.remove(key)
-            .ok_or_else(|| format_err!("missing key: {:?}", key))
+    fn remove(&mut self, key: &str) -> Option<Vec<&str>> {
+        HashMap::remove(self, key)
     }
 }
 
@@ -402,6 +420,8 @@ impl Default for PackageType {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::Constraint;
     use super::ConstraintOperator;
     use super::PackageType;
