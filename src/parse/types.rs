@@ -270,115 +270,59 @@ pub enum SourceFormat {
 }
 
 impl Package {
-    pub fn parse_bin<'i, I: Iterator<Item = Result<rfc822::Line<'i>, Error>>>(
-        it: I,
-    ) -> Result<Package, Error> {
+    pub fn parse_bin(it: rfc822::Scanner) -> Result<Package, Error> {
+        let mut it = it.collect_to_map()?;
         use super::rfc822::joined;
         use super::rfc822::one_line;
 
-        // Package
-        let mut name = None;
-        let mut version = None;
-        let mut priority = None;
-        let mut arches = None;
-        let mut maintainer = Vec::new();
-        let original_maintainer = Vec::new();
-
-        // Binary
+        // TODO: clearly `parse_file` is supposed to be called here somewhere
         let file = None;
-        let mut essential = None;
-        let mut build_essential = None;
-        let mut installed_size = None;
-        let mut description = None;
-        let mut depends = Vec::new();
-        let mut recommends = Vec::new();
-        let mut suggests = Vec::new();
-        let mut enhances = Vec::new();
-        let mut pre_depends = Vec::new();
-        let mut breaks = Vec::new();
-        let mut conflicts = Vec::new();
-        let mut replaces = Vec::new();
-        let mut provides = Vec::new();
 
-        let mut unparsed = HashMap::new();
+        let arches = it
+            .take_one_line("Architecture")?
+            // TODO: alternate splitting rules?
+            .split_whitespace()
+            .map(|s| s.parse())
+            .collect::<Result<HashSet<Arch>, Error>>()?;
 
-        let mut warnings = Vec::new();
-
-        for res in it {
-            let (key, values) = res?;
-            match key {
-                "Package" => name = Some(one_line(&values)?),
-                "Version" => version = Some(one_line(&values)?),
-                "Architecture" => {
-                    arches = Some(
-                        one_line(&values)?
-                            // TODO: alternate splitting rules?
-                            .split_whitespace()
-                            .map(|s| s.parse())
-                            .collect::<Result<HashSet<Arch>, Error>>()?,
-                    )
-                }
-
-                "Essential" => essential = Some(super::yes_no(one_line(&values)?)?),
-                "Build-Essential" => build_essential = Some(super::yes_no(one_line(&values)?)?),
-                "Priority" => priority = Some(super::parse_priority(one_line(&values)?)?),
-                "Maintainer" => match super::ident::read(one_line(&values)?) {
-                    Ok(idents) => maintainer.extend(idents),
-                    Err(e) => warnings.push(format!("parsing maintainer: {:?}", e)),
-                },
-                "Installed-Size" => installed_size = Some(one_line(&values)?.parse()?),
-                "Description" => description = Some(joined(&values)),
-
-                "Depends" => depends.extend(parse_dep(&values)?),
-                "Recommends" => recommends.extend(parse_dep(&values)?),
-                "Suggests" => suggests.extend(parse_dep(&values)?),
-                "Enhances" => enhances.extend(parse_dep(&values)?),
-                "Pre-Depends" => pre_depends.extend(parse_dep(&values)?),
-                "Breaks" => breaks.extend(parse_dep(&values)?),
-                "Conflicts" => conflicts.extend(parse_dep(&values)?),
-                "Replaces" => replaces.extend(parse_dep(&values)?),
-                "Provides" => provides.extend(parse_dep(&values)?),
-
-                other => {
-                    unparsed.insert(
-                        other.to_string(),
-                        values.iter().map(|s| s.to_string()).collect(),
-                    );
-                }
-            }
-        }
-
-        for warning in warnings {
-            eprintln!("warning in {:?} {:?}: {}", name, version, warning);
-        }
+        // TODO: this is missing in a couple of cases in dpkg/status; pretty crap
+        let installed_size = match it.remove("Installed-Size") {
+            Some(v) => rfc822::one_line(&v)?.parse()?,
+            None => 0,
+        };
 
         Ok(Package {
-            name: name.ok_or_else(|| format_err!("missing name"))?.to_string(),
-            version: version
-                .ok_or_else(|| format_err!("missing version"))?
-                .to_string(),
-            priority: priority.ok_or_else(|| format_err!("missing priority"))?,
-            arches: arches.ok_or_else(|| format_err!("missing arches"))?,
-            maintainer,
-            original_maintainer,
+            name: it.take_one_line("Package")?.to_string(),
+            version: it.take_one_line("Version")?.to_string(),
+            priority: super::parse_priority(it.take_one_line("Priority")?)?,
+            arches,
+            maintainer: super::ident::read(it.take_one_line("Maintainer")?)?,
+            original_maintainer: super::ident::read(it.take_one_line("Original-Maintainer")?)?,
             style: PackageType::Binary(Binary {
                 file,
-                essential: essential.unwrap_or(false),
-                build_essential: build_essential.unwrap_or(false),
-                // TODO: this is missing in a couple of cases in dpkg/status; pretty crap
-                installed_size: installed_size.unwrap_or(0),
-                description: description.ok_or_else(|| format_err!("missing description"))?,
-                depends,
-                recommends,
-                suggests,
-                enhances,
-                pre_depends,
-                breaks,
-                conflicts,
-                replaces,
-                provides,
+                essential: super::yes_no(it.take_one_line("Essential")?)?,
+                build_essential: super::yes_no(it.take_one_line("Build-Essential")?)?,
+                installed_size,
+                description: rfc822::joined(&it.take_err("Description")?),
+                depends: parse_dep(&it.remove("Depends").unwrap_or_else(Vec::new))?,
+                recommends: parse_dep(&it.remove("Recommends").unwrap_or_else(Vec::new))?,
+                suggests: parse_dep(&it.remove("Suggests").unwrap_or_else(Vec::new))?,
+                enhances: parse_dep(&it.remove("Enhances").unwrap_or_else(Vec::new))?,
+                pre_depends: parse_dep(&it.remove("Pre-Depends").unwrap_or_else(Vec::new))?,
+                breaks: parse_dep(&it.remove("Breaks").unwrap_or_else(Vec::new))?,
+                conflicts: parse_dep(&it.remove("Conflicts").unwrap_or_else(Vec::new))?,
+                replaces: parse_dep(&it.remove("Replaces").unwrap_or_else(Vec::new))?,
+                provides: parse_dep(&it.remove("Provides").unwrap_or_else(Vec::new))?,
             }),
-            unparsed,
+            unparsed: it
+                .into_iter()
+                .map(|(k, v)| {
+                    (
+                        k.to_string(),
+                        v.into_iter().map(|v| v.to_string()).collect(),
+                    )
+                })
+                .collect(),
         })
     }
 
@@ -387,6 +331,21 @@ impl Package {
             PackageType::Binary(bin) => Some(&bin),
             _ => None,
         }
+    }
+}
+
+trait MapExt {
+    fn take_err(&mut self, key: &str) -> Result<Vec<&str>, Error>;
+
+    fn take_one_line(&mut self, key: &str) -> Result<&str, Error> {
+        rfc822::one_line(&self.take_err(key)?)
+    }
+}
+
+impl<'s> MapExt for HashMap<&'s str, Vec<&'s str>> {
+    fn take_err(&mut self, key: &str) -> Result<Vec<&str>, Error> {
+        self.remove(key)
+            .ok_or_else(|| format_err!("missing key: {:?}", key))
     }
 }
 
