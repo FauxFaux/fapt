@@ -1,4 +1,5 @@
 use std::fs;
+use std::io;
 use std::path::Path;
 
 use failure::format_err;
@@ -29,7 +30,7 @@ impl<'k> GpgClient<'k> {
         )
         .with_context(|_| format_err!("creating temporary file"))?;
 
-        gpgrv::verify_message(gpgrv::ManyReader::new(from), &to, &self.keyring)?;
+        gpgrv::verify_message(io::BufReader::new(from), &to, &self.keyring)?;
 
         to.persist_by_rename(dest)
             .map_err(|e| e.error)
@@ -45,7 +46,7 @@ impl<'k> GpgClient<'k> {
         dest: R,
     ) -> Result<(), Error> {
         gpgrv::verify_detached(
-            fs::File::open(signature).with_context(|_| format_err!("opening signature file"))?,
+            io::BufReader::new(fs::File::open(signature).with_context(|_| format_err!("opening signature file"))?),
             fs::File::open(file.as_ref()).with_context(|_| format_err!("opening input file"))?,
             &self.keyring,
         )?;

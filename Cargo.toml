@@ -44,7 +44,7 @@ version = "1"
 [dependencies.gpgrv]
 git = "https://github.com/FauxFaux/gpgrv"
 # 0.2.0 prerelease
-rev = "42ef82e61bc0706a3dece77e103037df31ac6abc"
+rev = "3cf20c12710d2a36f2d9b46435e8004ffa560800"
 
 [[bin]]
 name = "fapt"
