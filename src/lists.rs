@@ -219,16 +219,14 @@ pub fn sections_in<P: AsRef<Path>>(
     release: &Release,
     listing: &Listing,
     lists_dir: P,
-) -> Result<Box<Iterator<Item = Result<String, Error>>>, Error> {
-    sections_in_reader(open_listing(release, listing, lists_dir)?)
+) -> Result<rfc822::StringSections<fs::File>, Error> {
+    Ok(sections_in_reader(open_listing(release, listing, lists_dir)?))
 }
 
 pub fn sections_in_reader<R: 'static + Read>(
     input: R,
-) -> Result<Box<Iterator<Item = Result<String, Error>>>, Error> {
-    Ok(Box::new(rfc822::Section::new(input).map(|v| {
-        decode_vec(v.context(format_err!("decoding")).map_err(|e| e.into()))
-    })))
+) -> rfc822::StringSections<R> {
+    rfc822::ByteSections::new(input).into_string_sections()
 }
 
 fn decode_vec(from: Result<Vec<u8>, Error>) -> Result<String, Error> {

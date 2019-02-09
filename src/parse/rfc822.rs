@@ -104,19 +104,25 @@ pub fn parse_date(date: &str) -> Result<DateTime<Utc>, Error> {
     )
 }
 
-pub struct Section<R: Read> {
+pub struct ByteSections<R> {
     from: io::BufReader<R>,
 }
 
-impl<R: Read> Section<R> {
+impl<R: Read> ByteSections<R> {
     pub fn new(from: R) -> Self {
-        Section {
+        ByteSections {
             from: io::BufReader::new(from),
+        }
+    }
+
+    pub fn into_string_sections(self) -> StringSections<R> {
+        StringSections {
+            inner: self
         }
     }
 }
 
-impl<R: Read> Iterator for Section<R> {
+impl<R: Read> Iterator for ByteSections<R> {
     type Item = Result<Vec<u8>, Error>;
 
     #[inline]
@@ -139,6 +145,20 @@ impl<R: Read> Iterator for Section<R> {
             }
             Some(Ok(buf))
         }
+    }
+}
+
+pub struct StringSections<R> {
+    inner: ByteSections<R>,
+}
+
+impl<R: Read> Iterator for StringSections<R> {
+    type Item = Result<String, Error>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|v| v.and_then(|v| -> Result<String, Error> {
+            Ok(String::from_utf8(v)?)
+        }))
     }
 }
 
@@ -208,11 +228,11 @@ mod tests {
 
     #[test]
     fn walkies() {
-        use super::Section;
+        use super::ByteSections;
         use std::io;
 
         let parts: Result<Vec<Vec<u8>>, Error> =
-            Section::new(io::Cursor::new(b"foo\nbar\n\nbaz\n")).collect();
+            ByteSections::new(io::Cursor::new(b"foo\nbar\n\nbaz\n")).collect();
         assert_eq!(
             vec![b"foo\nbar\n".to_vec(), b"baz\n".to_vec()],
             parts.unwrap()

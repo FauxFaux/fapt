@@ -139,17 +139,13 @@ impl System {
             .to_path_buf();
         status.push("status");
 
-        for section in lists::sections_in_reader(fs::File::open(status)?)? {
+        for section in lists::sections_in_reader(fs::File::open(status)?) {
             let section = section?;
             walker(section)?;
         }
 
         Ok(())
     }
-}
-
-pub struct ListIterator {
-
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
