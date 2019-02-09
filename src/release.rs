@@ -226,7 +226,7 @@ pub fn parse_release_file<P: AsRef<Path>>(path: P) -> Result<ReleaseFile, Error>
 }
 
 fn parse_release(release: &str) -> Result<ReleaseFile, Error> {
-    let data = rfc822::map(release)?;
+    let data = rfc822::scan(release).collect_to_map()?;
     Ok(ReleaseFile {
         origin: mandatory_single_line(&data, "Origin")?,
         label: mandatory_single_line(&data, "Label")?,

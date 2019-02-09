@@ -39,10 +39,11 @@ pub fn dodgy_dep_graph(system: &System) -> Result<(), Error> {
         let package = match Package::parse_bin(rfc822::scan(&section)) {
             Ok(package) => package,
             Err(e) => {
-                if rfc822::map(&section)?
-                    .get("Status")
-                    .ok_or_else(|| err_msg("no Status"))?
-                    != &vec![installed_msg]
+                if rfc822::scan(&section)
+                    .find(|r| r.as_ref().map(|(key, _)| &"Status" == key).unwrap_or(true))
+                    .ok_or_else(|| err_msg("no Status"))??
+                    .1
+                    != vec![installed_msg]
                 {
                     return Ok(());
                 } else {

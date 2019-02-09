@@ -46,7 +46,10 @@ impl<'k> GpgClient<'k> {
         dest: R,
     ) -> Result<(), Error> {
         gpgrv::verify_detached(
-            io::BufReader::new(fs::File::open(signature).with_context(|_| format_err!("opening signature file"))?),
+            io::BufReader::new(
+                fs::File::open(signature)
+                    .with_context(|_| format_err!("opening signature file"))?,
+            ),
             fs::File::open(file.as_ref()).with_context(|_| format_err!("opening input file"))?,
             &self.keyring,
         )?;

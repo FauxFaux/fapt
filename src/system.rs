@@ -99,7 +99,8 @@ impl System {
                 for section in lists::sections_in(&release, &listing, &self.lists_dir)? {
                     let section = section?;
                     walker(StringSection {
-                        inner: rfc822::map(&section)
+                        inner: rfc822::scan(&section)
+                            .collect_to_map()
                             .with_context(|_| format_err!("loading section: {:?}", section))?,
                     })
                     .with_context(|_| format_err!("processing section"))?;
