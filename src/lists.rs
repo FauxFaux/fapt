@@ -215,17 +215,17 @@ pub fn extract_downloads(releases: &[Release]) -> Result<Vec<DownloadableListing
         .collect()
 }
 
-pub fn sections_in<'i, P: AsRef<Path> + 'i>(
-    release: &'i Release,
-    listing: &'i Listing,
+pub fn sections_in<P: AsRef<Path>>(
+    release: &Release,
+    listing: &Listing,
     lists_dir: P,
-) -> Result<Box<Iterator<Item = Result<String, Error>> + 'i>, Error> {
+) -> Result<Box<Iterator<Item = Result<String, Error>>>, Error> {
     sections_in_reader(open_listing(release, listing, lists_dir)?)
 }
 
-pub fn sections_in_reader<'r, R: 'r + Read>(
+pub fn sections_in_reader<R: 'static + Read>(
     input: R,
-) -> Result<Box<Iterator<Item = Result<String, Error>> + 'r>, Error> {
+) -> Result<Box<Iterator<Item = Result<String, Error>>>, Error> {
     Ok(Box::new(rfc822::Section::new(input).map(|v| {
         decode_vec(v.context(format_err!("decoding")).map_err(|e| e.into()))
     })))
