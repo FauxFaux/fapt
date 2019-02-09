@@ -343,7 +343,8 @@ impl Package {
     }
 }
 
-trait MapExt {
+pub trait RfcMapExt {
+    fn get(&self, key: &str) -> Option<&Vec<&str>>;
     fn remove(&mut self, key: &str) -> Option<Vec<&str>>;
 
     fn take_err(&mut self, key: &str) -> Result<Vec<&str>, Error> {
@@ -358,9 +359,16 @@ trait MapExt {
     fn remove_one_line(&mut self, key: &str) -> Result<Option<&str>, Error> {
         self.remove(key).map(|v| rfc822::one_line(&v)).inside_out()
     }
+
+    fn get_if_one_line(&self, key: &str) -> Option<&str> {
+        self.get(key).and_then(|v| rfc822::one_line(v).ok())
+    }
 }
 
-impl<'s> MapExt for HashMap<&'s str, Vec<&'s str>> {
+impl<'s> RfcMapExt for HashMap<&'s str, Vec<&'s str>> {
+    fn get(&self, key: &str) -> Option<&Vec<&str>> {
+        HashMap::get(self, key)
+    }
     fn remove(&mut self, key: &str) -> Option<Vec<&str>> {
         HashMap::remove(self, key)
     }
@@ -419,8 +427,6 @@ impl Default for PackageType {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use super::Constraint;
     use super::ConstraintOperator;
     use super::PackageType;

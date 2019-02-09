@@ -220,12 +220,12 @@ pub fn sections_in<P: AsRef<Path>>(
     listing: &Listing,
     lists_dir: P,
 ) -> Result<rfc822::StringSections<fs::File>, Error> {
-    Ok(sections_in_reader(open_listing(release, listing, lists_dir)?))
+    Ok(sections_in_reader(open_listing(
+        release, listing, lists_dir,
+    )?))
 }
 
-pub fn sections_in_reader<R: 'static + Read>(
-    input: R,
-) -> rfc822::StringSections<R> {
+pub fn sections_in_reader<R: 'static + Read>(input: R) -> rfc822::StringSections<R> {
     rfc822::ByteSections::new(input).into_string_sections()
 }
 

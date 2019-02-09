@@ -2,16 +2,15 @@ use std::collections::HashMap;
 use std::io;
 
 use failure::bail;
-use failure::err_msg;
 use failure::format_err;
 use failure::Error;
 
 use crate::classic_sources_list;
 use crate::deps::dep_graph::DepGraph;
-use crate::parse::rfc822;
 use crate::parse::rfc822::one_line;
 use crate::parse::types::Package;
 use crate::system::System;
+use crate::RfcMapExt;
 
 pub fn add_builtin_keys(system: &mut System) {
     system
@@ -32,21 +31,19 @@ pub fn add_sources_entries_from_str<S: AsRef<str>>(
 pub fn dodgy_dep_graph(system: &System) -> Result<(), Error> {
     let mut dep_graph = DepGraph::new();
 
-    system.walk_status(|section| {
+    for section in system.open_status()? {
+        let section = section?;
+
         // BORROW CHECKER
         let installed_msg = "install ok installed";
 
-        let package = match Package::parse_bin(&mut rfc822::scan(&section).collect_to_map()?) {
+        let package = match Package::parse_bin(&mut section.as_map()?) {
             Ok(package) => package,
             Err(e) => {
-                if rfc822::scan(&section)
-                    .find_key("Status")?
-                    .ok_or_else(|| err_msg("no Status"))?
-                    != vec![installed_msg]
-                {
+                if section.as_map()?.take_err("Status")? != vec![installed_msg] {
                     return Ok(());
                 } else {
-                    bail!(e.context(format_err!("parsing:\n{}", section)))
+                    bail!(e.context(format_err!("parsing:\n{}", section.into_string())))
                 }
             }
         };
@@ -57,9 +54,7 @@ pub fn dodgy_dep_graph(system: &System) -> Result<(), Error> {
         }
 
         dep_graph.insert(package)?;
-
-        Ok(())
-    })?;
+    }
 
     let mut unexplained: Vec<usize> = Vec::with_capacity(100);
     let mut depended: Vec<usize> = Vec::with_capacity(100);
@@ -145,13 +140,18 @@ pub fn dodgy_dep_graph(system: &System) -> Result<(), Error> {
 }
 
 pub fn source_ninja(system: &System) -> Result<(), Error> {
-    system.walk_sections(|map| {
-        if map.contains_key("Files") {
-            print_ninja_source(&map)
-        } else {
-            print_ninja_binary(&map)
+    for list in system.listings()? {
+        for section in system.open_listing(&list)? {
+            let section = section?;
+            let map = section.as_map()?;
+            if map.contains_key("Files") {
+                print_ninja_source(&map)?;
+            } else {
+                print_ninja_binary(&map)?;
+            }
         }
-    })
+    }
+    Ok(())
 }
 
 fn stringify_package_list<I: IntoIterator<Item = usize>>(

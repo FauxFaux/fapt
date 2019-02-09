@@ -12,4 +12,5 @@ mod release;
 mod signing;
 mod system;
 
+pub use crate::parse::types::RfcMapExt;
 pub use crate::system::System;

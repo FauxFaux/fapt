@@ -8,7 +8,6 @@ use std::str::Lines;
 use chrono::DateTime;
 use chrono::Utc;
 use failure::ensure;
-use failure::err_msg;
 use failure::format_err;
 use failure::Error;
 use failure::ResultExt;
@@ -116,9 +115,7 @@ impl<R: Read> ByteSections<R> {
     }
 
     pub fn into_string_sections(self) -> StringSections<R> {
-        StringSections {
-            inner: self
-        }
+        StringSections { inner: self }
     }
 }
 
@@ -156,9 +153,9 @@ impl<R: Read> Iterator for StringSections<R> {
     type Item = Result<String, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(|v| v.and_then(|v| -> Result<String, Error> {
-            Ok(String::from_utf8(v)?)
-        }))
+        self.inner
+            .next()
+            .map(|v| v.and_then(|v| -> Result<String, Error> { Ok(String::from_utf8(v)?) }))
     }
 }
 

@@ -1,8 +1,6 @@
-use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::io::Read;
-use std::ops::Deref;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -24,6 +22,11 @@ pub struct System {
     arches: Vec<String>,
     keyring: Keyring,
     client: reqwest::Client,
+}
+
+pub struct DownloadedList {
+    release: release::Release,
+    listing: lists::Listing,
 }
 
 impl System {
@@ -84,7 +87,7 @@ impl System {
         Ok(())
     }
 
-    pub fn listings(&self) -> Result<Vec<(release::Release, lists::Listing)>, Error> {
+    pub fn listings(&self) -> Result<Vec<DownloadedList>, Error> {
         let releases =
             release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
                 .with_context(|_| format_err!("parsing sources entries"))?
@@ -95,43 +98,23 @@ impl System {
 
         for release in releases {
             for listing in lists::selected_listings(&release) {
-                ret.push((release.clone(), listing));
+                ret.push(DownloadedList {
+                    release: release.clone(),
+                    listing,
+                });
             }
         }
 
         Ok(ret)
     }
 
-    pub fn walk_sections<F>(&self, mut walker: F) -> Result<(), Error>
-    where
-        F: FnMut(StringSection) -> Result<(), Error>,
-    {
-        let releases =
-            release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
-                .with_context(|_| format_err!("parsing sources entries"))?
-                .parse(&self.lists_dir)
-                .with_context(|_| format_err!("parsing releases"))?;
-
-        for release in releases {
-            for listing in lists::selected_listings(&release) {
-                for section in lists::sections_in(&release, &listing, &self.lists_dir)? {
-                    let section = section?;
-                    walker(StringSection {
-                        inner: rfc822::scan(&section)
-                            .collect_to_map()
-                            .with_context(|_| format_err!("loading section: {:?}", section))?,
-                    })
-                    .with_context(|_| format_err!("processing section"))?;
-                }
-            }
-        }
-        Ok(())
+    pub fn open_listing(&self, list: &DownloadedList) -> Result<ListingWalker, Error> {
+        Ok(ListingWalker {
+            inner: lists::sections_in(&list.release, &list.listing, &self.lists_dir)?,
+        })
     }
 
-    pub fn walk_status<F>(&self, mut walker: F) -> Result<(), Error>
-    where
-        F: FnMut(String) -> Result<(), Error>,
-    {
+    pub fn open_status(&self) -> Result<ListingWalker, Error> {
         let mut status = self
             .dpkg_database
             .as_ref()
@@ -139,40 +122,35 @@ impl System {
             .to_path_buf();
         status.push("status");
 
-        for section in lists::sections_in_reader(fs::File::open(status)?) {
-            let section = section?;
-            walker(section)?;
-        }
-
-        Ok(())
+        Ok(ListingWalker {
+            inner: lists::sections_in_reader(fs::File::open(status)?),
+        })
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct StringSection<'s> {
-    inner: HashMap<&'s str, Vec<&'s str>>,
+pub struct ListingWalker {
+    inner: rfc822::StringSections<fs::File>,
 }
 
-impl<'s> StringSection<'s> {
-    pub fn joined_lines(&self) -> HashMap<&str, String> {
-        self.inner.iter().map(|(&k, v)| (k, v.join("\n"))).collect()
-    }
+impl Iterator for ListingWalker {
+    type Item = Result<Section, Error>;
 
-    pub fn get_if_one_line(&self, key: &str) -> Option<&str> {
-        match self.inner.get(key) {
-            Some(list) => match list.len() {
-                1 => Some(list[0]),
-                _ => None,
-            },
-            None => None,
-        }
+    fn next(&mut self) -> Option<Self::Item> {
+        self.inner.next().map(|v| v.map(|inner| Section { inner }))
     }
 }
 
-impl<'s> Deref for StringSection<'s> {
-    type Target = HashMap<&'s str, Vec<&'s str>>;
+#[derive(Clone, Debug)]
+pub struct Section {
+    inner: String,
+}
 
-    fn deref(&self) -> &HashMap<&'s str, Vec<&'s str>> {
-        &self.inner
+impl Section {
+    pub fn as_map(&self) -> Result<rfc822::Map, Error> {
+        rfc822::scan(&self.inner).collect_to_map()
+    }
+
+    pub fn into_string(self) -> String {
+        self.inner
     }
 }
