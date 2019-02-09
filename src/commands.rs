@@ -40,9 +40,8 @@ pub fn dodgy_dep_graph(system: &System) -> Result<(), Error> {
             Ok(package) => package,
             Err(e) => {
                 if rfc822::scan(&section)
-                    .find(|r| r.as_ref().map(|(key, _)| &"Status" == key).unwrap_or(true))
-                    .ok_or_else(|| err_msg("no Status"))??
-                    .1
+                    .find_key("Status")?
+                    .ok_or_else(|| err_msg("no Status"))?
                     != vec![installed_msg]
                 {
                     return Ok(());

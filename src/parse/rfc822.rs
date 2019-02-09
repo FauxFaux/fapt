@@ -35,6 +35,17 @@ impl<'a> Scanner<'a> {
         }
         Ok(ret)
     }
+
+    pub fn find_key(self, key: &str) -> Result<Option<Vec<&'a str>>, Error> {
+        for line in self {
+            let (this_key, value) = line?;
+            if this_key == key {
+                return Ok(Some(value));
+            }
+        }
+
+        Ok(None)
+    }
 }
 
 impl<'a> Iterator for Scanner<'a> {
