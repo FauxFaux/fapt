@@ -8,7 +8,7 @@ use hex;
 use sha2::Digest;
 use sha2::Sha256;
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq)]
 pub struct Hashes {
     pub md5: [u8; 16],
     pub sha256: [u8; 32],

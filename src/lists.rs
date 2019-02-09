@@ -57,7 +57,7 @@ impl DownloadableListing {
 // component: "contrib",
 // directory: "binary",
 // name: "packages"
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub struct Listing {
     pub component: String,
     pub arch: Option<String>,

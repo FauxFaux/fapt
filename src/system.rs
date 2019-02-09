@@ -84,6 +84,24 @@ impl System {
         Ok(())
     }
 
+    pub fn listings(&self) -> Result<Vec<(release::Release, lists::Listing)>, Error> {
+        let releases =
+            release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
+                .with_context(|_| format_err!("parsing sources entries"))?
+                .parse(&self.lists_dir)
+                .with_context(|_| format_err!("parsing releases"))?;
+
+        let mut ret = Vec::with_capacity(releases.len() * 4);
+
+        for release in releases {
+            for listing in lists::selected_listings(&release) {
+                ret.push((release.clone(), listing));
+            }
+        }
+
+        Ok(ret)
+    }
+
     pub fn walk_sections<F>(&self, mut walker: F) -> Result<(), Error>
     where
         F: FnMut(StringSection) -> Result<(), Error>,
@@ -128,6 +146,10 @@ impl System {
 
         Ok(())
     }
+}
+
+pub struct ListIterator {
+
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

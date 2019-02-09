@@ -31,7 +31,7 @@ pub struct RequestedReleases {
     releases: Vec<(RequestedRelease, Vec<Entry>)>,
 }
 
-#[derive(PartialOrd, Ord, Hash, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialOrd, Ord, Hash, PartialEq, Eq, Debug)]
 pub struct RequestedRelease {
     mirror: Url,
     /// This can also be called "suite" in some places,
@@ -41,7 +41,7 @@ pub struct RequestedRelease {
     pub arches: Vec<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ReleaseFile {
     origin: String,
     label: String,
@@ -57,13 +57,14 @@ pub struct ReleaseFile {
     pub contents: Vec<ReleaseContent>,
 }
 
+#[derive(Clone)]
 pub struct ReleaseContent {
     pub len: u64,
     pub name: String,
     pub hashes: Hashes,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Release {
     pub req: RequestedRelease,
     pub sources_entries: Vec<Entry>,
