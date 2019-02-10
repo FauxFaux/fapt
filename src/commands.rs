@@ -37,7 +37,7 @@ pub fn dodgy_dep_graph(system: &System) -> Result<(), Error> {
         // BORROW CHECKER
         let installed_msg = "install ok installed";
 
-        let package = match Package::parse_bin(&mut section.as_map()?) {
+        let package = match Package::parse(&mut section.as_map()?) {
             Ok(package) => package,
             Err(e) => {
                 if section.as_map()?.take_err("Status")? != vec![installed_msg] {
