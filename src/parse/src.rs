@@ -2,9 +2,22 @@ use std::collections::HashMap;
 
 use failure::bail;
 use failure::ensure;
+use failure::err_msg;
 use failure::Error;
+use insideout::InsideOut;
 
+use super::rfc822;
+use super::types::RfcMapExt;
 use super::types::SourceFormat;
+
+// TODO: This is *very* similar to a ReleaseContent
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SourceArchive {
+    name: String,
+    size: u64,
+    md5: crate::checksum::MD5,
+    sha256: Option<crate::checksum::SHA256>,
+}
 
 pub fn parse_format(string: &str) -> Result<SourceFormat, Error> {
     Ok(match string {
@@ -16,23 +29,25 @@ pub fn parse_format(string: &str) -> Result<SourceFormat, Error> {
     })
 }
 
-fn take_checksums<'a>(
-    map: &mut HashMap<&str, &'a str>,
-    key: &str,
-) -> Result<Option<HashMap<(&'a str, u64), &'a str>>, Error> {
-    Ok(match map.remove(key) {
-        Some(s) => Some(parse_checksums(s)?),
-        None => None,
-    })
-}
+pub fn take_files(map: &mut rfc822::Map) -> Result<Vec<SourceArchive>, Error> {
+    use crate::checksum::parse_md5;
+    use crate::checksum::parse_sha256;
+    use crate::release::take_checksums;
+    let file_and_size_to_md5 =
+        take_checksums(map, "Files")?.ok_or_else(|| err_msg("Files required"))?;
+    let mut file_and_size_to_sha256 =
+        take_checksums(map, "Checksums-Sha256")?.unwrap_or_else(HashMap::new);
 
-fn parse_checksums(from: &str) -> Result<HashMap<(&str, u64), &str>, Error> {
-    let mut ret = HashMap::new();
-    for line in from.lines() {
-        let parts: Vec<&str> = line.trim().split(' ').collect();
-        ensure!(3 == parts.len(), "invalid checksums line: {:?}", line);
-        ret.insert((parts[2], parts[1].parse()?), parts[0]);
+    let mut archives = Vec::with_capacity(file_and_size_to_md5.len());
+    for ((name, size), md5) in file_and_size_to_md5 {
+        let sha256 = file_and_size_to_sha256.remove(&(name, size));
+        archives.push(SourceArchive {
+            name: name.to_string(),
+            size,
+            md5: parse_md5(md5)?,
+            sha256: sha256.map(|v| parse_sha256(v)).inside_out()?,
+        })
     }
 
-    Ok(ret)
+    Ok(archives)
 }

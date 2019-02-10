@@ -27,6 +27,7 @@ pub struct Package {
     pub version: String,
     pub priority: Priority,
     pub arches: Arches,
+    pub section: String,
 
     pub maintainer: Vec<Identity>,
     pub original_maintainer: Vec<Identity>,
@@ -41,8 +42,10 @@ pub struct Source {
     pub format: SourceFormat,
 
     pub binaries: Vec<String>,
-    pub files: Vec<File>,
+    pub files: Vec<src::SourceArchive>,
     pub vcs: Vec<Vcs>,
+
+    pub directory: String,
 
     pub build_dep: Vec<Dependency>,
     pub build_dep_arch: Vec<Dependency>,
@@ -309,6 +312,7 @@ fn parse_pkg(map: &mut rfc822::Map, style: PackageType) -> Result<Package, Error
         version: map.take_one_line("Version")?.to_string(),
         priority: super::parse_priority(map.take_one_line("Priority")?)?,
         arches,
+        section: map.take_one_line("Section")?.to_string(),
         maintainer: super::ident::read(map.take_one_line("Maintainer")?)?,
         original_maintainer,
         style,
@@ -331,7 +335,8 @@ fn parse_src(map: &mut rfc822::Map) -> Result<Source, Error> {
             .split(',')
             .map(|s| s.trim().to_string())
             .collect(),
-        files: vec![],
+        files: src::take_files(map)?,
+        directory: map.take_one_line("Directory")?.to_string(),
         vcs: super::vcs::extract(map)?,
         build_dep: parse_dep(&map.remove("Build-Depends").unwrap_or_else(Vec::new))?,
         build_dep_arch: parse_dep(&map.remove("Build-Depends-Arch").unwrap_or_else(Vec::new))?,
@@ -524,7 +529,7 @@ Section: contrib/games
         };
 
         assert_eq!(vec!["alien-arena", "alien-arena-server"], src.binaries);
-        //assert_eq!(HashMap::new(), pkg.unparsed);
+        // assert_eq!(HashMap::new(), pkg.unparsed);
     }
 
     const PROVIDES_EXAMPLE: &str = r#"Package: python3-cffi-backend

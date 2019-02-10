@@ -5,13 +5,18 @@ use std::io::Read;
 use failure::ensure;
 use failure::Error;
 use hex;
+use hex::FromHex;
+use insideout::InsideOut;
 use sha2::Digest;
 use sha2::Sha256;
 
+pub type MD5 = [u8; 16];
+pub type SHA256 = [u8; 32];
+
 #[derive(Copy, Clone, Hash, PartialEq, Eq)]
 pub struct Hashes {
-    pub md5: [u8; 16],
-    pub sha256: [u8; 32],
+    pub md5: MD5,
+    pub sha256: SHA256,
 }
 
 impl fmt::Debug for Hashes {
@@ -23,6 +28,34 @@ impl fmt::Debug for Hashes {
             hex::encode(self.sha256)
         )
     }
+}
+
+pub fn parse_md5(hash: &str) -> Result<MD5, Error> {
+    let mut arr = [0u8; 16];
+    let v = Vec::from_hex(hash)?;
+    ensure!(
+        arr.len() == v.len(),
+        "a md5 checksum isn't the right length? {}",
+        hash
+    );
+    arr.copy_from_slice(&v);
+
+    Ok(arr)
+}
+
+pub fn parse_sha256(hash: &str) -> Result<SHA256, Error> {
+    let mut arr = [0u8; 32];
+
+    let v = Vec::from_hex(hash)?;
+    ensure!(
+        arr.len() == v.len(),
+        "a sha256 checksum isn't the right length? {}",
+        hash
+    );
+
+    arr.copy_from_slice(&v);
+
+    Ok(arr)
 }
 
 // TODO: also check the md5?

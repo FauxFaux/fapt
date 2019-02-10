@@ -227,7 +227,7 @@ pub fn parse_release_file<P: AsRef<Path>>(path: P) -> Result<ReleaseFile, Error>
 }
 
 fn parse_release(release: &str) -> Result<ReleaseFile, Error> {
-    let data = rfc822::scan(release).collect_to_map()?;
+    let mut data = rfc822::scan(release).collect_to_map()?;
     Ok(ReleaseFile {
         origin: mandatory_single_line(&data, "Origin")?,
         label: mandatory_single_line(&data, "Label")?,
@@ -244,11 +244,11 @@ fn parse_release(release: &str) -> Result<ReleaseFile, Error> {
         arches: mandatory_whitespace_list(&data, "Architectures")?,
         components: mandatory_whitespace_list(&data, "Components")?,
         description: mandatory_single_line(&data, "Description").ok(),
-        contents: load_contents(&data)?,
+        contents: load_contents(&mut data)?,
     })
 }
 
-fn load_contents(data: &HashMap<&str, Vec<&str>>) -> Result<Vec<ReleaseContent>, Error> {
+fn load_contents(data: &mut HashMap<&str, Vec<&str>>) -> Result<Vec<ReleaseContent>, Error> {
     let md5s = take_checksums(data, "MD5Sum")?;
     let sha256s = take_checksums(data, "SHA256")?
         .ok_or_else(|| format_err!("sha256sums missing from release file; refusing to process"))?;
@@ -263,26 +263,11 @@ fn load_contents(data: &HashMap<&str, Vec<&str>>) -> Result<Vec<ReleaseContent>,
 
         if let Some(md5s) = md5s.as_ref() {
             if let Some(hash) = md5s.get(&key) {
-                let v = Vec::from_hex(hash)?;
-                ensure!(
-                    md5.len() == v.len(),
-                    "a md5 checksum isn't the right length? {}",
-                    hash
-                );
-                md5.copy_from_slice(&v);
+                md5 = crate::checksum::parse_md5(hash)?;
             }
         }
 
-        {
-            let v = Vec::from_hex(hash)?;
-            ensure!(
-                sha256.len() == v.len(),
-                "a sha256 checksum isn't the right length? {}",
-                hash
-            );
-
-            sha256.copy_from_slice(&v);
-        }
+        sha256 = crate::checksum::parse_sha256(hash)?;
 
         ret.push(ReleaseContent {
             len,
@@ -294,12 +279,12 @@ fn load_contents(data: &HashMap<&str, Vec<&str>>) -> Result<Vec<ReleaseContent>,
     Ok(ret)
 }
 
-fn take_checksums<'a>(
-    data: &HashMap<&str, Vec<&'a str>>,
+pub fn take_checksums<'a>(
+    data: &mut HashMap<&str, Vec<&'a str>>,
     key: &str,
 ) -> Result<Option<HashMap<(&'a str, u64), &'a str>>, Error> {
-    Ok(match data.get(key) {
-        Some(s) => Some(parse_checksums(s)?),
+    Ok(match data.remove(key) {
+        Some(s) => Some(parse_checksums(&s)?),
         None => None,
     })
 }
