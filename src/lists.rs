@@ -220,31 +220,24 @@ pub fn sections_in<P: AsRef<Path>>(
     listing: &Listing,
     lists_dir: P,
 ) -> Result<rfc822::StringSections<fs::File>, Error> {
-    Ok(sections_in_reader(open_listing(
-        release, listing, lists_dir,
-    )?))
+    let local_path = lists_dir
+        .as_ref()
+        .join(find_file_easy(release, listing)?.local_name());
+    Ok(sections_in_reader(
+        fs::File::open(&local_path)
+            .with_context(|_| format_err!("Couldn't open {:?}", local_path))?,
+        format!("{:?}", local_path),
+    ))
 }
 
-pub fn sections_in_reader<R: 'static + Read>(input: R) -> rfc822::StringSections<R> {
-    rfc822::ByteSections::new(input).into_string_sections()
+pub fn sections_in_reader<R: 'static + Read>(input: R, name: String) -> rfc822::StringSections<R> {
+    rfc822::ByteSections::new(input, name).into_string_sections()
 }
 
 fn decode_vec(from: Result<Vec<u8>, Error>) -> Result<String, Error> {
     Ok(from
         .and_then(|vec| String::from_utf8(vec).map_err(|e| e.into()))
         .with_context(|_| format_err!("decoding string"))?)
-}
-
-pub fn open_listing<P: AsRef<Path>>(
-    release: &Release,
-    listing: &Listing,
-    lists_dir: P,
-) -> Result<fs::File, Error> {
-    let local_path = lists_dir
-        .as_ref()
-        .join(find_file_easy(release, listing)?.local_name());
-    Ok(fs::File::open(&local_path)
-        .with_context(|_| format_err!("Couldn't open {:?}", local_path))?)
 }
 
 pub fn find_file_easy(release: &Release, listing: &Listing) -> Result<DownloadableListing, Error> {

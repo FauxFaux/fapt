@@ -8,6 +8,7 @@ use deb_version::compare_versions;
 use failure::bail;
 use failure::format_err;
 use failure::Error;
+use failure::ResultExt;
 use insideout::InsideOut;
 
 use super::deps;
@@ -423,7 +424,8 @@ pub trait RfcMapExt {
     }
 
     fn take_one_line(&mut self, key: &str) -> Result<&str, Error> {
-        rfc822::one_line(&self.take_err(key)?)
+        Ok(rfc822::one_line(&self.take_err(key)?)
+            .with_context(|_| format_err!("for key: {:?}", key))?)
     }
 
     fn remove_one_line<S: AsRef<str>>(&mut self, key: S) -> Result<Option<&str>, Error> {

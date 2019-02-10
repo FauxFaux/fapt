@@ -104,12 +104,14 @@ pub fn parse_date(date: &str) -> Result<DateTime<Utc>, Error> {
 }
 
 pub struct ByteSections<R> {
+    pub(crate) name: String,
     from: io::BufReader<R>,
 }
 
 impl<R: Read> ByteSections<R> {
-    pub fn new(from: R) -> Self {
+    pub fn new(from: R, name: String) -> Self {
         ByteSections {
+            name,
             from: io::BufReader::new(from),
         }
     }
@@ -146,7 +148,7 @@ impl<R: Read> Iterator for ByteSections<R> {
 }
 
 pub struct StringSections<R> {
-    inner: ByteSections<R>,
+    pub(crate) inner: ByteSections<R>,
 }
 
 impl<R: Read> Iterator for StringSections<R> {
@@ -229,7 +231,7 @@ mod tests {
         use std::io;
 
         let parts: Result<Vec<Vec<u8>>, Error> =
-            ByteSections::new(io::Cursor::new(b"foo\nbar\n\nbaz\n")).collect();
+            ByteSections::new(io::Cursor::new(b"foo\nbar\n\nbaz\n"), String::new()).collect();
         assert_eq!(
             vec![b"foo\nbar\n".to_vec(), b"baz\n".to_vec()],
             parts.unwrap()

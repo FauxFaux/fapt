@@ -34,10 +34,11 @@ debs http://archive.ubuntu.com/ubuntu/  trusty-updates   main universe multivers
     for listing in fapt.listings()? {
         for item in fapt.open_listing(&listing)? {
             let item = item?;
-            if Package::parse(&mut item.as_map()?).is_ok() {
+            let res = Package::parse(&mut item.as_map()?);
+            if res.is_ok() {
                 good += 1;
             }
-            //                .with_context(|_| format_err!("parsing {:?} after {} successes", item, done))?;
+            res.with_context(|_| format_err!("parsing {:?} after {} successes", item, done))?;
             done += 1;
         }
     }

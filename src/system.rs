@@ -124,7 +124,7 @@ impl System {
         status.push("status");
 
         Ok(ListingWalker {
-            inner: lists::sections_in_reader(fs::File::open(status)?),
+            inner: lists::sections_in_reader(fs::File::open(status)?, "status".to_string()),
         })
     }
 }
@@ -137,12 +137,18 @@ impl Iterator for ListingWalker {
     type Item = Result<Section, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.inner.next().map(|v| v.map(|inner| Section { inner }))
+        self.inner.next().map(|v| {
+            v.map(|inner| Section {
+                inner,
+                locality: self.inner.inner.name.to_string(),
+            })
+        })
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct Section {
+    locality: String,
     inner: String,
 }
 
