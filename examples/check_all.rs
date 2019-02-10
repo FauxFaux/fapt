@@ -38,7 +38,10 @@ debs http://archive.ubuntu.com/ubuntu/  trusty-updates   main universe multivers
             if res.is_ok() {
                 good += 1;
             }
-            res.with_context(|_| format_err!("parsing {:?} after {} successes", item, done))?;
+            if let Err(e) = res {
+                println!("{:?}", item);
+                println!("{:?}", e);
+            };
             done += 1;
         }
     }

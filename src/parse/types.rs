@@ -126,6 +126,9 @@ pub enum ConstraintOperator {
 pub enum Arch {
     Any,
     All,
+    AnyAmd64,
+    AnyI386,
+    AnyArm64,
     Amd64,
     Armel,
     Armhf,
@@ -138,6 +141,7 @@ pub enum Arch {
     Mipsel,
     Mips64,
     Mips64El,
+    PowerPc,
     Ppc64El,
     S390X,
     LinuxAny,
@@ -154,6 +158,9 @@ impl FromStr for Arch {
         Ok(match s {
             "all" => Arch::All,
             "any" => Arch::Any,
+            "any-arm64" => Arch::AnyArm64,
+            "any-amd64" => Arch::AnyAmd64,
+            "any-i386" => Arch::AnyI386,
             "amd64" => Arch::Amd64,
             "armel" => Arch::Armel,
             "armhf" => Arch::Armhf,
@@ -166,6 +173,7 @@ impl FromStr for Arch {
             "mipsel" => Arch::Mipsel,
             "mips64" => Arch::Mips64,
             "mips64el" => Arch::Mips64El,
+            "powerpc" => Arch::PowerPc,
             "ppc64el" => Arch::Ppc64El,
             "s390x" => Arch::S390X,
             "linux-any" => Arch::LinuxAny,
@@ -183,6 +191,9 @@ impl fmt::Display for Arch {
             match self {
                 Arch::All => "all",
                 Arch::Any => "any",
+                Arch::AnyAmd64 => "any-amd64",
+                Arch::AnyI386 => "any-i386",
+                Arch::AnyArm64 => "any-arm64",
                 Arch::Amd64 => "amd64",
                 Arch::Armel => "armel",
                 Arch::Armhf => "armhf",
@@ -195,6 +206,7 @@ impl fmt::Display for Arch {
                 Arch::Mipsel => "mipsel",
                 Arch::Mips64 => "mips64",
                 Arch::Mips64El => "mips64el",
+                Arch::PowerPc => "powerpc",
                 Arch::Ppc64El => "ppc64el",
                 Arch::S390X => "s390x",
                 Arch::LinuxAny => "linux-any",
@@ -353,7 +365,11 @@ fn parse_src(map: &mut rfc822::Map) -> Result<Source, Error> {
         files: src::take_files(map)?,
         directory: map.take_one_line("Directory")?.to_string(),
         vcs: super::vcs::extract(map)?,
-        standards_version: map.take_one_line("Standards-Version")?.to_string(),
+        // TODO: Option<> instead of empty string?
+        standards_version: map
+            .remove_one_line("Standards-Version")?
+            .unwrap_or("")
+            .to_string(),
         build_dep: parse_dep(&map.remove("Build-Depends").unwrap_or_else(Vec::new))?,
         build_dep_arch: parse_dep(&map.remove("Build-Depends-Arch").unwrap_or_else(Vec::new))?,
         build_dep_indep: parse_dep(&map.remove("Build-Depends-Indep").unwrap_or_else(Vec::new))?,
