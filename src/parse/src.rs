@@ -32,9 +32,27 @@ pub fn parse_format(string: &str) -> Result<SourceFormat, Error> {
 }
 
 pub fn take_package_list(map: &mut rfc822::Map) -> Result<Vec<SourceBinary>, Error> {
-    let mut binaries: HashSet<_> = map.take_one_line("Binary")?.split_whitespace().collect();
+    let package_list = match map.remove("Package-List") {
+        Some(list) => list,
+        None => {
+            // sigh legacy
+            return Ok(map
+                .take_err("Binary")?
+                .into_iter()
+                // TODO: optional, instead of empty string?
+                // TODO: or fallback to the values on the parent package?
+                .map(|v| SourceBinary {
+                    name: v.to_string(),
+                    style: String::new(),
+                    section: String::new(),
+                    priority: super::Priority::Unknown,
+                    extras: Vec::new(),
+                })
+                .collect());
+        }
+    };
 
-    let package_list = map.take_err("Package-List")?;
+    let mut binaries: HashSet<_> = map.take_one_line("Binary")?.split_whitespace().collect();
 
     let mut binaries = Vec::with_capacity(package_list.len());
 
