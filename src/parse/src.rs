@@ -8,7 +8,9 @@ use insideout::InsideOut;
 
 use super::rfc822;
 use super::types::RfcMapExt;
+use super::types::SourceBinary;
 use super::types::SourceFormat;
+use std::collections::HashSet;
 
 // TODO: This is *very* similar to a ReleaseContent
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -27,6 +29,28 @@ pub fn parse_format(string: &str) -> Result<SourceFormat, Error> {
         "3.0 (native)" => SourceFormat::Native3dot0,
         other => bail!("unsupported source format: '{}'", other),
     })
+}
+
+pub fn take_package_list(map: &mut rfc822::Map) -> Result<Vec<SourceBinary>, Error> {
+    let mut binaries: HashSet<_> = map.take_one_line("Binary")?.split_whitespace().collect();
+
+    let package_list = map.take_err("Package-List")?;
+
+    let mut binaries = Vec::with_capacity(package_list.len());
+
+    for line in package_list {
+        let mut parts: Vec<_> = line.split_whitespace().collect();
+        ensure!(parts.len() > 4, "package list line too short: {:?}", line);
+        binaries.push(SourceBinary {
+            name: parts[0].to_string(),
+            style: parts[1].to_string(),
+            section: parts[2].to_string(),
+            priority: super::parse_priority(parts[3])?,
+            extras: parts[4..].into_iter().map(|s| s.to_string()).collect(),
+        });
+    }
+
+    Ok(binaries)
 }
 
 pub fn take_files(map: &mut rfc822::Map) -> Result<Vec<SourceArchive>, Error> {

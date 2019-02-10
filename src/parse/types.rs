@@ -32,6 +32,8 @@ pub struct Package {
     pub maintainer: Vec<Identity>,
     pub original_maintainer: Vec<Identity>,
 
+    pub homepage: Option<String>,
+
     pub unparsed: HashMap<String, Vec<String>>,
 
     pub style: PackageType,
@@ -41,11 +43,12 @@ pub struct Package {
 pub struct Source {
     pub format: SourceFormat,
 
-    pub binaries: Vec<String>,
+    pub binaries: Vec<SourceBinary>,
     pub files: Vec<src::SourceArchive>,
     pub vcs: Vec<Vcs>,
 
     pub directory: String,
+    pub standards_version: String,
 
     pub build_dep: Vec<Dependency>,
     pub build_dep_arch: Vec<Dependency>,
@@ -68,6 +71,8 @@ pub struct Binary {
     pub installed_size: u64,
 
     pub description: String,
+    pub source: Option<String>,
+    pub status: Option<String>,
 
     pub depends: Vec<Dependency>,
     pub recommends: Vec<Dependency>,
@@ -315,6 +320,7 @@ fn parse_pkg(map: &mut rfc822::Map, style: PackageType) -> Result<Package, Error
         section: map.take_one_line("Section")?.to_string(),
         maintainer: super::ident::read(map.take_one_line("Maintainer")?)?,
         original_maintainer,
+        homepage: map.remove_one_line("Homepage")?.map(|s| s.to_string()),
         style,
         unparsed: map
             .into_iter()
@@ -331,13 +337,11 @@ fn parse_pkg(map: &mut rfc822::Map, style: PackageType) -> Result<Package, Error
 fn parse_src(map: &mut rfc822::Map) -> Result<Source, Error> {
     Ok(Source {
         format: src::parse_format(map.take_one_line("Format")?)?,
-        binaries: rfc822::joined(&map.take_err("Binary")?)
-            .split(',')
-            .map(|s| s.trim().to_string())
-            .collect(),
+        binaries: src::take_package_list(map)?,
         files: src::take_files(map)?,
         directory: map.take_one_line("Directory")?.to_string(),
         vcs: super::vcs::extract(map)?,
+        standards_version: map.take_one_line("Standards-Version")?.to_string(),
         build_dep: parse_dep(&map.remove("Build-Depends").unwrap_or_else(Vec::new))?,
         build_dep_arch: parse_dep(&map.remove("Build-Depends-Arch").unwrap_or_else(Vec::new))?,
         build_dep_indep: parse_dep(&map.remove("Build-Depends-Indep").unwrap_or_else(Vec::new))?,
@@ -380,6 +384,8 @@ fn parse_bin(it: &mut rfc822::Map) -> Result<Binary, Error> {
         build_essential,
         installed_size,
         description: rfc822::joined(&it.take_err("Description")?),
+        source: it.remove_one_line("Source")?.map(|s| s.to_string()),
+        status: it.remove_one_line("Status")?.map(|s| s.to_string()),
         depends: parse_dep(&it.remove("Depends").unwrap_or_else(Vec::new))?,
         recommends: parse_dep(&it.remove("Recommends").unwrap_or_else(Vec::new))?,
         suggests: parse_dep(&it.remove("Suggests").unwrap_or_else(Vec::new))?,
@@ -528,8 +534,14 @@ Section: contrib/games
             other => panic!("bad type: {:?}", other),
         };
 
-        assert_eq!(vec!["alien-arena", "alien-arena-server"], src.binaries);
-        // assert_eq!(HashMap::new(), pkg.unparsed);
+        assert_eq!(
+            vec!["alien-arena", "alien-arena-server"],
+            src.binaries
+                .into_iter()
+                .map(|b| b.name)
+                .collect::<Vec<String>>()
+        );
+        assert_eq!(HashMap::new(), pkg.unparsed);
     }
 
     const PROVIDES_EXAMPLE: &str = r#"Package: python3-cffi-backend
@@ -579,5 +591,6 @@ Homepage: http://cffi.readthedocs.org/
             _ => panic!("wrong type!"),
         };
         assert_eq!(3, bin.provides.len());
+        assert_eq!(HashMap::new(), p.unparsed);
     }
 }
