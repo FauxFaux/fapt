@@ -274,96 +274,12 @@ impl Package {
     pub fn parse(map: &mut rfc822::Map) -> Result<Package, Error> {
         let style = if map.contains_key("Binary") {
             // Binary indicates that it's a source package *producing* that binary
-            PackageType::Source(Self::parse_src(map)?)
+            PackageType::Source(parse_src(map)?)
         } else {
-            PackageType::Binary(Self::parse_bin(map)?)
+            PackageType::Binary(parse_bin(map)?)
         };
 
-        Self::parse_pkg(map, style)
-    }
-
-    fn parse_pkg(map: &mut rfc822::Map, style: PackageType) -> Result<Package, Error> {
-        let arches = map
-            .take_one_line("Architecture")?
-            // TODO: alternate splitting rules?
-            .split_whitespace()
-            .map(|s| s.parse())
-            .collect::<Result<HashSet<Arch>, Error>>()?;
-
-        Ok(Package {
-            name: map.take_one_line("Package")?.to_string(),
-            version: map.take_one_line("Version")?.to_string(),
-            priority: super::parse_priority(map.take_one_line("Priority")?)?,
-            arches,
-            maintainer: super::ident::read(map.take_one_line("Maintainer")?)?,
-            original_maintainer: super::ident::read(map.take_one_line("Original-Maintainer")?)?,
-            style,
-            unparsed: map
-                .into_iter()
-                .map(|(k, v)| {
-                    (
-                        k.to_string(),
-                        v.into_iter().map(|v| v.to_string()).collect(),
-                    )
-                })
-                .collect(),
-        })
-    }
-
-    pub fn parse_src(map: &mut rfc822::Map) -> Result<Source, Error> {
-        Ok(Source {
-            format: SourceFormat::Unknown,
-            binaries: vec![],
-            files: vec![],
-            vcs: vec![],
-            build_dep: vec![],
-            build_dep_arch: vec![],
-            build_dep_indep: vec![],
-            build_conflict: vec![],
-            build_conflict_arch: vec![],
-            build_conflict_indep: vec![],
-            uploaders: vec![],
-        })
-    }
-
-    pub fn parse_bin(it: &mut rfc822::Map) -> Result<Binary, Error> {
-        // TODO: clearly `parse_file` is supposed to be called here somewhere
-        let file = None;
-
-        // TODO: this is missing in a couple of cases in dpkg/status; pretty crap
-        let installed_size = match it.remove("Installed-Size") {
-            Some(v) => rfc822::one_line(&v)?.parse()?,
-            None => 0,
-        };
-
-        let essential = it
-            .remove_one_line("Essential")?
-            .map(|line| super::yes_no(line))
-            .inside_out()?
-            .unwrap_or(false);
-
-        let build_essential = it
-            .remove_one_line("Build-Essential")?
-            .map(|line| super::yes_no(line))
-            .inside_out()?
-            .unwrap_or(false);
-
-        Ok(Binary {
-            file,
-            essential,
-            build_essential,
-            installed_size,
-            description: rfc822::joined(&it.take_err("Description")?),
-            depends: parse_dep(&it.remove("Depends").unwrap_or_else(Vec::new))?,
-            recommends: parse_dep(&it.remove("Recommends").unwrap_or_else(Vec::new))?,
-            suggests: parse_dep(&it.remove("Suggests").unwrap_or_else(Vec::new))?,
-            enhances: parse_dep(&it.remove("Enhances").unwrap_or_else(Vec::new))?,
-            pre_depends: parse_dep(&it.remove("Pre-Depends").unwrap_or_else(Vec::new))?,
-            breaks: parse_dep(&it.remove("Breaks").unwrap_or_else(Vec::new))?,
-            conflicts: parse_dep(&it.remove("Conflicts").unwrap_or_else(Vec::new))?,
-            replaces: parse_dep(&it.remove("Replaces").unwrap_or_else(Vec::new))?,
-            provides: parse_dep(&it.remove("Provides").unwrap_or_else(Vec::new))?,
-        })
+        parse_pkg(map, style)
     }
 
     pub fn bin(&self) -> Option<&Binary> {
@@ -372,6 +288,90 @@ impl Package {
             _ => None,
         }
     }
+}
+
+fn parse_pkg(map: &mut rfc822::Map, style: PackageType) -> Result<Package, Error> {
+    let arches = map
+        .take_one_line("Architecture")?
+        // TODO: alternate splitting rules?
+        .split_whitespace()
+        .map(|s| s.parse())
+        .collect::<Result<HashSet<Arch>, Error>>()?;
+
+    Ok(Package {
+        name: map.take_one_line("Package")?.to_string(),
+        version: map.take_one_line("Version")?.to_string(),
+        priority: super::parse_priority(map.take_one_line("Priority")?)?,
+        arches,
+        maintainer: super::ident::read(map.take_one_line("Maintainer")?)?,
+        original_maintainer: super::ident::read(map.take_one_line("Original-Maintainer")?)?,
+        style,
+        unparsed: map
+            .into_iter()
+            .map(|(k, v)| {
+                (
+                    k.to_string(),
+                    v.into_iter().map(|v| v.to_string()).collect(),
+                )
+            })
+            .collect(),
+    })
+}
+
+fn parse_src(map: &mut rfc822::Map) -> Result<Source, Error> {
+    Ok(Source {
+        format: SourceFormat::Unknown,
+        binaries: vec![],
+        files: vec![],
+        vcs: vec![],
+        build_dep: vec![],
+        build_dep_arch: vec![],
+        build_dep_indep: vec![],
+        build_conflict: vec![],
+        build_conflict_arch: vec![],
+        build_conflict_indep: vec![],
+        uploaders: vec![],
+    })
+}
+
+fn parse_bin(it: &mut rfc822::Map) -> Result<Binary, Error> {
+    // TODO: clearly `parse_file` is supposed to be called here somewhere
+    let file = None;
+
+    // TODO: this is missing in a couple of cases in dpkg/status; pretty crap
+    let installed_size = match it.remove("Installed-Size") {
+        Some(v) => rfc822::one_line(&v)?.parse()?,
+        None => 0,
+    };
+
+    let essential = it
+        .remove_one_line("Essential")?
+        .map(|line| super::yes_no(line))
+        .inside_out()?
+        .unwrap_or(false);
+
+    let build_essential = it
+        .remove_one_line("Build-Essential")?
+        .map(|line| super::yes_no(line))
+        .inside_out()?
+        .unwrap_or(false);
+
+    Ok(Binary {
+        file,
+        essential,
+        build_essential,
+        installed_size,
+        description: rfc822::joined(&it.take_err("Description")?),
+        depends: parse_dep(&it.remove("Depends").unwrap_or_else(Vec::new))?,
+        recommends: parse_dep(&it.remove("Recommends").unwrap_or_else(Vec::new))?,
+        suggests: parse_dep(&it.remove("Suggests").unwrap_or_else(Vec::new))?,
+        enhances: parse_dep(&it.remove("Enhances").unwrap_or_else(Vec::new))?,
+        pre_depends: parse_dep(&it.remove("Pre-Depends").unwrap_or_else(Vec::new))?,
+        breaks: parse_dep(&it.remove("Breaks").unwrap_or_else(Vec::new))?,
+        conflicts: parse_dep(&it.remove("Conflicts").unwrap_or_else(Vec::new))?,
+        replaces: parse_dep(&it.remove("Replaces").unwrap_or_else(Vec::new))?,
+        provides: parse_dep(&it.remove("Provides").unwrap_or_else(Vec::new))?,
+    })
 }
 
 pub trait RfcMapExt {
