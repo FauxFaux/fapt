@@ -12,6 +12,7 @@ use insideout::InsideOut;
 
 use super::deps;
 use super::rfc822;
+use super::src;
 
 /// The parsed top-level types for package
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -39,7 +40,7 @@ pub struct Package {
 pub struct Source {
     pub format: SourceFormat,
 
-    pub binaries: Vec<SourceBinary>,
+    pub binaries: Vec<String>,
     pub files: Vec<File>,
     pub vcs: Vec<Vcs>,
 
@@ -197,7 +198,7 @@ pub struct File {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Vcs {
     pub description: String,
-    pub type_: VcsType,
+    pub vcs: VcsType,
     pub tag: VcsTag,
 }
 
@@ -263,7 +264,6 @@ pub struct Identity {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum SourceFormat {
-    Unknown,
     Original,
     Quilt3dot0,
     Native3dot0,
@@ -298,13 +298,19 @@ fn parse_pkg(map: &mut rfc822::Map, style: PackageType) -> Result<Package, Error
         .map(|s| s.parse())
         .collect::<Result<HashSet<Arch>, Error>>()?;
 
+    let original_maintainer = map
+        .remove_one_line("Original-Maintainer")?
+        .map(|line| super::ident::read(line))
+        .inside_out()?
+        .unwrap_or_else(Vec::new);
+
     Ok(Package {
         name: map.take_one_line("Package")?.to_string(),
         version: map.take_one_line("Version")?.to_string(),
         priority: super::parse_priority(map.take_one_line("Priority")?)?,
         arches,
         maintainer: super::ident::read(map.take_one_line("Maintainer")?)?,
-        original_maintainer: super::ident::read(map.take_one_line("Original-Maintainer")?)?,
+        original_maintainer,
         style,
         unparsed: map
             .into_iter()
@@ -320,17 +326,24 @@ fn parse_pkg(map: &mut rfc822::Map, style: PackageType) -> Result<Package, Error
 
 fn parse_src(map: &mut rfc822::Map) -> Result<Source, Error> {
     Ok(Source {
-        format: SourceFormat::Unknown,
-        binaries: vec![],
+        format: src::parse_format(map.take_one_line("Format")?)?,
+        binaries: rfc822::joined(&map.take_err("Binary")?)
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .collect(),
         files: vec![],
-        vcs: vec![],
-        build_dep: vec![],
-        build_dep_arch: vec![],
-        build_dep_indep: vec![],
-        build_conflict: vec![],
-        build_conflict_arch: vec![],
-        build_conflict_indep: vec![],
-        uploaders: vec![],
+        vcs: super::vcs::extract(map)?,
+        build_dep: parse_dep(&map.remove("Build-Depends").unwrap_or_else(Vec::new))?,
+        build_dep_arch: parse_dep(&map.remove("Build-Depends-Arch").unwrap_or_else(Vec::new))?,
+        build_dep_indep: parse_dep(&map.remove("Build-Depends-Indep").unwrap_or_else(Vec::new))?,
+        build_conflict: parse_dep(&map.remove("Build-Conflicts").unwrap_or_else(Vec::new))?,
+        build_conflict_arch: parse_dep(
+            &map.remove("Build-Conflicts-Arch").unwrap_or_else(Vec::new),
+        )?,
+        build_conflict_indep: parse_dep(
+            &map.remove("Build-Conflicts-Indep").unwrap_or_else(Vec::new),
+        )?,
+        uploaders: super::ident::read(map.take_one_line("Uploaders")?)?,
     })
 }
 
@@ -387,8 +400,10 @@ pub trait RfcMapExt {
         rfc822::one_line(&self.take_err(key)?)
     }
 
-    fn remove_one_line(&mut self, key: &str) -> Result<Option<&str>, Error> {
-        self.remove(key).map(|v| rfc822::one_line(&v)).inside_out()
+    fn remove_one_line<S: AsRef<str>>(&mut self, key: S) -> Result<Option<&str>, Error> {
+        self.remove(key.as_ref())
+            .map(|v| rfc822::one_line(&v))
+            .inside_out()
     }
 
     fn get_if_one_line(&self, key: &str) -> Option<&str> {
@@ -458,9 +473,59 @@ impl Default for PackageType {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::Constraint;
     use super::ConstraintOperator;
     use super::PackageType;
+
+    const SOURCE_BLOCK_ALIEN: &str = r#"Package: alien-arena
+Binary: alien-arena, alien-arena-server
+Version: 7.66+dfsg-5
+Maintainer: Debian Games Team <pkg-games-devel@lists.alioth.debian.org>
+Uploaders: Michael Gilbert <mgilbert@debian.org>, Barry deFreese <bddebian@comcast.net>
+Build-Depends: debhelper (>= 10), sharutils, libglu1-mesa-dev, libgl1-mesa-dev, libjpeg-dev, libpng-dev, libxxf86vm-dev, libxxf86dga-dev, libxext-dev, libx11-dev, libcurl4-gnutls-dev, libopenal-dev, libvorbis-dev, libfreetype6-dev, pkg-config
+Architecture: any
+Standards-Version: 4.0.1
+Format: 3.0 (quilt)
+Files:
+ f26e5a6a298163277318a720b77a3b58 2291 alien-arena_7.66+dfsg-5.dsc
+ af12838d2346b05a6e043141ceb40c49 1767600 alien-arena_7.66+dfsg.orig.tar.gz
+ d806e404397c6338eae0d6470b4e8723 13844 alien-arena_7.66+dfsg-5.debian.tar.xz
+Vcs-Browser: https://salsa.debian.org/games-team/alien-arena
+Vcs-Git: https://salsa.debian.org/games-team/alien-arena.git
+Checksums-Sha256:
+ 85eabee2877db5e070cd6549078ece3e5b4bc35a3a33ff8987d06fbb9732cd6e 2291 alien-arena_7.66+dfsg-5.dsc
+ d4d173aba65fbdbf338e4fbdcb04a888e0cd3790e6de72597ba74b0bef42c14b 1767600 alien-arena_7.66+dfsg.orig.tar.gz
+ 6e90eabd98ac9c98ebe55b064ceb427101a3d4d4ff0b8aa4a2cea28052ec34c1 13844 alien-arena_7.66+dfsg-5.debian.tar.xz
+Homepage: http://red.planetarena.org
+Package-List:
+ alien-arena deb contrib/games optional arch=any
+ alien-arena-server deb contrib/games optional arch=any
+Directory: pool/contrib/a/alien-arena
+Priority: source
+Section: contrib/games
+"#;
+
+    #[test]
+    fn parse_alien() {
+        let pkg = super::Package::parse(
+            &mut super::rfc822::scan(SOURCE_BLOCK_ALIEN)
+                .collect_to_map()
+                .unwrap(),
+        )
+        .unwrap();
+
+        assert_eq!("7.66+dfsg-5", pkg.version);
+
+        let src = match pkg.style {
+            PackageType::Source(s) => s,
+            other => panic!("bad type: {:?}", other),
+        };
+
+        assert_eq!(vec!["alien-arena", "alien-arena-server"], src.binaries);
+        //assert_eq!(HashMap::new(), pkg.unparsed);
+    }
 
     const PROVIDES_EXAMPLE: &str = r#"Package: python3-cffi-backend
 Status: install ok installed

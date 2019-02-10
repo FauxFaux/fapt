@@ -1,31 +1,15 @@
+use failure::Error;
+
+use super::rfc822;
+use super::types::RfcMapExt;
+use super::types::Vcs;
 use super::types::VcsTag;
 use super::types::VcsType;
 
-#[derive(Clone)]
-struct Entry {
-    description: String,
-    vcs: VcsType,
-    tag: VcsTag,
-}
-
-impl Entry {
-    pub fn new(description: &str, vcs: &VcsType, tag: &VcsTag) -> Self {
-        Entry {
-            description: description.to_string(),
-            vcs: *vcs,
-            tag: *tag,
-        }
-    }
-}
-
-#[cfg(capnp)]
-pub fn extract(
-    map: &mut HashMap<&str, &str>,
-    builder: &mut apt_capnp::source::Builder,
-) -> Result<()> {
+pub fn extract(map: &mut rfc822::Map) -> Result<Vec<Vcs>, Error> {
     let mut found = Vec::with_capacity(4);
 
-    for &(vcs_token, ref vcs) in [
+    for (vcs_token, vcs) in &[
         ("Arch", VcsType::Arch),
         ("Browser", VcsType::Browser),
         ("Browse", VcsType::Browser),
@@ -36,42 +20,44 @@ pub fn extract(
         ("Hg", VcsType::Hg),
         ("Mtn", VcsType::Mtn),
         ("Svn", VcsType::Svn),
-    ]
-    .into_iter()
-    {
+    ] {
         // Simplest form: Vcs-Git
-        if let Some(x) = map.remove(format!("Vcs-{}", vcs_token).as_str()) {
-            found.push(Entry::new(x, vcs, &VcsTag::Vcs));
+        if let Some(description) = map.remove_one_line(&format!("Vcs-{}", vcs_token))? {
+            found.push(Vcs {
+                description: description.to_string(),
+                vcs: *vcs,
+                tag: VcsTag::Vcs,
+            });
         }
 
-        for &(tag_token, ref tag) in [
+        for (tag_token, tag) in &[
             ("Orig", VcsTag::Orig),
             ("Original", VcsTag::Orig),
             ("Debian", VcsTag::Debian),
             ("Upstream", VcsTag::Upstream),
-        ]
-        .into_iter()
-        {
+        ] {
             // Common form: Debian-Vcs-Git, Orig-Vcs-Browser, Original-Vcs-Bzr, Upstream-Vcs-Bzr
-            if let Some(x) = map.remove(format!("{}-Vcs-{}", tag_token, vcs_token).as_str()) {
-                found.push(Entry::new(x, vcs, tag));
+            if let Some(description) =
+                map.remove_one_line(format!("{}-Vcs-{}", tag_token, vcs_token))?
+            {
+                found.push(Vcs {
+                    description: description.to_string(),
+                    vcs: *vcs,
+                    tag: *tag,
+                });
             }
             // Vcs-Upstream-Bzr seen in the wild
-            else if let Some(x) = map.remove(format!("Vcs-{}-{}", tag_token, vcs_token).as_str())
+            else if let Some(description) =
+                map.remove_one_line(format!("Vcs-{}-{}", tag_token, vcs_token))?
             {
-                found.push(Entry::new(x, vcs, tag));
+                found.push(Vcs {
+                    description: description.to_string(),
+                    vcs: *vcs,
+                    tag: *tag,
+                });
             }
         }
     }
 
-    let mut builder = builder.borrow().init_vcs(as_u32(found.len()));
-
-    for (i, entry) in found.into_iter().enumerate() {
-        let mut builder = builder.borrow().get(as_u32(i));
-        builder.set_description(&entry.description);
-        builder.set_type(entry.vcs);
-        builder.set_tag(entry.tag);
-    }
-
-    Ok(())
+    Ok(found)
 }

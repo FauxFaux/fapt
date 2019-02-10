@@ -6,7 +6,7 @@ use failure::Error;
 
 use super::types::SourceFormat;
 
-fn parse_format(string: &str) -> Result<SourceFormat, Error> {
+pub fn parse_format(string: &str) -> Result<SourceFormat, Error> {
     Ok(match string {
         "3.0 (quilt)" => SourceFormat::Quilt3dot0,
         "1.0" => SourceFormat::Original,
