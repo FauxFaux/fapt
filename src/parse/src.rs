@@ -40,7 +40,7 @@ pub fn take_package_list(map: &mut rfc822::Map) -> Result<Vec<SourceBinary>, Err
 
     for line in package_list {
         let mut parts: Vec<_> = line.split_whitespace().collect();
-        ensure!(parts.len() > 4, "package list line too short: {:?}", line);
+        ensure!(parts.len() >= 4, "package list line too short: {:?}", line);
         binaries.push(SourceBinary {
             name: parts[0].to_string(),
             style: parts[1].to_string(),

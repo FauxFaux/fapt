@@ -130,6 +130,9 @@ pub enum Arch {
     Armhf,
     Arm64,
     I386,
+    Ia64,
+    KFreeBsdAmd64,
+    KFreeBsdI386,
     Mips,
     Mipsel,
     Mips64,
@@ -138,6 +141,7 @@ pub enum Arch {
     S390X,
     LinuxAny,
     X32,
+    ParserBug,
 }
 
 pub type Arches = HashSet<Arch>;
@@ -153,7 +157,10 @@ impl FromStr for Arch {
             "armel" => Arch::Armel,
             "armhf" => Arch::Armhf,
             "arm64" => Arch::Arm64,
+            "ia64" => Arch::Ia64,
             "i386" => Arch::I386,
+            "kfreebsd-amd64" => Arch::KFreeBsdAmd64,
+            "kfreebsd-i386" => Arch::KFreeBsdI386,
             "mips" => Arch::Mips,
             "mipsel" => Arch::Mipsel,
             "mips64" => Arch::Mips64,
@@ -180,6 +187,9 @@ impl fmt::Display for Arch {
                 Arch::Armhf => "armhf",
                 Arch::Arm64 => "arm64",
                 Arch::I386 => "i386",
+                Arch::Ia64 => "ia64",
+                Arch::KFreeBsdAmd64 => "kfreebsd-amd64",
+                Arch::KFreeBsdI386 => "kfreebsd-i386",
                 Arch::Mips => "mips",
                 Arch::Mipsel => "mipsel",
                 Arch::Mips64 => "mips64",
@@ -188,6 +198,7 @@ impl fmt::Display for Arch {
                 Arch::S390X => "s390x",
                 Arch::LinuxAny => "linux-any",
                 Arch::X32 => "x32",
+                Arch::ParserBug => return Err(fmt::Error {}),
             }
         )
     }
@@ -352,7 +363,11 @@ fn parse_src(map: &mut rfc822::Map) -> Result<Source, Error> {
         build_conflict_indep: parse_dep(
             &map.remove("Build-Conflicts-Indep").unwrap_or_else(Vec::new),
         )?,
-        uploaders: super::ident::read(map.take_one_line("Uploaders")?)?,
+        uploaders: map
+            .remove_one_line("Uploaders")?
+            .map(|line| super::ident::read(line))
+            .inside_out()?
+            .unwrap_or_else(Vec::new),
     })
 }
 

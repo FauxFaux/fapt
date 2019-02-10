@@ -24,6 +24,7 @@ pub struct System {
     client: reqwest::Client,
 }
 
+#[derive(Debug)]
 pub struct DownloadedList {
     release: release::Release,
     listing: lists::Listing,

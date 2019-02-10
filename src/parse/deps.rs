@@ -83,10 +83,10 @@ named!(single<CompleteStr, SingleDependency>,
             // TODO: or work out how to propagate the error up,
             // TODO: or work out how to explain to nom that it's an error,
             // TODO: every one of these options suck
-            arch: arch.map(|a| a.parse().unwrap()),
+            arch: arch.map(|a| a.parse().unwrap_or(Arch::ParserBug)),
             version_constraints,
             // TODO: and here
-            arch_filter: arch_filter.into_iter().map(|x| x.0.parse::<Arch>().unwrap()).collect(),
+            arch_filter: arch_filter.into_iter().map(|x| x.0.parse::<Arch>().unwrap_or(Arch::ParserBug)).collect(),
             stage_filter: stage_filter.into_iter().map(|x| x.0.to_string()).collect(),
         } )
     ))
