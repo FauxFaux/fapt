@@ -49,5 +49,11 @@ pub fn take_files(map: &mut rfc822::Map) -> Result<Vec<SourceArchive>, Error> {
         })
     }
 
+    ensure!(
+        file_and_size_to_sha256.is_empty(),
+        "sha256sum for a file which didn't exist: {:?}",
+        file_and_size_to_sha256
+    );
+
     Ok(archives)
 }
