@@ -32,6 +32,7 @@ strum!(
     KFreeBsd("kfreebsd"),
     KNetBsd("knetbsd"),
     KOpenSolaris("kopensolaris"),
+    Linux("linux"),
     Mint("mint"),
     MuslLinux("musl-linux"),
     NetBsd("netbsd"),
