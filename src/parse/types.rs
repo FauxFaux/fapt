@@ -429,6 +429,14 @@ pub trait RfcMapExt {
             .with_context(|_| format_err!("for key: {:?}", key))?)
     }
 
+    fn take_csv(&mut self, key: &str) -> Result<Vec<&str>, Error> {
+        Ok(self
+            .take_err(key)?
+            .into_iter()
+            .flat_map(|l| l.split_whitespace().map(|v| v.trim_end_matches(',')))
+            .collect())
+    }
+
     fn remove_one_line<S: AsRef<str>>(&mut self, key: S) -> Result<Option<&str>, Error> {
         self.remove(key.as_ref())
             .map(|v| rfc822::one_line(&v))

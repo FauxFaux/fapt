@@ -37,7 +37,7 @@ pub fn take_package_list(map: &mut rfc822::Map) -> Result<Vec<SourceBinary>, Err
         None => {
             // sigh legacy
             return Ok(map
-                .take_err("Binary")?
+                .take_csv("Binary")?
                 .into_iter()
                 // TODO: optional, instead of empty string?
                 // TODO: or fallback to the values on the parent package?
@@ -52,7 +52,7 @@ pub fn take_package_list(map: &mut rfc822::Map) -> Result<Vec<SourceBinary>, Err
         }
     };
 
-    let mut binaries: HashSet<_> = map.take_one_line("Binary")?.split_whitespace().collect();
+    let mut binaries: HashSet<_> = map.take_csv("Binary")?.into_iter().collect();
 
     let mut binaries = Vec::with_capacity(package_list.len());
 
