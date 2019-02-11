@@ -262,7 +262,7 @@ fn satisfies_values(d: &SingleDependency, name: &str, arches: &Arches, version: 
 
     if let Some(arch) = d.arch {
         // TODO: no idea what this logic should be
-        if Arch::Any != arch && !arches.contains(&arch) {
+        if !arch.is_any() && !arches.contains(&arch) {
             return false;
         }
     }

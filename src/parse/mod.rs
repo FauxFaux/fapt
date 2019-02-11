@@ -1,3 +1,4 @@
+mod arch;
 pub mod deps;
 mod ident;
 pub mod rfc822;

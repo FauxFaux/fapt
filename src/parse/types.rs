@@ -11,6 +11,7 @@ use failure::Error;
 use failure::ResultExt;
 use insideout::InsideOut;
 
+use super::arch;
 use super::deps;
 use super::rfc822;
 use super::src;
@@ -122,100 +123,84 @@ pub enum ConstraintOperator {
 
 // Other types
 
-#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, Ord, PartialOrd)]
-pub enum Arch {
-    Any,
-    All,
-    AnyAmd64,
-    AnyI386,
-    AnyArm64,
-    Amd64,
-    Armel,
-    Armhf,
-    Arm64,
-    I386,
-    Ia64,
-    KFreeBsdAmd64,
-    KFreeBsdI386,
-    Mips,
-    Mipsel,
-    Mips64,
-    Mips64El,
-    PowerPc,
-    Ppc64El,
-    S390X,
-    LinuxAny,
-    X32,
-    ParserBug,
+#[derive(Copy, Clone, Debug, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Arch {
+    kernel: Option<arch::Kernel>,
+    cpu: Option<arch::Cpu>,
+    boogered: bool,
 }
 
-pub type Arches = HashSet<Arch>;
+impl Arch {
+    pub fn is_any(&self) -> bool {
+        self.kernel.is_none() && self.cpu.is_none()
+    }
+
+    pub fn boogered() -> Arch {
+        Arch {
+            kernel: None,
+            cpu: None,
+            boogered: true,
+        }
+    }
+}
 
 impl FromStr for Arch {
     type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Error> {
-        Ok(match s {
-            "all" => Arch::All,
-            "any" => Arch::Any,
-            "any-arm64" => Arch::AnyArm64,
-            "any-amd64" => Arch::AnyAmd64,
-            "any-i386" => Arch::AnyI386,
-            "amd64" => Arch::Amd64,
-            "armel" => Arch::Armel,
-            "armhf" => Arch::Armhf,
-            "arm64" => Arch::Arm64,
-            "ia64" => Arch::Ia64,
-            "i386" => Arch::I386,
-            "kfreebsd-amd64" => Arch::KFreeBsdAmd64,
-            "kfreebsd-i386" => Arch::KFreeBsdI386,
-            "mips" => Arch::Mips,
-            "mipsel" => Arch::Mipsel,
-            "mips64" => Arch::Mips64,
-            "mips64el" => Arch::Mips64El,
-            "powerpc" => Arch::PowerPc,
-            "ppc64el" => Arch::Ppc64El,
-            "s390x" => Arch::S390X,
-            "linux-any" => Arch::LinuxAny,
-            "x32" => Arch::X32,
-            other => bail!("unrecognised arch: {:?}", other),
+    fn from_str(s: &str) -> Result<Arch, Error> {
+        // TODO: what *are* we going to do about any vs. all?
+
+        // > Specifying only any indicates that the source package isn’t dependent on any
+        // particular architecture and should compile fine on any one. The produced binary
+        // package(s) will be specific to whatever the current build architecture is.
+        //
+        // > Specifying only all indicates that the source package will only build
+        // architecture-independent packages.
+        //
+        // > Specifying any all indicates that the source package isn’t dependent on any
+        // particular architecture. The set of produced binary packages will include at
+        // least one architecture-dependent package and one architecture-independent package.
+
+        if "any" == s || "all" == s {
+            return Ok(Arch {
+                kernel: None,
+                cpu: None,
+                boogered: false,
+            });
+        }
+        Ok(match s.rfind('-') {
+            Some(pos) => {
+                let (kernel, cpu) = s.split_at(pos);
+                let kernel = if "any" == kernel {
+                    None
+                } else {
+                    Some(kernel.parse()?)
+                };
+
+                let cpu = &cpu[1..];
+
+                let cpu = if "any" == cpu {
+                    None
+                } else {
+                    Some(cpu.parse()?)
+                };
+
+                Arch {
+                    kernel,
+                    cpu,
+                    boogered: false,
+                }
+            }
+            None => Arch {
+                kernel: None,
+                cpu: Some(s.parse()?),
+                boogered: false,
+            },
         })
     }
 }
 
-impl fmt::Display for Arch {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Arch::All => "all",
-                Arch::Any => "any",
-                Arch::AnyAmd64 => "any-amd64",
-                Arch::AnyI386 => "any-i386",
-                Arch::AnyArm64 => "any-arm64",
-                Arch::Amd64 => "amd64",
-                Arch::Armel => "armel",
-                Arch::Armhf => "armhf",
-                Arch::Arm64 => "arm64",
-                Arch::I386 => "i386",
-                Arch::Ia64 => "ia64",
-                Arch::KFreeBsdAmd64 => "kfreebsd-amd64",
-                Arch::KFreeBsdI386 => "kfreebsd-i386",
-                Arch::Mips => "mips",
-                Arch::Mipsel => "mipsel",
-                Arch::Mips64 => "mips64",
-                Arch::Mips64El => "mips64el",
-                Arch::PowerPc => "powerpc",
-                Arch::Ppc64El => "ppc64el",
-                Arch::S390X => "s390x",
-                Arch::LinuxAny => "linux-any",
-                Arch::X32 => "x32",
-                Arch::ParserBug => return Err(fmt::Error {}),
-            }
-        )
-    }
-}
+pub type Arches = HashSet<Arch>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct File {
@@ -461,18 +446,6 @@ impl<'s> RfcMapExt for HashMap<&'s str, Vec<&'s str>> {
     }
     fn remove(&mut self, key: &str) -> Option<Vec<&str>> {
         HashMap::remove(self, key)
-    }
-}
-
-impl fmt::Display for Package {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.name)?;
-        match self.arches.len() {
-            0 => (),
-            1 => write!(f, ":{}", self.arches.iter().next().unwrap())?,
-            _ => unimplemented!("Don't know how to format multiple arches:\n{:?}", self),
-        }
-        write!(f, "={}", self.version)
     }
 }
 
