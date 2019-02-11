@@ -26,7 +26,7 @@ debs http://archive.ubuntu.com/ubuntu/  trusty-updates   main universe multivers
 
     "#,
     )?;
-    //fapt.update()?;
+    fapt.update()?;
 
     let mut good: u64 = 0;
     let mut done: u64 = 0;

@@ -56,6 +56,7 @@ strum!(
     Hppa("hppa"),
     I386("i386"),
     Ia64("ia64"),
+    Lpia("lpia"),
     M32r("m32r"),
     M68k("m68k"),
     Mips("mips"),

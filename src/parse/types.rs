@@ -324,7 +324,11 @@ fn parse_pkg(map: &mut rfc822::Map, style: PackageType) -> Result<Package, Error
     Ok(Package {
         name: map.take_one_line("Package")?.to_string(),
         version: map.take_one_line("Version")?.to_string(),
-        priority: super::parse_priority(map.take_one_line("Priority")?)?,
+        priority: map
+            .remove_one_line("Priority")?
+            .map(|p| super::parse_priority(p))
+            .inside_out()?
+            .unwrap_or(Priority::Unknown),
         arches,
         section: map.take_one_line("Section")?.to_string(),
         maintainer: super::ident::read(map.take_one_line("Maintainer")?)?,
