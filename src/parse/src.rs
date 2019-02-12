@@ -6,11 +6,35 @@ use failure::err_msg;
 use failure::Error;
 use insideout::InsideOut;
 
+use super::deps::parse_dep;
+use super::deps::Dependency;
+use super::ident::Identity;
 use super::rfc822;
-use super::types::RfcMapExt;
-use super::types::SourceBinary;
-use super::types::SourceFormat;
+use super::rfc822::RfcMapExt;
+use super::types;
+use super::vcs;
 use std::collections::HashSet;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Source {
+    pub format: SourceFormat,
+
+    pub binaries: Vec<SourceBinary>,
+    pub files: Vec<SourceArchive>,
+    pub vcs: Vec<vcs::Vcs>,
+
+    pub directory: String,
+    pub standards_version: String,
+
+    pub build_dep: Vec<Dependency>,
+    pub build_dep_arch: Vec<Dependency>,
+    pub build_dep_indep: Vec<Dependency>,
+    pub build_conflict: Vec<Dependency>,
+    pub build_conflict_arch: Vec<Dependency>,
+    pub build_conflict_indep: Vec<Dependency>,
+
+    pub uploaders: Vec<Identity>,
+}
 
 // TODO: This is *very* similar to a ReleaseContent
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -19,6 +43,54 @@ pub struct SourceArchive {
     size: u64,
     md5: crate::checksum::MD5,
     sha256: Option<crate::checksum::SHA256>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SourceBinary {
+    pub name: String,
+    pub style: String,
+    pub section: String,
+
+    pub priority: types::Priority,
+    pub extras: Vec<String>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum SourceFormat {
+    Original,
+    Quilt3dot0,
+    Native3dot0,
+    Git3dot0,
+}
+
+pub fn parse_src(map: &mut rfc822::Map) -> Result<Source, Error> {
+    Ok(Source {
+        format: parse_format(map.take_one_line("Format")?)?,
+        binaries: take_package_list(map)?,
+        files: take_files(map)?,
+        directory: map.take_one_line("Directory")?.to_string(),
+        vcs: super::vcs::extract(map)?,
+        // TODO: Option<> instead of empty string?
+        standards_version: map
+            .remove_one_line("Standards-Version")?
+            .unwrap_or("")
+            .to_string(),
+        build_dep: parse_dep(&map.remove("Build-Depends").unwrap_or_else(Vec::new))?,
+        build_dep_arch: parse_dep(&map.remove("Build-Depends-Arch").unwrap_or_else(Vec::new))?,
+        build_dep_indep: parse_dep(&map.remove("Build-Depends-Indep").unwrap_or_else(Vec::new))?,
+        build_conflict: parse_dep(&map.remove("Build-Conflicts").unwrap_or_else(Vec::new))?,
+        build_conflict_arch: parse_dep(
+            &map.remove("Build-Conflicts-Arch").unwrap_or_else(Vec::new),
+        )?,
+        build_conflict_indep: parse_dep(
+            &map.remove("Build-Conflicts-Indep").unwrap_or_else(Vec::new),
+        )?,
+        uploaders: map
+            .remove_one_line("Uploaders")?
+            .map(|line| super::ident::read(line))
+            .inside_out()?
+            .unwrap_or_else(Vec::new),
+    })
 }
 
 pub fn parse_format(string: &str) -> Result<SourceFormat, Error> {

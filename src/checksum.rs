@@ -6,7 +6,6 @@ use failure::ensure;
 use failure::Error;
 use hex;
 use hex::FromHex;
-use insideout::InsideOut;
 use sha2::Digest;
 use sha2::Sha256;
 

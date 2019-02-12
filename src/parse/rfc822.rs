@@ -11,6 +11,7 @@ use failure::ensure;
 use failure::format_err;
 use failure::Error;
 use failure::ResultExt;
+use insideout::InsideOut;
 
 pub type Line<'s> = (&'s str, Vec<&'s str>);
 pub type Map<'s> = HashMap<&'s str, Vec<&'s str>>;
@@ -185,6 +186,45 @@ pub fn one_line<'a>(lines: &[&'a str]) -> Result<&'a str, Error> {
 
 pub fn joined(lines: &[&str]) -> String {
     lines.join(" ")
+}
+
+pub trait RfcMapExt {
+    fn get(&self, key: &str) -> Option<&Vec<&str>>;
+    fn remove(&mut self, key: &str) -> Option<Vec<&str>>;
+
+    fn take_err(&mut self, key: &str) -> Result<Vec<&str>, Error> {
+        self.remove(key)
+            .ok_or_else(|| format_err!("missing key: {:?}", key))
+    }
+
+    fn take_one_line(&mut self, key: &str) -> Result<&str, Error> {
+        Ok(one_line(&self.take_err(key)?).with_context(|_| format_err!("for key: {:?}", key))?)
+    }
+
+    fn take_csv(&mut self, key: &str) -> Result<Vec<&str>, Error> {
+        Ok(self
+            .take_err(key)?
+            .into_iter()
+            .flat_map(|l| l.split_whitespace().map(|v| v.trim_end_matches(',')))
+            .collect())
+    }
+
+    fn remove_one_line<S: AsRef<str>>(&mut self, key: S) -> Result<Option<&str>, Error> {
+        self.remove(key.as_ref()).map(|v| one_line(&v)).inside_out()
+    }
+
+    fn get_if_one_line(&self, key: &str) -> Option<&str> {
+        self.get(key).and_then(|v| one_line(v).ok())
+    }
+}
+
+impl<'s> RfcMapExt for HashMap<&'s str, Vec<&'s str>> {
+    fn get(&self, key: &str) -> Option<&Vec<&str>> {
+        HashMap::get(self, key)
+    }
+    fn remove(&mut self, key: &str) -> Option<Vec<&str>> {
+        HashMap::remove(self, key)
+    }
 }
 
 #[cfg(test)]

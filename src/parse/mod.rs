@@ -1,4 +1,6 @@
-mod arch;
+// TODO: pub
+pub mod arch;
+pub mod bin;
 pub mod deps;
 mod ident;
 pub mod rfc822;

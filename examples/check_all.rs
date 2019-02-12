@@ -1,6 +1,4 @@
-use failure::format_err;
 use failure::Error;
-use failure::ResultExt;
 use fapt_pkg::commands;
 use fapt_pkg::Package;
 use fapt_pkg::System;

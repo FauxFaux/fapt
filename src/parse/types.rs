@@ -1,38 +1,33 @@
-use std::cmp;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::fmt;
-use std::str::FromStr;
 
-use deb_version::compare_versions;
-use failure::bail;
-use failure::format_err;
 use failure::Error;
-use failure::ResultExt;
 use insideout::InsideOut;
 
 use super::arch;
-use super::deps;
+use super::bin;
+use super::ident;
 use super::rfc822;
+use super::rfc822::RfcMapExt;
 use super::src;
 
 /// The parsed top-level types for package
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PackageType {
-    Source(Source),
-    Binary(Binary),
+    Source(src::Source),
+    Binary(bin::Binary),
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Default)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Package {
     pub name: String,
     pub version: String,
     pub priority: Priority,
-    pub arches: Arches,
+    pub arches: arch::Arches,
     pub section: String,
 
-    pub maintainer: Vec<Identity>,
-    pub original_maintainer: Vec<Identity>,
+    pub maintainer: Vec<ident::Identity>,
+    pub original_maintainer: Vec<ident::Identity>,
 
     pub homepage: Option<String>,
 
@@ -42,167 +37,6 @@ pub struct Package {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Source {
-    pub format: SourceFormat,
-
-    pub binaries: Vec<SourceBinary>,
-    pub files: Vec<src::SourceArchive>,
-    pub vcs: Vec<Vcs>,
-
-    pub directory: String,
-    pub standards_version: String,
-
-    pub build_dep: Vec<Dependency>,
-    pub build_dep_arch: Vec<Dependency>,
-    pub build_dep_indep: Vec<Dependency>,
-    pub build_conflict: Vec<Dependency>,
-    pub build_conflict_arch: Vec<Dependency>,
-    pub build_conflict_indep: Vec<Dependency>,
-
-    pub uploaders: Vec<Identity>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Default)]
-pub struct Binary {
-    // "File" is missing in e.g. dpkg/status, but never in Packages as far as I've seen
-    pub file: Option<File>,
-
-    pub essential: bool,
-    pub build_essential: bool,
-
-    pub installed_size: u64,
-
-    pub description: String,
-    pub source: Option<String>,
-    pub status: Option<String>,
-
-    pub depends: Vec<Dependency>,
-    pub recommends: Vec<Dependency>,
-    pub suggests: Vec<Dependency>,
-    pub enhances: Vec<Dependency>,
-    pub pre_depends: Vec<Dependency>,
-
-    pub breaks: Vec<Dependency>,
-    pub conflicts: Vec<Dependency>,
-    pub replaces: Vec<Dependency>,
-
-    pub provides: Vec<Dependency>,
-}
-
-// The dependency chain types
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Dependency {
-    pub alternate: Vec<SingleDependency>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Default)]
-pub struct SingleDependency {
-    pub package: String,
-    pub arch: Option<Arch>,
-    /// Note: It's possible Debian only supports a single version constraint.
-    pub version_constraints: Vec<Constraint>,
-    pub arch_filter: Arches,
-    pub stage_filter: Vec<String>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Constraint {
-    pub version: String,
-    pub operator: ConstraintOperator,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum ConstraintOperator {
-    Ge,
-    Eq,
-    Le,
-    Gt,
-    Lt,
-}
-
-// Other types
-
-#[derive(Copy, Clone, Debug, Hash, PartialOrd, Ord, PartialEq, Eq)]
-pub struct Arch {
-    kernel: Option<arch::Kernel>,
-    cpu: Option<arch::Cpu>,
-    boogered: bool,
-}
-
-impl Arch {
-    pub fn is_any(&self) -> bool {
-        self.kernel.is_none() && self.cpu.is_none()
-    }
-
-    pub fn boogered() -> Arch {
-        Arch {
-            kernel: None,
-            cpu: None,
-            boogered: true,
-        }
-    }
-}
-
-impl FromStr for Arch {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Arch, Error> {
-        // TODO: what *are* we going to do about any vs. all?
-
-        // > Specifying only any indicates that the source package isn’t dependent on any
-        // particular architecture and should compile fine on any one. The produced binary
-        // package(s) will be specific to whatever the current build architecture is.
-        //
-        // > Specifying only all indicates that the source package will only build
-        // architecture-independent packages.
-        //
-        // > Specifying any all indicates that the source package isn’t dependent on any
-        // particular architecture. The set of produced binary packages will include at
-        // least one architecture-dependent package and one architecture-independent package.
-
-        if "any" == s || "all" == s {
-            return Ok(Arch {
-                kernel: None,
-                cpu: None,
-                boogered: false,
-            });
-        }
-        Ok(match s.rfind('-') {
-            Some(pos) => {
-                let (kernel, cpu) = s.split_at(pos);
-                let kernel = if "any" == kernel {
-                    None
-                } else {
-                    Some(kernel.parse()?)
-                };
-
-                let cpu = &cpu[1..];
-
-                let cpu = if "any" == cpu {
-                    None
-                } else {
-                    Some(cpu.parse()?)
-                };
-
-                Arch {
-                    kernel,
-                    cpu,
-                    boogered: false,
-                }
-            }
-            None => Arch {
-                kernel: None,
-                cpu: Some(s.parse()?),
-                boogered: false,
-            },
-        })
-    }
-}
-
-pub type Arches = HashSet<Arch>;
-
-#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct File {
     pub name: String,
     pub size: u64,
@@ -210,44 +44,6 @@ pub struct File {
     pub sha1: String,
     pub sha256: String,
     pub sha512: String,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Vcs {
-    pub description: String,
-    pub vcs: VcsType,
-    pub tag: VcsTag,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum VcsType {
-    Browser,
-    Arch,
-    Bzr,
-    Cvs,
-    Darcs,
-    Git,
-    Hg,
-    Mtn,
-    Svn,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum VcsTag {
-    Vcs,
-    Orig,
-    Debian,
-    Upstream,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SourceBinary {
-    pub name: String,
-    pub style: String,
-    pub section: String,
-
-    pub priority: Priority,
-    pub extras: Vec<String>,
 }
 
 /// https://www.debian.org/doc/debian-policy/#priorities
@@ -273,33 +69,19 @@ pub struct Description {
     pub value: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Identity {
-    pub name: String,
-    pub email: String,
-}
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum SourceFormat {
-    Original,
-    Quilt3dot0,
-    Native3dot0,
-    Git3dot0,
-}
-
 impl Package {
     pub fn parse(map: &mut rfc822::Map) -> Result<Package, Error> {
         let style = if map.contains_key("Binary") {
             // Binary indicates that it's a source package *producing* that binary
-            PackageType::Source(parse_src(map)?)
+            PackageType::Source(src::parse_src(map)?)
         } else {
-            PackageType::Binary(parse_bin(map)?)
+            PackageType::Binary(bin::parse_bin(map)?)
         };
 
         parse_pkg(map, style)
     }
 
-    pub fn bin(&self) -> Option<&Binary> {
+    pub fn bin(&self) -> Option<&bin::Binary> {
         match &self.style {
             PackageType::Binary(bin) => Some(&bin),
             _ => None,
@@ -313,7 +95,7 @@ fn parse_pkg(map: &mut rfc822::Map, style: PackageType) -> Result<Package, Error
         // TODO: alternate splitting rules?
         .split_whitespace()
         .map(|s| s.parse())
-        .collect::<Result<HashSet<Arch>, Error>>()?;
+        .collect::<Result<HashSet<arch::Arch>, Error>>()?;
 
     let original_maintainer = map
         .remove_one_line("Original-Maintainer")?
@@ -347,165 +129,10 @@ fn parse_pkg(map: &mut rfc822::Map, style: PackageType) -> Result<Package, Error
     })
 }
 
-fn parse_src(map: &mut rfc822::Map) -> Result<Source, Error> {
-    Ok(Source {
-        format: src::parse_format(map.take_one_line("Format")?)?,
-        binaries: src::take_package_list(map)?,
-        files: src::take_files(map)?,
-        directory: map.take_one_line("Directory")?.to_string(),
-        vcs: super::vcs::extract(map)?,
-        // TODO: Option<> instead of empty string?
-        standards_version: map
-            .remove_one_line("Standards-Version")?
-            .unwrap_or("")
-            .to_string(),
-        build_dep: parse_dep(&map.remove("Build-Depends").unwrap_or_else(Vec::new))?,
-        build_dep_arch: parse_dep(&map.remove("Build-Depends-Arch").unwrap_or_else(Vec::new))?,
-        build_dep_indep: parse_dep(&map.remove("Build-Depends-Indep").unwrap_or_else(Vec::new))?,
-        build_conflict: parse_dep(&map.remove("Build-Conflicts").unwrap_or_else(Vec::new))?,
-        build_conflict_arch: parse_dep(
-            &map.remove("Build-Conflicts-Arch").unwrap_or_else(Vec::new),
-        )?,
-        build_conflict_indep: parse_dep(
-            &map.remove("Build-Conflicts-Indep").unwrap_or_else(Vec::new),
-        )?,
-        uploaders: map
-            .remove_one_line("Uploaders")?
-            .map(|line| super::ident::read(line))
-            .inside_out()?
-            .unwrap_or_else(Vec::new),
-    })
-}
-
-fn parse_bin(it: &mut rfc822::Map) -> Result<Binary, Error> {
-    // TODO: clearly `parse_file` is supposed to be called here somewhere
-    let file = None;
-
-    // TODO: this is missing in a couple of cases in dpkg/status; pretty crap
-    let installed_size = match it.remove("Installed-Size") {
-        Some(v) => rfc822::one_line(&v)?.parse()?,
-        None => 0,
-    };
-
-    let essential = it
-        .remove_one_line("Essential")?
-        .map(|line| super::yes_no(line))
-        .inside_out()?
-        .unwrap_or(false);
-
-    let build_essential = it
-        .remove_one_line("Build-Essential")?
-        .map(|line| super::yes_no(line))
-        .inside_out()?
-        .unwrap_or(false);
-
-    Ok(Binary {
-        file,
-        essential,
-        build_essential,
-        installed_size,
-        description: rfc822::joined(&it.take_err("Description")?),
-        source: it.remove_one_line("Source")?.map(|s| s.to_string()),
-        status: it.remove_one_line("Status")?.map(|s| s.to_string()),
-        depends: parse_dep(&it.remove("Depends").unwrap_or_else(Vec::new))?,
-        recommends: parse_dep(&it.remove("Recommends").unwrap_or_else(Vec::new))?,
-        suggests: parse_dep(&it.remove("Suggests").unwrap_or_else(Vec::new))?,
-        enhances: parse_dep(&it.remove("Enhances").unwrap_or_else(Vec::new))?,
-        pre_depends: parse_dep(&it.remove("Pre-Depends").unwrap_or_else(Vec::new))?,
-        breaks: parse_dep(&it.remove("Breaks").unwrap_or_else(Vec::new))?,
-        conflicts: parse_dep(&it.remove("Conflicts").unwrap_or_else(Vec::new))?,
-        replaces: parse_dep(&it.remove("Replaces").unwrap_or_else(Vec::new))?,
-        provides: parse_dep(&it.remove("Provides").unwrap_or_else(Vec::new))?,
-    })
-}
-
-pub trait RfcMapExt {
-    fn get(&self, key: &str) -> Option<&Vec<&str>>;
-    fn remove(&mut self, key: &str) -> Option<Vec<&str>>;
-
-    fn take_err(&mut self, key: &str) -> Result<Vec<&str>, Error> {
-        self.remove(key)
-            .ok_or_else(|| format_err!("missing key: {:?}", key))
-    }
-
-    fn take_one_line(&mut self, key: &str) -> Result<&str, Error> {
-        Ok(rfc822::one_line(&self.take_err(key)?)
-            .with_context(|_| format_err!("for key: {:?}", key))?)
-    }
-
-    fn take_csv(&mut self, key: &str) -> Result<Vec<&str>, Error> {
-        Ok(self
-            .take_err(key)?
-            .into_iter()
-            .flat_map(|l| l.split_whitespace().map(|v| v.trim_end_matches(',')))
-            .collect())
-    }
-
-    fn remove_one_line<S: AsRef<str>>(&mut self, key: S) -> Result<Option<&str>, Error> {
-        self.remove(key.as_ref())
-            .map(|v| rfc822::one_line(&v))
-            .inside_out()
-    }
-
-    fn get_if_one_line(&self, key: &str) -> Option<&str> {
-        self.get(key).and_then(|v| rfc822::one_line(v).ok())
-    }
-}
-
-impl<'s> RfcMapExt for HashMap<&'s str, Vec<&'s str>> {
-    fn get(&self, key: &str) -> Option<&Vec<&str>> {
-        HashMap::get(self, key)
-    }
-    fn remove(&mut self, key: &str) -> Option<Vec<&str>> {
-        HashMap::remove(self, key)
-    }
-}
-
-fn parse_dep(multi_str: &[&str]) -> Result<Vec<Dependency>, Error> {
-    deps::read(&rfc822::joined(multi_str))
-}
-
-impl Constraint {
-    pub fn new(operator: ConstraintOperator, version: &str) -> Self {
-        Constraint {
-            operator,
-            version: version.to_string(),
-        }
-    }
-
-    pub fn satisfied_by<S: AsRef<str>>(&self, version: S) -> bool {
-        self.operator
-            .satisfied_by(compare_versions(version.as_ref(), &self.version))
-    }
-}
-
-impl ConstraintOperator {
-    fn satisfied_by(&self, ordering: cmp::Ordering) -> bool {
-        use self::ConstraintOperator::*;
-        use std::cmp::Ordering::*;
-
-        match *self {
-            Eq => Equal == ordering,
-            Ge => Less != ordering,
-            Le => Greater != ordering,
-            Lt => Less == ordering,
-            Gt => Greater == ordering,
-        }
-    }
-}
-
-impl Default for PackageType {
-    fn default() -> Self {
-        PackageType::Binary(Binary::default())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
 
-    use super::Constraint;
-    use super::ConstraintOperator;
     use super::PackageType;
 
     const SOURCE_BLOCK_ALIEN: &str = r#"Package: alien-arena
@@ -619,13 +246,6 @@ Description: Foreign Function Interface for Python 3 calling C code - runtime
 Original-Maintainer: Debian Python Modules Team <python-modules-team@lists.alioth.debian.org>
 Homepage: http://cffi.readthedocs.org/
 "#;
-
-    #[test]
-    fn version() {
-        let cons = Constraint::new(ConstraintOperator::Gt, "1.0");
-        assert!(cons.satisfied_by("2.0"));
-        assert!(!cons.satisfied_by("1.0"));
-    }
 
     #[test]
     fn parse_provides() {

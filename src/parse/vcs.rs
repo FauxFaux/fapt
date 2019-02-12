@@ -1,10 +1,35 @@
 use failure::Error;
 
 use super::rfc822;
-use super::types::RfcMapExt;
-use super::types::Vcs;
-use super::types::VcsTag;
-use super::types::VcsType;
+use super::rfc822::RfcMapExt;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Vcs {
+    pub description: String,
+    pub vcs: VcsType,
+    pub tag: VcsTag,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum VcsType {
+    Browser,
+    Arch,
+    Bzr,
+    Cvs,
+    Darcs,
+    Git,
+    Hg,
+    Mtn,
+    Svn,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum VcsTag {
+    Vcs,
+    Orig,
+    Debian,
+    Upstream,
+}
 
 pub fn extract(map: &mut rfc822::Map) -> Result<Vec<Vcs>, Error> {
     let mut found = Vec::with_capacity(4);

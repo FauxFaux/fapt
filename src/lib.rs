@@ -12,6 +12,6 @@ mod release;
 mod signing;
 mod system;
 
+pub use crate::parse::rfc822::RfcMapExt;
 pub use crate::parse::types::Package;
-pub use crate::parse::types::RfcMapExt;
 pub use crate::system::System;

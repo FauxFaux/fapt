@@ -1,12 +1,47 @@
+use std::cmp;
+
+use deb_version::compare_versions;
 use failure::format_err;
 use failure::Error;
 use nom::types::CompleteStr;
 
-use super::types::Arch;
-use super::types::Constraint;
-use super::types::ConstraintOperator;
-use super::types::Dependency;
-use super::types::SingleDependency;
+use super::arch::Arch;
+use super::arch::Arches;
+use super::rfc822;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Dependency {
+    pub alternate: Vec<SingleDependency>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
+pub struct SingleDependency {
+    pub package: String,
+    pub arch: Option<Arch>,
+    /// Note: It's possible Debian only supports a single version constraint.
+    pub version_constraints: Vec<Constraint>,
+    pub arch_filter: Arches,
+    pub stage_filter: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Constraint {
+    pub version: String,
+    pub operator: ConstraintOperator,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ConstraintOperator {
+    Ge,
+    Eq,
+    Le,
+    Gt,
+    Lt,
+}
+
+pub fn parse_dep(multi_str: &[&str]) -> Result<Vec<Dependency>, Error> {
+    read(&rfc822::joined(multi_str))
+}
 
 pub fn read(val: &str) -> Result<Vec<Dependency>, Error> {
     use nom::Err as NomErr;
@@ -28,6 +63,35 @@ fn is_package_name_char(val: char) -> bool {
 
 fn is_version_char(val: char) -> bool {
     val.is_alphanumeric() || '.' == val || '~' == val || '+' == val || ':' == val || '-' == val
+}
+
+impl Constraint {
+    pub fn new(operator: ConstraintOperator, version: &str) -> Self {
+        Constraint {
+            operator,
+            version: version.to_string(),
+        }
+    }
+
+    pub fn satisfied_by<S: AsRef<str>>(&self, version: S) -> bool {
+        self.operator
+            .satisfied_by(compare_versions(version.as_ref(), &self.version))
+    }
+}
+
+impl ConstraintOperator {
+    fn satisfied_by(&self, ordering: cmp::Ordering) -> bool {
+        use self::ConstraintOperator::*;
+        use std::cmp::Ordering::*;
+
+        match *self {
+            Eq => Equal == ordering,
+            Ge => Less != ordering,
+            Le => Greater != ordering,
+            Lt => Less == ordering,
+            Gt => Greater == ordering,
+        }
+    }
 }
 
 named!(package_name<CompleteStr, CompleteStr>, take_while1_s!(is_package_name_char));
@@ -139,4 +203,11 @@ fn check() {
     named!(l<&str, Vec<&str>>,
         separated_nonempty_list!(complete!(tag!(",")), tag!("foo")));
     println!("{:?}", l("foo,foo"));
+}
+
+#[test]
+fn constraint_version() {
+    let cons = Constraint::new(ConstraintOperator::Gt, "1.0");
+    assert!(cons.satisfied_by("2.0"));
+    assert!(!cons.satisfied_by("1.0"));
 }

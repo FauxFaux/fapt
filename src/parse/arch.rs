@@ -1,7 +1,87 @@
+use std::collections::HashSet;
 use std::str::FromStr;
 
 use failure::bail;
 use failure::Error;
+
+#[derive(Copy, Clone, Debug, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct Arch {
+    kernel: Option<Kernel>,
+    cpu: Option<Cpu>,
+    boogered: bool,
+}
+
+impl Arch {
+    pub fn is_any(&self) -> bool {
+        self.kernel.is_none() && self.cpu.is_none()
+    }
+
+    pub fn boogered() -> Arch {
+        Arch {
+            kernel: None,
+            cpu: None,
+            boogered: true,
+        }
+    }
+}
+
+impl FromStr for Arch {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Arch, Error> {
+        // TODO: what *are* we going to do about any vs. all?
+
+        // > Specifying only any indicates that the source package isn’t dependent on any
+        // particular architecture and should compile fine on any one. The produced binary
+        // package(s) will be specific to whatever the current build architecture is.
+        //
+        // > Specifying only all indicates that the source package will only build
+        // architecture-independent packages.
+        //
+        // > Specifying any all indicates that the source package isn’t dependent on any
+        // particular architecture. The set of produced binary packages will include at
+        // least one architecture-dependent package and one architecture-independent package.
+
+        if "any" == s || "all" == s {
+            return Ok(Arch {
+                kernel: None,
+                cpu: None,
+                boogered: false,
+            });
+        }
+        Ok(match s.rfind('-') {
+            Some(pos) => {
+                let (kernel, cpu) = s.split_at(pos);
+                let kernel = if "any" == kernel {
+                    None
+                } else {
+                    Some(kernel.parse()?)
+                };
+
+                let cpu = &cpu[1..];
+
+                let cpu = if "any" == cpu {
+                    None
+                } else {
+                    Some(cpu.parse()?)
+                };
+
+                Arch {
+                    kernel,
+                    cpu,
+                    boogered: false,
+                }
+            }
+            None => Arch {
+                kernel: None,
+                cpu: Some(s.parse()?),
+                boogered: false,
+            },
+        })
+    }
+}
+
+pub type Arches = HashSet<Arch>;
 
 macro_rules! strum {
     ($name:ident, $($variant:ident($str:expr),)*) => {

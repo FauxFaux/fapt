@@ -14,7 +14,6 @@ use failure::format_err;
 use failure::Error;
 use failure::ResultExt;
 use gpgrv::Keyring;
-use hex::FromHex;
 use reqwest;
 use reqwest::Url;
 

@@ -4,7 +4,11 @@ use failure::Error;
 use nom::types::CompleteStr;
 use nom::Err;
 
-use super::types::Identity;
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Identity {
+    pub name: String,
+    pub email: String,
+}
 
 named!(ident<CompleteStr, Result<Identity, Error>>,
     do_parse!(

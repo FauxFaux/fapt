@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use crate::parse::types::Arch;
-use crate::parse::types::Arches;
-use crate::parse::types::ConstraintOperator;
+use crate::parse::arch::Arch;
+use crate::parse::arch::Arches;
+use crate::parse::deps::ConstraintOperator;
+use crate::parse::deps::SingleDependency;
 use crate::parse::types::Package;
 use crate::parse::types::PackageType;
-use crate::parse::types::SingleDependency;
 use deb_version::compare_versions;
 use failure::Error;
 
@@ -278,13 +278,17 @@ fn satisfies_values(d: &SingleDependency, name: &str, arches: &Arches, version: 
 
 #[cfg(test)]
 mod tests {
-    use crate::parse::types::Binary;
-    use crate::parse::types::Constraint;
-    use crate::parse::types::ConstraintOperator;
-    use crate::parse::types::Dependency;
+    use std::collections::HashMap;
+
+    use crate::parse::arch::Arches;
+    use crate::parse::bin::Binary;
+    use crate::parse::deps::Constraint;
+    use crate::parse::deps::ConstraintOperator;
+    use crate::parse::deps::Dependency;
+    use crate::parse::deps::SingleDependency;
     use crate::parse::types::Package;
     use crate::parse::types::PackageType;
-    use crate::parse::types::SingleDependency;
+    use crate::parse::types::Priority;
 
     #[test]
     fn cant_get_no() {
@@ -304,7 +308,14 @@ mod tests {
                 }],
                 ..Default::default()
             }),
-            ..Default::default()
+            arches: Arches::new(),
+            homepage: None,
+            maintainer: Vec::new(),
+            original_maintainer: Vec::new(),
+
+            priority: Priority::Unknown,
+            section: String::new(),
+            unparsed: HashMap::new(),
         };
 
         let d = SingleDependency {
