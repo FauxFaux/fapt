@@ -86,22 +86,10 @@ impl<'a> Iterator for Scanner<'a> {
 }
 
 pub fn parse_date(date: &str) -> Result<DateTime<Utc>, Error> {
-    // TODO: SIGH
-    let fixed;
-    let mut f;
-    if date.ends_with(" UTC") {
-        f = date[..date.len() - " UTC".len()].to_string();
-        f.push_str(" +0000");
-        fixed = f.as_str();
-    } else {
-        fixed = date;
-    }
-
-    Ok(
-        chrono::DateTime::<chrono::FixedOffset>::parse_from_rfc2822(fixed)
-            .with_context(|_| format_err!("parsing {:?} as date", date))?
-            .with_timezone(&chrono::offset::Utc),
-    )
+    use chrono::offset::TimeZone;
+    let signed_epoch = mailparse::dateparse(date)
+        .map_err(|msg| format_err!("parsing {:?} as date: {}", date, msg))?;
+    Ok(chrono::Utc.timestamp(signed_epoch, 0))
 }
 
 pub struct ByteSections<R> {
@@ -280,10 +268,33 @@ mod tests {
 
     #[test]
     fn date_parsing_seriously_it_is_2019() {
+        use chrono::Datelike;
         use chrono::Timelike;
+        let d = parse_date("Wed, 06 Feb 2019 14:29:43 UTC").unwrap();
         assert_eq!(
-            14,
-            parse_date("Wed, 06 Feb 2019 14:29:43 UTC").unwrap().hour()
+            (2019, 2, 6, 14, 29, 43),
+            (
+                d.year(),
+                d.month(),
+                d.day(),
+                d.hour(),
+                d.minute(),
+                d.second()
+            ),
+        );
+
+        // .. single digit hours? That is literally impossible. How could that happen?
+        let d = parse_date("Wed, 13 Feb 2019  6:51:09 UTC").unwrap();
+        assert_eq!(
+            (2019, 2, 13, 6, 51, 9),
+            (
+                d.year(),
+                d.month(),
+                d.day(),
+                d.hour(),
+                d.minute(),
+                d.second()
+            ),
         );
     }
 }
