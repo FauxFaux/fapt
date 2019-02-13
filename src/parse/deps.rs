@@ -1,8 +1,10 @@
 use std::cmp;
+use std::collections::HashSet;
 
 use deb_version::compare_versions;
 use failure::format_err;
 use failure::Error;
+use insideout::InsideOut;
 use nom::types::CompleteStr;
 
 use super::arch::Arch;
@@ -46,7 +48,7 @@ pub fn parse_dep(multi_str: &[&str]) -> Result<Vec<Dependency>, Error> {
 pub fn read(val: &str) -> Result<Vec<Dependency>, Error> {
     use nom::Err as NomErr;
     match parse(CompleteStr(val)) {
-        Ok((CompleteStr(""), val)) => Ok(val),
+        Ok((CompleteStr(""), val)) => Ok(val.into_iter().collect::<Result<_, Error>>()?),
         Err(NomErr::Incomplete(_)) => unreachable!(),
         Ok((trailing, _)) => Err(format_err!("trailing data: '{:?}'", trailing)),
         other => Err(format_err!("nom error: {:?}", other)),
@@ -134,39 +136,53 @@ named!(arch_suffix<CompleteStr, CompleteStr>,
     preceded!(tag!(":"), take_while1_s!(is_arch_char))
 );
 
-named!(single<CompleteStr, SingleDependency>,
+named!(single<CompleteStr, Result<SingleDependency, Error>>,
     ws!(do_parse!(
         package: package_name >>
         arch: opt!(complete!(arch_suffix)) >>
         version_constraints: ws!(many0!(complete!(version_constraint))) >>
         arch_filter: ws!(many0!(complete!(arch_filter))) >>
         stage_filter: ws!(many0!(complete!(stage_filter))) >>
-        ( SingleDependency {
-            package: package.0.to_string(),
-            // TODO: should either validate this at the parser,
-            // TODO: or work out how to propagate the error up,
-            // TODO: or work out how to explain to nom that it's an error,
-            // TODO: every one of these options suck
-            arch: arch.map(|a| a.parse().unwrap_or(Arch::boogered())),
-            version_constraints,
-            // TODO: and here
-            arch_filter: arch_filter.into_iter().map(|x| x.0.parse::<Arch>().unwrap_or(Arch::boogered())).collect(),
-            stage_filter: stage_filter.into_iter().map(|x| x.0.to_string()).collect(),
-        } )
+        ( build_single_dep(package, arch, version_constraints, arch_filter, stage_filter) )
     ))
 );
 
-named!(dep<CompleteStr, Dependency>,
+fn build_single_dep(
+    package: CompleteStr,
+    arch: Option<CompleteStr>,
+    version_constraints: Vec<Constraint>,
+    arch_filter: Vec<CompleteStr>,
+    stage_filter: Vec<CompleteStr>,
+) -> Result<SingleDependency, Error> {
+    Ok(SingleDependency {
+        package: package.to_string(),
+        arch: arch.map(|a| a.parse()).inside_out()?,
+        version_constraints,
+        arch_filter: arch_filter
+            .into_iter()
+            .map(|x| x.parse::<Arch>())
+            .collect::<Result<HashSet<Arch>, Error>>()?,
+        stage_filter: stage_filter.into_iter().map(|x| x.0.to_string()).collect(),
+    })
+}
+
+named!(dep<CompleteStr, Result<Dependency, Error>>,
     ws!(do_parse!(
         alternate: ws!(separated_nonempty_list!(
             complete!(tag!("|")),
             single)
         ) >>
-        ( Dependency { alternate })
+        ( build_dep(alternate) )
     ))
 );
 
-named!(parse<CompleteStr, Vec<Dependency>>,
+fn build_dep(alternate: Vec<Result<SingleDependency, Error>>) -> Result<Dependency, Error> {
+    Ok(Dependency {
+        alternate: alternate.into_iter().collect::<Result<_, Error>>()?,
+    })
+}
+
+named!(parse<CompleteStr, Vec<Result<Dependency, Error>>>,
     ws!(
         separated_list!(
             complete!(tag!(",")),
