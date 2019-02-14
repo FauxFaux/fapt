@@ -124,6 +124,7 @@ strum!(
 
 strum!(
     Cpu,
+    Native("native"),
     Alpha("alpha"),
     Amd64("amd64"),
     Arm("arm"),
