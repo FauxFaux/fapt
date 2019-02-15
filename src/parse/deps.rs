@@ -8,7 +8,6 @@ use insideout::InsideOut;
 use nom::types::CompleteStr;
 
 use super::arch::Arch;
-use super::arch::Arches;
 use super::rfc822;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -22,7 +21,7 @@ pub struct SingleDependency {
     pub arch: Option<Arch>,
     /// Note: It's possible Debian only supports a single version constraint.
     pub version_constraints: Vec<Constraint>,
-    pub arch_filter: Arches,
+    pub arch_filter: HashSet<(bool, Arch)>,
     pub stage_filter: Vec<String>,
 }
 
@@ -56,7 +55,7 @@ pub fn read(val: &str) -> Result<Vec<Dependency>, Error> {
 }
 
 fn is_arch_char(val: char) -> bool {
-    val.is_alphanumeric()
+    val.is_alphanumeric() || '-' == val
 }
 
 fn is_package_name_char(val: char) -> bool {
@@ -116,10 +115,18 @@ named!(version_constraint<CompleteStr, Constraint>,
         ( Constraint::new(operator, version.0) )
     )));
 
-named!(arch_filter<CompleteStr, CompleteStr>,
+named!(arch_part<CompleteStr, (bool, CompleteStr)>,
+    do_parse!(
+        bang: opt!(tag!("!")) >>
+        arch: take_while1_s!(is_arch_char) >>
+        ( (bang.is_none(), arch) )
+    )
+);
+
+named!(arch_filter<CompleteStr, Vec<(bool, CompleteStr)>>,
     delimited!(
         tag!("["),
-        take_until_s!("]"),
+        ws!(many1!(ws!(arch_part))),
         tag!("]")
     )
 );
@@ -141,7 +148,7 @@ named!(single<CompleteStr, Result<SingleDependency, Error>>,
         package: package_name >>
         arch: opt!(complete!(arch_suffix)) >>
         version_constraints: ws!(many0!(complete!(version_constraint))) >>
-        arch_filter: ws!(many0!(complete!(arch_filter))) >>
+        arch_filter: ws!(opt!(arch_filter)) >>
         stage_filter: ws!(many0!(complete!(stage_filter))) >>
         ( build_single_dep(package, arch, version_constraints, arch_filter, stage_filter) )
     ))
@@ -151,7 +158,7 @@ fn build_single_dep(
     package: CompleteStr,
     arch: Option<CompleteStr>,
     version_constraints: Vec<Constraint>,
-    arch_filter: Vec<CompleteStr>,
+    arch_filter: Option<Vec<(bool, CompleteStr)>>,
     stage_filter: Vec<CompleteStr>,
 ) -> Result<SingleDependency, Error> {
     Ok(SingleDependency {
@@ -159,9 +166,10 @@ fn build_single_dep(
         arch: arch.map(|a| a.parse()).inside_out()?,
         version_constraints,
         arch_filter: arch_filter
+            .unwrap_or_else(Vec::new)
             .into_iter()
-            .map(|x| x.parse::<Arch>())
-            .collect::<Result<HashSet<Arch>, Error>>()?,
+            .map(|(positive, arch)| arch.parse::<Arch>().map(|a| (positive, a)))
+            .collect::<Result<HashSet<(bool, Arch)>, Error>>()?,
         stage_filter: stage_filter.into_iter().map(|x| x.0.to_string()).collect(),
     })
 }
@@ -211,6 +219,7 @@ fn check() {
     );
 
     println!("{:?}", single(CompleteStr("foo (>> 1) (<< 9) [linux-any]")));
+    println!("{:?}", single(CompleteStr("foo [!amd64 !i386]")));
     println!("{:?}", single(CompleteStr("foo")));
     println!("{:?}", dep(CompleteStr("foo|baz")));
     println!("{:?}", dep(CompleteStr("foo | baz")));
