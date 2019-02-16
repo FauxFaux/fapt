@@ -47,7 +47,7 @@ pub fn extract(map: &mut rfc822::Map) -> Result<Vec<Vcs>, Error> {
         ("Svn", VcsType::Svn),
     ] {
         // Simplest form: Vcs-Git
-        if let Some(description) = map.remove_one_line(&format!("Vcs-{}", vcs_token))? {
+        if let Some(description) = map.remove_value(&format!("Vcs-{}", vcs_token)).one_line()? {
             found.push(Vcs {
                 description: description.to_string(),
                 vcs: *vcs,
@@ -62,8 +62,9 @@ pub fn extract(map: &mut rfc822::Map) -> Result<Vec<Vcs>, Error> {
             ("Upstream", VcsTag::Upstream),
         ] {
             // Common form: Debian-Vcs-Git, Orig-Vcs-Browser, Original-Vcs-Bzr, Upstream-Vcs-Bzr
-            if let Some(description) =
-                map.remove_one_line(format!("{}-Vcs-{}", tag_token, vcs_token))?
+            if let Some(description) = map
+                .remove_value(&format!("{}-Vcs-{}", tag_token, vcs_token))
+                .one_line()?
             {
                 found.push(Vcs {
                     description: description.to_string(),
@@ -72,8 +73,9 @@ pub fn extract(map: &mut rfc822::Map) -> Result<Vec<Vcs>, Error> {
                 });
             }
             // Vcs-Upstream-Bzr seen in the wild
-            else if let Some(description) =
-                map.remove_one_line(format!("Vcs-{}-{}", tag_token, vcs_token))?
+            else if let Some(description) = map
+                .remove_value(&format!("Vcs-{}-{}", tag_token, vcs_token))
+                .one_line()?
             {
                 found.push(Vcs {
                     description: description.to_string(),

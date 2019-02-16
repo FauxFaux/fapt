@@ -14,6 +14,7 @@ use failure::format_err;
 use failure::Error;
 use failure::ResultExt;
 use gpgrv::Keyring;
+use insideout::InsideOut;
 use reqwest;
 use reqwest::Url;
 
@@ -227,21 +228,20 @@ pub fn parse_release_file<P: AsRef<Path>>(path: P) -> Result<ReleaseFile, Error>
 fn parse_release(release: &str) -> Result<ReleaseFile, Error> {
     let mut data = rfc822::scan(release).collect_to_map()?;
     Ok(ReleaseFile {
-        origin: data.take_one_line("Origin")?.to_string(),
-        label: data.take_one_line("Label")?.to_string(),
-        suite: data.take_one_line("Suite").map(ToString::to_string).ok(),
-        codename: data.take_one_line("Codename").map(ToString::to_string).ok(),
-        changelogs: data
-            .take_one_line("Changelogs")
-            .map(ToString::to_string)
-            .ok(),
-        date: rfc822::parse_date(&data.take_one_line("Date")?)?,
+        origin: data.remove_value("Origin").one_line_req()?.to_string(),
+        label: data.remove_value("Label").one_line_req()?.to_string(),
+        suite: data.remove_value("Suite").one_line_owned()?,
+        codename: data.remove_value("Codename").one_line_owned()?,
+        changelogs: data.remove_value("Changelogs").one_line_owned()?,
+        date: rfc822::parse_date(&data.remove_value("Date").one_line_req()?)?,
         valid_until: data
-            .take_one_line("Valid-Until")
-            .and_then(|s| rfc822::parse_date(&s))
-            .ok(),
+            .remove_value("Valid-Until")
+            .one_line()?
+            .map(|s| rfc822::parse_date(&s))
+            .inside_out()?,
         acquire_by_hash: data
-            .take_one_line("Acquire-By-Hash")
+            .remove_value("Acquire-By-Hash")
+            .one_line()?
             .map(|s| "yes" == s)
             .unwrap_or(false),
         arches: data
@@ -254,10 +254,7 @@ fn parse_release(release: &str) -> Result<ReleaseFile, Error> {
             .into_iter()
             .map(ToString::to_string)
             .collect(),
-        description: data
-            .take_one_line("Description")
-            .map(ToString::to_string)
-            .ok(),
+        description: data.remove_value("Description").one_line_owned()?,
         contents: load_contents(&mut data)?,
     })
 }

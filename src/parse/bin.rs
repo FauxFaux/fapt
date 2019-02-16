@@ -40,19 +40,22 @@ pub fn parse_bin(it: &mut rfc822::Map) -> Result<Binary, Error> {
 
     // TODO: this is missing in a couple of cases in dpkg/status; pretty crap
     let installed_size = it
-        .remove_one_line("Installed-Size")?
+        .remove_value("Installed-Size")
+        .one_line()?
         .map(|v| v.parse())
         .inside_out()?
         .unwrap_or(0);
 
     let essential = it
-        .remove_one_line("Essential")?
+        .remove_value("Essential")
+        .one_line()?
         .map(|line| super::yes_no(line))
         .inside_out()?
         .unwrap_or(false);
 
     let build_essential = it
-        .remove_one_line("Build-Essential")?
+        .remove_value("Build-Essential")
+        .one_line()?
         .map(|line| super::yes_no(line))
         .inside_out()?
         .unwrap_or(false);
@@ -63,8 +66,8 @@ pub fn parse_bin(it: &mut rfc822::Map) -> Result<Binary, Error> {
         build_essential,
         installed_size,
         description: rfc822::joined(&it.take_err("Description")?),
-        source: it.remove_one_line("Source")?.map(|s| s.to_string()),
-        status: it.remove_one_line("Status")?.map(|s| s.to_string()),
+        source: it.remove_value("Source").one_line_owned()?,
+        status: it.remove_value("Status").one_line_owned()?,
         depends: parse_dep(&it.remove("Depends").unwrap_or_else(Vec::new))?,
         recommends: parse_dep(&it.remove("Recommends").unwrap_or_else(Vec::new))?,
         suggests: parse_dep(&it.remove("Suggests").unwrap_or_else(Vec::new))?,

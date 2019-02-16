@@ -182,20 +182,12 @@ pub trait RfcMapExt {
             .ok_or_else(|| format_err!("missing key: {:?}", key))
     }
 
-    fn take_one_line(&mut self, key: &str) -> Result<&str, Error> {
-        Ok(one_line(&self.take_err(key)?).with_context(|_| format_err!("for key: {:?}", key))?)
-    }
-
     fn take_csv(&mut self, key: &str) -> Result<Vec<&str>, Error> {
         Ok(self
             .take_err(key)?
             .into_iter()
             .flat_map(|l| l.split_whitespace().map(|v| v.trim_end_matches(',')))
             .collect())
-    }
-
-    fn remove_one_line<S: AsRef<str>>(&mut self, key: S) -> Result<Option<&str>, Error> {
-        self.remove(key.as_ref()).map(|v| one_line(&v)).inside_out()
     }
 }
 
@@ -222,8 +214,25 @@ impl<'k, 's, T: AsRef<[&'s str]>> Value<'k, T> {
             .as_ref())
     }
 
+    pub fn one_line(&self) -> Result<Option<&'s str>, Error> {
+        Ok(self
+            .val
+            .as_ref()
+            .map(|lines| one_line(lines.as_ref()))
+            .inside_out()
+            .with_context(|_| format_err!("{:?} should be one line", self.key))?)
+    }
+
+    pub fn one_line_owned(&self) -> Result<Option<String>, Error> {
+        Ok(match &self.val {
+            Some(lines) => Some(one_line(lines.as_ref())?.to_string()),
+            None => None,
+        })
+    }
+
     pub fn one_line_req(&self) -> Result<&'s str, Error> {
-        one_line(self.required()?)
+        self.one_line()
+            .and_then(|o| o.ok_or_else(|| format_err!("{:?} required", self.key)))
     }
 }
 

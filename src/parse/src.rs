@@ -65,14 +65,15 @@ pub enum SourceFormat {
 
 pub fn parse_src(map: &mut rfc822::Map) -> Result<Source, Error> {
     Ok(Source {
-        format: parse_format(map.take_one_line("Format")?)?,
+        format: parse_format(map.remove_value("Format").one_line_req()?)?,
         binaries: take_package_list(map)?,
         files: take_files(map)?,
-        directory: map.take_one_line("Directory")?.to_string(),
+        directory: map.remove_value("Directory").one_line_req()?.to_string(),
         vcs: super::vcs::extract(map)?,
         // TODO: Option<> instead of empty string?
         standards_version: map
-            .remove_one_line("Standards-Version")?
+            .remove_value("Standards-Version")
+            .one_line()?
             .unwrap_or("")
             .to_string(),
         build_dep: parse_dep(&map.remove("Build-Depends").unwrap_or_else(Vec::new))?,
@@ -86,7 +87,8 @@ pub fn parse_src(map: &mut rfc822::Map) -> Result<Source, Error> {
             &map.remove("Build-Conflicts-Indep").unwrap_or_else(Vec::new),
         )?,
         uploaders: map
-            .remove_one_line("Uploaders")?
+            .remove_value("Uploaders")
+            .one_line()?
             .map(|line| super::ident::read(line))
             .inside_out()?
             .unwrap_or_else(Vec::new),

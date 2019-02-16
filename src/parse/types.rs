@@ -91,31 +91,34 @@ impl Package {
 
 fn parse_pkg(map: &mut rfc822::Map, style: PackageType) -> Result<Package, Error> {
     let arches = map
-        .take_one_line("Architecture")?
+        .remove_value("Architecture")
+        .one_line_req()?
         // TODO: alternate splitting rules?
         .split_whitespace()
         .map(|s| s.parse())
         .collect::<Result<HashSet<arch::Arch>, Error>>()?;
 
     let original_maintainer = map
-        .remove_one_line("Original-Maintainer")?
+        .remove_value("Original-Maintainer")
+        .one_line()?
         .map(|line| super::ident::read(line))
         .inside_out()?
         .unwrap_or_else(Vec::new);
 
     Ok(Package {
-        name: map.take_one_line("Package")?.to_string(),
-        version: map.take_one_line("Version")?.to_string(),
+        name: map.remove_value("Package").one_line_req()?.to_string(),
+        version: map.remove_value("Version").one_line_req()?.to_string(),
         priority: map
-            .remove_one_line("Priority")?
+            .remove_value("Priority")
+            .one_line()?
             .map(|p| super::parse_priority(p))
             .inside_out()?
             .unwrap_or(Priority::Unknown),
         arches,
-        section: map.take_one_line("Section")?.to_string(),
-        maintainer: super::ident::read(map.take_one_line("Maintainer")?)?,
+        section: map.remove_value("Section").one_line_req()?.to_string(),
+        maintainer: super::ident::read(map.remove_value("Maintainer").one_line_req()?)?,
         original_maintainer,
-        homepage: map.remove_one_line("Homepage")?.map(|s| s.to_string()),
+        homepage: map.remove_value("Homepage").one_line_owned()?,
         style,
         unparsed: map
             .into_iter()
