@@ -234,12 +234,6 @@ pub fn sections_in_reader<R: 'static + Read>(input: R, name: String) -> rfc822::
     rfc822::ByteSections::new(input, name).into_string_sections()
 }
 
-fn decode_vec(from: Result<Vec<u8>, Error>) -> Result<String, Error> {
-    Ok(from
-        .and_then(|vec| String::from_utf8(vec).map_err(|e| e.into()))
-        .with_context(|_| format_err!("decoding string"))?)
-}
-
 pub fn find_file_easy(release: &Release, listing: &Listing) -> Result<DownloadableListing, Error> {
     Ok(find_file(
         &release.req.dists()?,

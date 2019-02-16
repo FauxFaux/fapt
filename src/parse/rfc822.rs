@@ -36,17 +36,6 @@ impl<'a> Scanner<'a> {
         }
         Ok(ret)
     }
-
-    pub fn find_key(self, key: &str) -> Result<Option<Vec<&'a str>>, Error> {
-        for line in self {
-            let (this_key, value) = line?;
-            if this_key == key {
-                return Ok(Some(value));
-            }
-        }
-
-        Ok(None)
-    }
 }
 
 impl<'a> Iterator for Scanner<'a> {
@@ -150,7 +139,7 @@ impl<R: Read> Iterator for StringSections<R> {
     }
 }
 
-pub fn one_line<'a>(lines: &[&'a str]) -> Result<&'a str, Error> {
+fn one_line<'a>(lines: &[&'a str]) -> Result<&'a str, Error> {
     ensure!(1 == lines.len(), "{:?} isn't exactly one line", lines);
     Ok(lines[0])
 }
@@ -175,19 +164,6 @@ pub trait RfcMapExt {
             key,
             val: self.remove(key),
         }
-    }
-
-    fn take_err(&mut self, key: &str) -> Result<Vec<&str>, Error> {
-        self.remove(key)
-            .ok_or_else(|| format_err!("missing key: {:?}", key))
-    }
-
-    fn take_csv(&mut self, key: &str) -> Result<Vec<&str>, Error> {
-        Ok(self
-            .take_err(key)?
-            .into_iter()
-            .flat_map(|l| l.split_whitespace().map(|v| v.trim_end_matches(',')))
-            .collect())
     }
 }
 
@@ -224,15 +200,43 @@ impl<'k, 's, T: AsRef<[&'s str]>> Value<'k, T> {
     }
 
     pub fn one_line_owned(&self) -> Result<Option<String>, Error> {
-        Ok(match &self.val {
-            Some(lines) => Some(one_line(lines.as_ref())?.to_string()),
-            None => None,
-        })
+        Ok(self.one_line()?.map(ToString::to_string))
     }
 
     pub fn one_line_req(&self) -> Result<&'s str, Error> {
         self.one_line()
             .and_then(|o| o.ok_or_else(|| format_err!("{:?} required", self.key)))
+    }
+
+    pub fn joined_lines(&self) -> Option<String> {
+        self.val.as_ref().map(|lines| joined(lines.as_ref()))
+    }
+
+    pub fn joined_lines_req(&self) -> Result<String, Error> {
+        self.joined_lines()
+            .ok_or_else(|| format_err!("{:?} required", self.key))
+    }
+
+    pub fn split_comma(&self) -> Result<Vec<&'s str>, Error> {
+        let lines = self.required()?;
+        let mut ret = Vec::with_capacity(lines.len() * 8);
+        for line in lines {
+            for word in line.split(',') {
+                ret.push(word.trim());
+            }
+        }
+        Ok(ret)
+    }
+
+    pub fn split_whitespace(&self) -> Result<Vec<String>, Error> {
+        let lines = self.required()?;
+        let mut ret = Vec::with_capacity(lines.len() * 8);
+        for line in lines {
+            for word in line.split_whitespace() {
+                ret.push(word.to_string());
+            }
+        }
+        Ok(ret)
     }
 }
 

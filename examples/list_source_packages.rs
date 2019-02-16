@@ -1,4 +1,3 @@
-use failure::err_msg;
 use fapt_pkg::commands;
 use fapt_pkg::RfcMapExt;
 

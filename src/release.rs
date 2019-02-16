@@ -244,16 +244,8 @@ fn parse_release(release: &str) -> Result<ReleaseFile, Error> {
             .one_line()?
             .map(|s| "yes" == s)
             .unwrap_or(false),
-        arches: data
-            .take_csv("Architectures")?
-            .into_iter()
-            .map(ToString::to_string)
-            .collect(),
-        components: data
-            .take_csv("Components")?
-            .into_iter()
-            .map(ToString::to_string)
-            .collect(),
+        arches: data.remove_value("Architectures").split_whitespace()?,
+        components: data.remove_value("Components").split_whitespace()?,
         description: data.remove_value("Description").one_line_owned()?,
         contents: load_contents(&mut data)?,
     })
@@ -270,7 +262,6 @@ fn load_contents(data: &mut HashMap<&str, Vec<&str>>) -> Result<Vec<ReleaseConte
         let (name, len) = key;
 
         let mut md5 = [0u8; 16];
-        let mut sha256 = [0u8; 32];
 
         if let Some(md5s) = md5s.as_ref() {
             if let Some(hash) = md5s.get(&key) {
@@ -278,7 +269,7 @@ fn load_contents(data: &mut HashMap<&str, Vec<&str>>) -> Result<Vec<ReleaseConte
             }
         }
 
-        sha256 = crate::checksum::parse_sha256(hash)?;
+        let sha256 = crate::checksum::parse_sha256(hash)?;
 
         ret.push(ReleaseContent {
             len,

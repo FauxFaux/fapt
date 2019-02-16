@@ -8,7 +8,6 @@ use failure::Error;
 
 use crate::classic_sources_list;
 use crate::deps::dep_graph::DepGraph;
-use crate::parse::rfc822::one_line;
 use crate::parse::types::Package;
 use crate::system::System;
 use crate::RfcMapExt;
@@ -223,15 +222,17 @@ fn print_ninja_source(map: &HashMap<&str, Vec<&str>>) -> Result<(), Error> {
 }
 
 fn print_ninja_binary(map: &HashMap<&str, Vec<&str>>) -> Result<(), Error> {
-    let pkg = one_line(&map["Package"])?;
-    let source = one_line(&map.get("Source").unwrap_or_else(|| &map["Package"]))?
+    let pkg = map.get_value("Package").one_line_req()?;
+    let source = map
+        .get_value("Source")
+        .one_line_req()?
         .split_whitespace()
         .nth(0)
         .unwrap();
-    let arch = one_line(&map["Architecture"])?;
-    let version = one_line(&map["Version"])?.replace(':', "$:");
-    let filename = one_line(&map["Filename"])?;
-    let size: u64 = one_line(&map["Size"])?.parse()?;
+    let arch = map.get_value("Architecture").one_line_req()?;
+    let version = map.get_value("Version").one_line_req()?.replace(':', "$:");
+    let filename = map.get_value("Filename").one_line_req()?;
+    let size: u64 = map.get_value("Size").one_line_req()?.parse()?;
 
     let prefix = format!("{}/{}/{}_{}_{}", subdir(source), source, pkg, version, arch);
 

@@ -65,7 +65,7 @@ pub fn parse_bin(it: &mut rfc822::Map) -> Result<Binary, Error> {
         essential,
         build_essential,
         installed_size,
-        description: rfc822::joined(&it.take_err("Description")?),
+        description: it.remove_value("Description").joined_lines_req()?,
         source: it.remove_value("Source").one_line_owned()?,
         status: it.remove_value("Status").one_line_owned()?,
         depends: parse_dep(&it.remove("Depends").unwrap_or_else(Vec::new))?,

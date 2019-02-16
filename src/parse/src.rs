@@ -111,7 +111,8 @@ pub fn take_package_list(map: &mut rfc822::Map) -> Result<Vec<SourceBinary>, Err
         None => {
             // sigh legacy
             return Ok(map
-                .take_csv("Binary")?
+                .remove_value("Binary")
+                .split_comma()?
                 .into_iter()
                 // TODO: optional, instead of empty string?
                 // TODO: or fallback to the values on the parent package?
@@ -126,21 +127,37 @@ pub fn take_package_list(map: &mut rfc822::Map) -> Result<Vec<SourceBinary>, Err
         }
     };
 
-    let mut binaries: HashSet<_> = map.take_csv("Binary")?.into_iter().collect();
+    let mut binary_names: HashSet<_> = map
+        .remove_value("Binary")
+        .split_comma()?
+        .into_iter()
+        .collect();
 
     let mut binaries = Vec::with_capacity(package_list.len());
 
     for line in package_list {
-        let mut parts: Vec<_> = line.split_whitespace().collect();
+        let parts: Vec<_> = line.split_whitespace().collect();
         ensure!(parts.len() >= 4, "package list line too short: {:?}", line);
+        let name = parts[0];
+        ensure!(
+            binary_names.remove(name),
+            "{:?} in package list, but not in Binary",
+            name
+        );
         binaries.push(SourceBinary {
-            name: parts[0].to_string(),
+            name: name.to_string(),
             style: parts[1].to_string(),
             section: parts[2].to_string(),
             priority: super::parse_priority(parts[3])?,
             extras: parts[4..].into_iter().map(|s| s.to_string()).collect(),
         });
     }
+
+    ensure!(
+        binary_names.is_empty(),
+        "some binary names were not in Package-List: {:?}",
+        binary_names
+    );
 
     Ok(binaries)
 }

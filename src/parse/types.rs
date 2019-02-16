@@ -64,11 +64,6 @@ impl Default for Priority {
     }
 }
 
-pub struct Description {
-    pub locale: String,
-    pub value: String,
-}
-
 impl Package {
     pub fn parse(map: &mut rfc822::Map) -> Result<Package, Error> {
         let style = if map.contains_key("Binary") {
