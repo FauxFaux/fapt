@@ -22,8 +22,7 @@ use crate::classic_sources_list::Entry;
 use crate::fetch::fetch;
 use crate::fetch::Download;
 use crate::parse::rfc822;
-use crate::parse::rfc822::mandatory_single_line;
-use crate::parse::rfc822::mandatory_whitespace_list;
+use crate::parse::rfc822::RfcMapExt;
 use crate::signing::GpgClient;
 
 pub struct RequestedReleases {
@@ -228,21 +227,37 @@ pub fn parse_release_file<P: AsRef<Path>>(path: P) -> Result<ReleaseFile, Error>
 fn parse_release(release: &str) -> Result<ReleaseFile, Error> {
     let mut data = rfc822::scan(release).collect_to_map()?;
     Ok(ReleaseFile {
-        origin: mandatory_single_line(&data, "Origin")?,
-        label: mandatory_single_line(&data, "Label")?,
-        suite: mandatory_single_line(&data, "Suite").ok(),
-        codename: mandatory_single_line(&data, "Codename").ok(),
-        changelogs: mandatory_single_line(&data, "Changelogs").ok(),
-        date: rfc822::parse_date(&mandatory_single_line(&data, "Date")?)?,
-        valid_until: mandatory_single_line(&data, "Valid-Until")
+        origin: data.take_one_line("Origin")?.to_string(),
+        label: data.take_one_line("Label")?.to_string(),
+        suite: data.take_one_line("Suite").map(ToString::to_string).ok(),
+        codename: data.take_one_line("Codename").map(ToString::to_string).ok(),
+        changelogs: data
+            .take_one_line("Changelogs")
+            .map(ToString::to_string)
+            .ok(),
+        date: rfc822::parse_date(&data.take_one_line("Date")?)?,
+        valid_until: data
+            .take_one_line("Valid-Until")
             .and_then(|s| rfc822::parse_date(&s))
             .ok(),
-        acquire_by_hash: mandatory_single_line(&data, "Acquire-By-Hash")
+        acquire_by_hash: data
+            .take_one_line("Acquire-By-Hash")
             .map(|s| "yes" == s)
             .unwrap_or(false),
-        arches: mandatory_whitespace_list(&data, "Architectures")?,
-        components: mandatory_whitespace_list(&data, "Components")?,
-        description: mandatory_single_line(&data, "Description").ok(),
+        arches: data
+            .take_csv("Architectures")?
+            .into_iter()
+            .map(ToString::to_string)
+            .collect(),
+        components: data
+            .take_csv("Components")?
+            .into_iter()
+            .map(ToString::to_string)
+            .collect(),
+        description: data
+            .take_one_line("Description")
+            .map(ToString::to_string)
+            .ok(),
         contents: load_contents(&mut data)?,
     })
 }

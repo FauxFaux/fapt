@@ -150,23 +150,6 @@ impl<R: Read> Iterator for StringSections<R> {
     }
 }
 
-pub fn mandatory_single_line(data: &HashMap<&str, Vec<&str>>, key: &str) -> Result<String, Error> {
-    Ok(data
-        .get(key)
-        .ok_or_else(|| format_err!("{} is mandatory", key))?
-        .join(" "))
-}
-
-pub fn mandatory_whitespace_list(
-    data: &HashMap<&str, Vec<&str>>,
-    key: &str,
-) -> Result<Vec<String>, Error> {
-    Ok(mandatory_single_line(data, key)?
-        .split_whitespace()
-        .map(|x| x.to_string())
-        .collect())
-}
-
 pub fn one_line<'a>(lines: &[&'a str]) -> Result<&'a str, Error> {
     ensure!(1 == lines.len(), "{:?} isn't exactly one line", lines);
     Ok(lines[0])
@@ -179,6 +162,20 @@ pub fn joined(lines: &[&str]) -> String {
 pub trait RfcMapExt {
     fn get(&self, key: &str) -> Option<&Vec<&str>>;
     fn remove(&mut self, key: &str) -> Option<Vec<&str>>;
+
+    fn get_value<'k, 'u>(&'u self, key: &'k str) -> Value<'k, &[&'u str]> {
+        Value {
+            key,
+            val: self.get(key).map(|v| v.as_slice()),
+        }
+    }
+
+    fn remove_value<'k, 'u>(&'u mut self, key: &'k str) -> Value<'k, Vec<&'u str>> {
+        Value {
+            key,
+            val: self.remove(key),
+        }
+    }
 
     fn take_err(&mut self, key: &str) -> Result<Vec<&str>, Error> {
         self.remove(key)
@@ -200,10 +197,6 @@ pub trait RfcMapExt {
     fn remove_one_line<S: AsRef<str>>(&mut self, key: S) -> Result<Option<&str>, Error> {
         self.remove(key.as_ref()).map(|v| one_line(&v)).inside_out()
     }
-
-    fn get_if_one_line(&self, key: &str) -> Option<&str> {
-        self.get(key).and_then(|v| one_line(v).ok())
-    }
 }
 
 impl<'s> RfcMapExt for HashMap<&'s str, Vec<&'s str>> {
@@ -212,6 +205,25 @@ impl<'s> RfcMapExt for HashMap<&'s str, Vec<&'s str>> {
     }
     fn remove(&mut self, key: &str) -> Option<Vec<&str>> {
         HashMap::remove(self, key)
+    }
+}
+
+pub struct Value<'k, T> {
+    pub key: &'k str,
+    pub val: Option<T>,
+}
+
+impl<'k, 's, T: AsRef<[&'s str]>> Value<'k, T> {
+    pub fn required(&self) -> Result<&[&'s str], Error> {
+        Ok(self
+            .val
+            .as_ref()
+            .ok_or_else(|| format_err!("{:?} required", self.key))?
+            .as_ref())
+    }
+
+    pub fn one_line_req(&self) -> Result<&'s str, Error> {
+        one_line(self.required()?)
     }
 }
 

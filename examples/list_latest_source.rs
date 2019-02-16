@@ -23,15 +23,9 @@ fn main() -> Result<(), failure::Error> {
             let files_section = map
                 .get("Files")
                 .ok_or_else(|| err_msg("no file in package"))?;
-            let pkg = map
-                .get_if_one_line("Package")
-                .ok_or_else(|| err_msg("invalid Package"))?;
-            let version = map
-                .get_if_one_line("Version")
-                .ok_or_else(|| err_msg("invalid Version"))?;
-            let dir = map
-                .get_if_one_line("Directory")
-                .ok_or_else(|| err_msg("invalid Directory"))?;
+            let pkg = map.get_value("Package").one_line_req()?;
+            let version = map.get_value("Version").one_line_req()?;
+            let dir = map.get_value("Directory").one_line_req()?;
 
             let mut urls = Vec::with_capacity(4);
 

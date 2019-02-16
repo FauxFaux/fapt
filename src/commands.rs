@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::io;
 
 use failure::bail;
+use failure::err_msg;
 use failure::format_err;
 use failure::Error;
 
@@ -40,7 +41,7 @@ pub fn dodgy_dep_graph(system: &System) -> Result<(), Error> {
         let package = match Package::parse(&mut section.as_map()?) {
             Ok(package) => package,
             Err(e) => {
-                if section.as_map()?.take_err("Status")? != vec![installed_msg] {
+                if section.as_map()?.remove_value("Status").required()? != &[installed_msg] {
                     return Ok(());
                 } else {
                     bail!(e.context(format_err!("parsing:\n{}", section.into_string())))
@@ -176,18 +177,20 @@ fn subdir(name: &str) -> &str {
 }
 
 fn print_ninja_source(map: &HashMap<&str, Vec<&str>>) -> Result<(), Error> {
-    let pkg = one_line(&map["Package"])?;
-    let version = one_line(&map["Version"])?.replace(':', "$:");
-    let dir = one_line(&map["Directory"])?;
+    let pkg = map.get_value("Package").one_line_req()?;
+    let version = map.get_value("Version").one_line_req()?.replace(':', "$:");
+    let dir = map.get_value("Directory").one_line_req()?;
 
-    let dsc = map["Files"]
+    let dsc = map
+        .get("Files")
+        .ok_or_else(|| err_msg("expecting Files"))?
         .iter()
         .filter(|line| line.ends_with(".dsc"))
         .next()
-        .unwrap()
+        .ok_or_else(|| err_msg("expecting a .dsc"))?
         .split_whitespace()
         .nth(2)
-        .unwrap();
+        .ok_or_else(|| err_msg("expecting valid dsc block"))?;
 
     let size: u64 = map["Files"]
         .iter()

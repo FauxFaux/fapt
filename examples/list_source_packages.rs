@@ -16,9 +16,7 @@ fn main() -> Result<(), failure::Error> {
         for section in fapt.open_listing(&list)? {
             let section = section?;
             let map = section.as_map()?;
-            let pkg = map
-                .get_if_one_line("Package")
-                .ok_or_else(|| err_msg("invalid Package"))?;
+            let pkg = map.get_value("Package").one_line_req()?;
             println!("{}", pkg);
         }
     }

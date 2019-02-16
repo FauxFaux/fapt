@@ -39,10 +39,11 @@ pub fn parse_bin(it: &mut rfc822::Map) -> Result<Binary, Error> {
     let file = None;
 
     // TODO: this is missing in a couple of cases in dpkg/status; pretty crap
-    let installed_size = match it.remove("Installed-Size") {
-        Some(v) => rfc822::one_line(&v)?.parse()?,
-        None => 0,
-    };
+    let installed_size = it
+        .remove_one_line("Installed-Size")?
+        .map(|v| v.parse())
+        .inside_out()?
+        .unwrap_or(0);
 
     let essential = it
         .remove_one_line("Essential")?
