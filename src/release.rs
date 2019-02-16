@@ -99,7 +99,7 @@ impl RequestedRelease {
             u.scheme(),
             u.username(),
             u.host_str().unwrap_or(""),
-            u.port().unwrap_or(0),
+            u.port_or_known_default().unwrap_or(0),
             underscore_path,
             self.codename
         )
