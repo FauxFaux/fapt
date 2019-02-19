@@ -12,7 +12,7 @@ fn main() -> Result<(), failure::Error> {
         args.join(" ")
     };
 
-    let mut fapt = fapt_pkg::System::cache_dirs_only(".fapt-lists")?;
+    let mut fapt = fapt_pkg::System::cache_only()?;
     commands::add_sources_entries_from_str(&mut fapt, src_line)?;
     commands::add_builtin_keys(&mut fapt);
     fapt.update()?;

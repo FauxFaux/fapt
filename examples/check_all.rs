@@ -4,7 +4,7 @@ use fapt_pkg::Package;
 use fapt_pkg::System;
 
 fn main() -> Result<(), Error> {
-    let mut fapt = System::cache_dirs_only(".fapt-lists")?;
+    let mut fapt = System::cache_only()?;
     commands::add_builtin_keys(&mut fapt);
     commands::add_sources_entries_from_str(
         &mut fapt,

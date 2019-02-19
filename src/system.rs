@@ -4,6 +4,7 @@ use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 
+use failure::err_msg;
 use failure::format_err;
 use failure::Error;
 use failure::ResultExt;
@@ -31,6 +32,15 @@ pub struct DownloadedList {
 }
 
 impl System {
+    pub fn cache_only() -> Result<Self, Error> {
+        let mut cache_dir = directories::ProjectDirs::from("xxx", "fau", "fapt")
+            .ok_or(err_msg("couldn't find HOME's data directories"))?
+            .cache_dir()
+            .to_path_buf();
+        cache_dir.push("lists");
+        Self::cache_dirs_only(cache_dir)
+    }
+
     pub fn cache_dirs_only<P: AsRef<Path>>(lists_dir: P) -> Result<Self, Error> {
         fs::create_dir_all(lists_dir.as_ref())?;
 
