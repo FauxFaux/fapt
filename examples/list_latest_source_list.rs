@@ -16,5 +16,11 @@ fn main() -> Result<(), failure::Error> {
     commands::add_builtin_keys(&mut fapt);
     fapt.update()?;
 
-    unimplemented!()
+    let mut p = PackageList::new();
+
+    for para in commands::all_paragraphs(&fapt)? {
+        p.push(para?.as_pkg()?);
+    }
+
+    Ok(())
 }

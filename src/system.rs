@@ -18,7 +18,7 @@ use crate::release;
 use crate::Package;
 
 pub struct System {
-    lists_dir: PathBuf,
+    pub(crate) lists_dir: PathBuf,
     dpkg_database: Option<PathBuf>,
     sources_entries: Vec<Entry>,
     arches: Vec<String>,
@@ -26,10 +26,10 @@ pub struct System {
     client: reqwest::Client,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DownloadedList {
-    release: release::Release,
-    listing: lists::Listing,
+    pub release: release::Release,
+    pub listing: lists::Listing,
 }
 
 impl System {
@@ -141,7 +141,7 @@ impl System {
 }
 
 pub struct ListingWalker {
-    inner: rfc822::StringSections<fs::File>,
+    pub(crate) inner: rfc822::StringSections<fs::File>,
 }
 
 impl Iterator for ListingWalker {

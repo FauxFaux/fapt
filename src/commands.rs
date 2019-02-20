@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::io;
+use std::path::PathBuf;
 
 use failure::bail;
 use failure::err_msg;
@@ -8,7 +9,11 @@ use failure::Error;
 
 use crate::classic_sources_list;
 use crate::deps::dep_graph::DepGraph;
+use crate::lists;
 use crate::parse::types::Package;
+use crate::system::DownloadedList;
+use crate::system::ListingWalker;
+use crate::system::Section;
 use crate::system::System;
 use crate::RfcMapExt;
 
@@ -26,6 +31,45 @@ pub fn add_sources_entries_from_str<S: AsRef<str>>(
         string.as_ref(),
     ))?);
     Ok(())
+}
+
+pub fn all_paragraphs(system: &System) -> Result<AllParagraphs, Error> {
+    let mut listings = system.listings()?;
+    let current = system.open_listing(&listings.pop().unwrap())?;
+    Ok(AllParagraphs {
+        lists_dir: system.lists_dir.to_path_buf(),
+        listings,
+        current,
+    })
+}
+
+pub struct AllParagraphs {
+    lists_dir: PathBuf,
+    listings: Vec<DownloadedList>,
+    current: ListingWalker,
+}
+
+impl Iterator for AllParagraphs {
+    type Item = Result<Section, Error>;
+
+    fn next(&mut self) -> Option<Result<Section, Error>> {
+        loop {
+            if let Some(paragraph) = self.current.next() {
+                return Some(paragraph);
+            }
+
+            if let Some(new) = self.listings.pop() {
+                let inner = match lists::sections_in(&new.release, &new.listing, &self.lists_dir) {
+                    Ok(inner) => inner,
+                    Err(e) => return Some(Err(e)),
+                };
+                self.current = ListingWalker { inner };
+                continue;
+            }
+
+            return None;
+        }
+    }
 }
 
 pub fn dodgy_dep_graph(system: &System) -> Result<(), Error> {
