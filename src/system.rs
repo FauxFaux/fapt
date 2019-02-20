@@ -15,6 +15,7 @@ use crate::classic_sources_list::Entry;
 use crate::lists;
 use crate::parse::rfc822;
 use crate::release;
+use crate::Package;
 
 pub struct System {
     lists_dir: PathBuf,
@@ -165,6 +166,10 @@ pub struct Section {
 impl Section {
     pub fn as_map(&self) -> Result<rfc822::Map, Error> {
         rfc822::scan(&self.inner).collect_to_map()
+    }
+
+    pub fn as_pkg(&self) -> Result<Package, Error> {
+        Package::parse(&mut self.as_map()?)
     }
 
     pub fn into_string(self) -> String {

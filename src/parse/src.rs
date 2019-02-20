@@ -39,10 +39,10 @@ pub struct Source {
 // TODO: This is *very* similar to a ReleaseContent
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SourceArchive {
-    name: String,
-    size: u64,
-    md5: crate::checksum::MD5,
-    sha256: Option<crate::checksum::SHA256>,
+    pub name: String,
+    pub size: u64,
+    pub md5: crate::checksum::MD5,
+    pub sha256: Option<crate::checksum::SHA256>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

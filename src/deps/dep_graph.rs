@@ -222,7 +222,7 @@ fn satisfies(p: &Package, d: &SingleDependency) -> bool {
 }
 
 fn provides_satisfies(d: &SingleDependency, package: &Package) -> bool {
-    for p in &package.bin().expect("must be bin").provides {
+    for p in &package.as_bin().expect("must be bin").provides {
         assert_eq!(
             1,
             p.alternate.len(),

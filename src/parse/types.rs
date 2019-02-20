@@ -76,9 +76,16 @@ impl Package {
         parse_pkg(map, style)
     }
 
-    pub fn bin(&self) -> Option<&bin::Binary> {
+    pub fn as_src(&self) -> Option<&src::Source> {
         match &self.style {
-            PackageType::Binary(bin) => Some(&bin),
+            PackageType::Source(src) => Some(src),
+            _ => None,
+        }
+    }
+
+    pub fn as_bin(&self) -> Option<&bin::Binary> {
+        match &self.style {
+            PackageType::Binary(bin) => Some(bin),
             _ => None,
         }
     }
