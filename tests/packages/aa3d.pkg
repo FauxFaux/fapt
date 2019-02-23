@@ -1,0 +1,20 @@
+Package: aa3d
+Binary: aa3d
+Version: 1.0-8
+Maintainer: Uwe Hermann <uwe@debian.org>
+Build-Depends: cdbs, debhelper (>= 5)
+Architecture: any
+Standards-Version: 3.8.0
+Format: 1.0
+Files:
+ 398d64179a3b8ffb9ac54e9f5e42f08e 951 aa3d_1.0-8.dsc
+ e9bb49ac09381d96d31d44d3b7e97e8a 10198 aa3d_1.0.orig.tar.gz
+ 8db26e00404f2ac86e8c906680144b39 5363 aa3d_1.0-8.diff.gz
+Checksums-Sha256:
+ 0bf2cda9b6413a545abe4d7f56a0db14b000d6d5f7d0bd37546ba649d4e7e9e7 951 aa3d_1.0-8.dsc
+ 944621bd7bf177178a7ecb98b274230744c5e2ae6aa0996ed83332a2fb96e6ee 10198 aa3d_1.0.orig.tar.gz
+ de196bb8101f73333d1ed9a6724d7da107e53c1e3701dda603d30bbc6292a484 5363 aa3d_1.0-8.diff.gz
+Homepage: http://aa-project.sourceforge.net/aa3d/
+Directory: pool/main/a/aa3d
+Priority: source
+Section: graphics

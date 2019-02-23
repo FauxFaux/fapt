@@ -1,0 +1,26 @@
+Package: alien-arena
+Binary: alien-arena, alien-arena-server
+Version: 7.66+dfsg-5
+Maintainer: Debian Games Team <pkg-games-devel@lists.alioth.debian.org>
+Uploaders: Michael Gilbert <mgilbert@debian.org>, Barry deFreese <bddebian@comcast.net>
+Build-Depends: debhelper (>= 10), sharutils, libglu1-mesa-dev, libgl1-mesa-dev, libjpeg-dev, libpng-dev, libxxf86vm-dev, libxxf86dga-dev, libxext-dev, libx11-dev, libcurl4-gnutls-dev, libopenal-dev, libvorbis-dev, libfreetype6-dev, pkg-config
+Architecture: any
+Standards-Version: 4.0.1
+Format: 3.0 (quilt)
+Files:
+ f26e5a6a298163277318a720b77a3b58 2291 alien-arena_7.66+dfsg-5.dsc
+ af12838d2346b05a6e043141ceb40c49 1767600 alien-arena_7.66+dfsg.orig.tar.gz
+ d806e404397c6338eae0d6470b4e8723 13844 alien-arena_7.66+dfsg-5.debian.tar.xz
+Vcs-Browser: https://salsa.debian.org/games-team/alien-arena
+Vcs-Git: https://salsa.debian.org/games-team/alien-arena.git
+Checksums-Sha256:
+ 85eabee2877db5e070cd6549078ece3e5b4bc35a3a33ff8987d06fbb9732cd6e 2291 alien-arena_7.66+dfsg-5.dsc
+ d4d173aba65fbdbf338e4fbdcb04a888e0cd3790e6de72597ba74b0bef42c14b 1767600 alien-arena_7.66+dfsg.orig.tar.gz
+ 6e90eabd98ac9c98ebe55b064ceb427101a3d4d4ff0b8aa4a2cea28052ec34c1 13844 alien-arena_7.66+dfsg-5.debian.tar.xz
+Homepage: http://red.planetarena.org
+Package-List:
+ alien-arena deb contrib/games optional arch=any
+ alien-arena-server deb contrib/games optional arch=any
+Directory: pool/contrib/a/alien-arena
+Priority: source
+Section: contrib/games
