@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+use failure::format_err;
 use failure::Error;
+use failure::ResultExt;
 use insideout::InsideOut;
 
 use super::arch;
@@ -66,11 +68,21 @@ impl Default for Priority {
 
 impl Package {
     pub fn parse(map: &mut rfc822::Map) -> Result<Package, Error> {
+        let name = map
+            .get_value("Package")
+            .one_line_req()
+            .with_context(|_| format_err!("no Package: {:?}", map))?
+            .to_string();
+
         let style = if map.contains_key("Binary") {
             // Binary indicates that it's a source package *producing* that binary
-            PackageType::Source(src::parse_src(map)?)
+            PackageType::Source(
+                src::parse_src(map).with_context(|_| format_err!("source fields in {}", name))?,
+            )
         } else {
-            PackageType::Binary(bin::parse_bin(map)?)
+            PackageType::Binary(
+                bin::parse_bin(map).with_context(|_| format_err!("binary fields in {}", name))?,
+            )
         };
 
         parse_pkg(map, style)

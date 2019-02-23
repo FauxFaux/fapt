@@ -1,0 +1,53 @@
+Package: google-android-installers
+Binary: google-android-platform-24-installer, google-android-platform-23-installer, google-android-platform-22-installer, google-android-platform-21-installer, google-android-platform-20-installer, google-android-platform-19-installer, google-android-platform-18-installer, google-android-platform-17-installer, google-android-platform-16-installer, google-android-platform-15-installer, google-android-platform-14-installer, google-android-platform-13-installer, google-android-platform-12-installer, google-android-platform-11-installer, google-android-platform-10-installer, google-android-platform-9-installer, google-android-platform-8-installer, google-android-platform-7-installer, google-android-platform-6-installer, google-android-platform-5-installer, google-android-platform-4-installer, google-android-platform-3-installer, google-android-platform-2-installer, google-android-build-tools-24-installer, google-android-build-tools-23-installer,
+ google-android-build-tools-22-installer, google-android-build-tools-21-installer, google-android-build-tools-20-installer, google-android-build-tools-19-installer, google-android-build-tools-18-installer,
+ google-android-build-tools-17-installer
+Version: 1472023576+nmu3
+Maintainer: Android tools Maintainer <android-tools-devel@lists.alioth.debian.org>
+Uploaders: Mouaad Aallam <Mouaad@Aallam.com>
+Build-Depends: debhelper (>= 9)
+Architecture: all i386 amd64
+Standards-Version: 3.9.8
+Format: 3.0 (native)
+Files:
+ 804f6becc933950a63aeb7fc05d23529 5165 google-android-installers_1472023576+nmu3.dsc
+ 3b07078314292078abc65aaaf79335a9 17012 google-android-installers_1472023576+nmu3.tar.xz
+Checksums-Sha256:
+ 719cc2768d2b96d3203dba0f23d8d9bddee90c8ba6f57c2facafacd96a7c5285 5165 google-android-installers_1472023576+nmu3.dsc
+ 71bf3ab5fc8575f769d2c9e5e25075ef510dd966e4ff10b764a9ad69cb3677f7 17012 google-android-installers_1472023576+nmu3.tar.xz
+Homepage: https://developer.android.com/about/index.html
+Package-List:
+ google-android-build-tools-17-installer deb contrib/devel optional arch=i386,amd64
+ google-android-build-tools-18-installer deb contrib/devel optional arch=i386,amd64
+ google-android-build-tools-19-installer deb contrib/devel optional arch=i386,amd64
+ google-android-build-tools-20-installer deb contrib/devel optional arch=i386,amd64
+ google-android-build-tools-21-installer deb contrib/devel optional arch=i386,amd64
+ google-android-build-tools-22-installer deb contrib/devel optional arch=i386,amd64
+ google-android-build-tools-23-installer deb contrib/devel optional arch=i386,amd64
+ google-android-build-tools-24-installer deb contrib/devel optional arch=i386,amd64
+ google-android-platform-10-installer deb contrib/devel optional arch=all
+ google-android-platform-11-installer deb contrib/devel optional arch=all
+ google-android-platform-12-installer deb contrib/devel optional arch=all
+ google-android-platform-13-installer deb contrib/devel optional arch=all
+ google-android-platform-14-installer deb contrib/devel optional arch=all
+ google-android-platform-15-installer deb contrib/devel optional arch=all
+ google-android-platform-16-installer deb contrib/devel optional arch=all
+ google-android-platform-17-installer deb contrib/devel optional arch=all
+ google-android-platform-18-installer deb contrib/devel optional arch=all
+ google-android-platform-19-installer deb contrib/devel optional arch=all
+ google-android-platform-2-installer deb contrib/devel optional arch=all
+ google-android-platform-20-installer deb contrib/devel optional arch=all
+ google-android-platform-21-installer deb contrib/devel optional arch=all
+ google-android-platform-22-installer deb contrib/devel optional arch=all
+ google-android-platform-23-installer deb contrib/devel optional arch=all
+ google-android-platform-24-installer deb contrib/devel optional arch=all
+ google-android-platform-3-installer deb contrib/devel optional arch=all
+ google-android-platform-4-installer deb contrib/devel optional arch=all
+ google-android-platform-5-installer deb contrib/devel optional arch=all
+ google-android-platform-6-installer deb contrib/devel optional arch=all
+ google-android-platform-7-installer deb contrib/devel optional arch=all
+ google-android-platform-8-installer deb contrib/devel optional arch=all
+ google-android-platform-9-installer deb contrib/devel optional arch=all
+Directory: pool/contrib/g/google-android-installers
+Priority: optional
+Section: contrib/misc

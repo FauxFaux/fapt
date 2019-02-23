@@ -222,7 +222,11 @@ impl<'k, 's, T: AsRef<[&'s str]>> Value<'k, T> {
         let mut ret = Vec::with_capacity(lines.len() * 8);
         for line in lines {
             for word in line.split(',') {
-                ret.push(word.trim());
+                let stripped = word.trim();
+                if stripped.is_empty() {
+                    continue;
+                }
+                ret.push(stripped);
             }
         }
         Ok(ret)
