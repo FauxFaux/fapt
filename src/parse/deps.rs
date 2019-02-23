@@ -4,6 +4,7 @@ use std::collections::HashSet;
 use deb_version::compare_versions;
 use failure::format_err;
 use failure::Error;
+use failure::ResultExt;
 use insideout::InsideOut;
 use nom::types::CompleteStr;
 
@@ -154,6 +155,10 @@ named!(single<CompleteStr, Result<SingleDependency, Error>>,
     ))
 );
 
+fn to_arch(s: CompleteStr) -> Result<Arch, Error> {
+    Ok(s.parse()?)
+}
+
 fn build_single_dep(
     package: CompleteStr,
     arch: Option<CompleteStr>,
@@ -161,16 +166,21 @@ fn build_single_dep(
     arch_filter: Option<Vec<(bool, CompleteStr)>>,
     stage_filter: Vec<CompleteStr>,
 ) -> Result<SingleDependency, Error> {
+    let package = package.to_string();
     Ok(SingleDependency {
-        package: package.to_string(),
-        arch: arch.map(|a| a.parse()).inside_out()?,
+        arch: arch
+            .map(|s| to_arch(s))
+            .inside_out()
+            .with_context(|_| format_err!("explicit arch in dep {:?}", package))?,
         version_constraints,
         arch_filter: arch_filter
             .unwrap_or_else(Vec::new)
             .into_iter()
-            .map(|(positive, arch)| arch.parse::<Arch>().map(|a| (positive, a)))
-            .collect::<Result<HashSet<(bool, Arch)>, Error>>()?,
+            .map(|(positive, arch)| to_arch(arch).map(|a| (positive, a)))
+            .collect::<Result<HashSet<(bool, Arch)>, Error>>()
+            .with_context(|_| format_err!("arch filter in dep {:?}", package))?,
         stage_filter: stage_filter.into_iter().map(|x| x.0.to_string()).collect(),
+        package,
     })
 }
 

@@ -19,7 +19,17 @@ fn main() -> Result<(), failure::Error> {
     let mut p = PackageList::new();
 
     for para in commands::all_paragraphs(&fapt)? {
-        p.push(para?.as_pkg()?);
+        let para = para?;
+        let map_view = para.as_map()?;
+        let name = map_view.get("Package").unwrap();
+        match name.as_slice() {
+            // bad architecture: https://lintian.debian.org/tags/unknown-architecture.html
+            &["reprozip"] => continue,
+            // bad architecture: "[!avr]" in build-depends
+            &["gcc-3.3"] => continue,
+            _ => (),
+        }
+        p.push(para.as_pkg()?);
     }
 
     Ok(())
