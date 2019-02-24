@@ -6,6 +6,9 @@ use failure::err_msg;
 use fapt_pkg::commands;
 use fapt_pkg::RfcMapExt;
 
+#[global_allocator]
+static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
+
 fn main() -> Result<(), failure::Error> {
     let mut fapt = fapt_pkg::System::cache_only()?;
     commands::add_sources_entries_from_str(
@@ -14,7 +17,7 @@ fn main() -> Result<(), failure::Error> {
     )
     .expect("parsing static data");
     commands::add_builtin_keys(&mut fapt);
-    fapt.update()?;
+//    fapt.update()?;
 
     let mut p = PackageList::new();
 

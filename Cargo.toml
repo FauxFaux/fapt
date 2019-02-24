@@ -12,7 +12,7 @@ edition = "2018"
 repository = "FauxFaux/fapt"
 
 [features]
-binaries = ["clap"]
+binaries = ["clap", "jemallocator"]
 
 [dependencies]
 deb-version = "0.1"
@@ -45,6 +45,17 @@ default-features = false
 features = ["rust_backend"]
 version = "1"
 
+[dependencies.jemallocator]
+optional = true
+version = "0.1"
+
 [[bin]]
 name = "fapt"
 required-features = ["binaries"]
+
+[[example]]
+name = "list_latest_source_list"
+required-features = ["binaries"]
+
+[profile.release]
+debug = true

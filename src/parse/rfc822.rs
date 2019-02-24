@@ -29,7 +29,7 @@ pub struct Scanner<'a> {
 
 impl<'a> Scanner<'a> {
     pub fn collect_to_map(self) -> Result<Map<'a>, Error> {
-        let mut ret = HashMap::with_capacity(16);
+        let mut ret = HashMap::with_capacity(32);
         for val in self {
             let (key, val) = val?;
             ret.insert(key, val);
@@ -54,7 +54,7 @@ impl<'a> Iterator for Scanner<'a> {
 
         let (key, first_val) = line.split_at(colon);
         let first_val = first_val[1..].trim();
-        let mut sub = Vec::new();
+        let mut sub = Vec::with_capacity(8);
         if !first_val.is_empty() {
             sub.push(first_val);
         }
