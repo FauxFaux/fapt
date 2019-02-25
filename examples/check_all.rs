@@ -1,7 +1,7 @@
 use failure::Error;
-use fapt_pkg::commands;
-use fapt_pkg::Package;
-use fapt_pkg::System;
+use fapt::commands;
+use fapt::Package;
+use fapt::System;
 
 fn main() -> Result<(), Error> {
     let mut fapt = System::cache_only()?;

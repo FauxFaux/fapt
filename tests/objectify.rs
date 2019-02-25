@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
 use failure::Error;
-use fapt_pkg::Package;
+use fapt::Package;
 
 fn parse(pkg: &str) -> Result<Package, Error> {
-    fapt_pkg::Package::parse(&mut fapt_pkg::rfc822::scan(pkg).collect_to_map()?)
+    fapt::Package::parse(&mut fapt::rfc822::scan(pkg).collect_to_map()?)
 }
 
 #[test]

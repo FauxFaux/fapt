@@ -13,7 +13,7 @@ replacement for `apt`.
 It is intended to give access to the data when necessary, for example:
 
 ```rust
-let mut fapt = fapt_pkg::System::cache_dirs_only(".fapt-lists")?;
+let mut fapt = fapt::System::cache_dirs_only(".fapt-lists")?;
 commands::add_sources_entries_from_str(&mut fapt, "deb http...")?;
 commands::add_builtin_keys(&mut fapt);
 fapt.update()?;

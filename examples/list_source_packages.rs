@@ -1,7 +1,7 @@
 use std::env;
 
-use fapt_pkg::commands;
-use fapt_pkg::RfcMapExt;
+use fapt::commands;
+use fapt::RfcMapExt;
 
 fn main() -> Result<(), failure::Error> {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -12,7 +12,7 @@ fn main() -> Result<(), failure::Error> {
         args.join(" ")
     };
 
-    let mut fapt = fapt_pkg::System::cache_only()?;
+    let mut fapt = fapt::System::cache_only()?;
     commands::add_sources_entries_from_str(&mut fapt, src_line)?;
     commands::add_builtin_keys(&mut fapt);
     fapt.update()?;
