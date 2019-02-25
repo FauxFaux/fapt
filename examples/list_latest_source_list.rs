@@ -6,6 +6,7 @@ use failure::err_msg;
 use fapt_pkg::commands;
 use fapt_pkg::RfcMapExt;
 
+#[cfg(feature = "jemallocator")]
 #[global_allocator]
 static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 

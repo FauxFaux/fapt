@@ -2,7 +2,7 @@
 authors = ["Chris West (Faux) <git@goeswhere.com>"]
 description = "Faux' apt package manager for Debian"
 license = "MIT OR Apache-2.0"
-name = "fapt-pkg"
+name = "fapt"
 repository = "https://github.com/FauxFaux/fapt"
 version = "0.1.0"
 
@@ -12,7 +12,7 @@ edition = "2018"
 repository = "FauxFaux/fapt"
 
 [features]
-binaries = ["clap", "jemallocator"]
+binaries = ["clap"]
 
 [dependencies]
 deb-version = "0.1"
@@ -56,6 +56,3 @@ required-features = ["binaries"]
 [[example]]
 name = "list_latest_source_list"
 required-features = ["binaries"]
-
-[profile.release]
-debug = true

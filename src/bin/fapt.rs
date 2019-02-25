@@ -16,12 +16,6 @@ fn main() -> Result<(), failure::Error> {
     let matches = App::new("Faux' apt")
         .setting(AppSettings::SubcommandRequired)
         .arg(
-            Arg::with_name("root-dir")
-                .long("root-dir")
-                .value_name("DIRECTORY")
-                .help("a chroot-like place to read/write files"),
-        )
-        .arg(
             Arg::with_name("sources-list")
                 .long("sources-list")
                 .value_name("PREFIX")
@@ -43,15 +37,15 @@ fn main() -> Result<(), failure::Error> {
                 .help("explicitly set the cache directory"),
         )
         .arg(
-            Arg::with_name("release-url")
-                .long("release-url")
+            Arg::with_name("sources-line")
+                .long("sources-line")
                 .short("r")
-                .value_name("URL")
+                .value_name("LINE")
                 .multiple(true)
                 .number_of_values(1)
                 .help(concat!(
-                    "a url-format sources.list entry",
-                    " e.g. http://deb.debian.org/debian#sid,main,contrib,non-free"
+                    "a sources.list entry",
+                    " e.g. debs http://deb.debian.org/debian sid main contrib"
                 )),
         )
         .arg(
@@ -78,29 +72,8 @@ fn main() -> Result<(), failure::Error> {
         )
         .get_matches();
 
-    let mut cache_dir = None;
-    let mut sources_list_prefix = None;
-
-    if let Some(root) = matches.value_of("root-dir") {
-        let root = PathBuf::from(root);
-        sources_list_prefix = Some(root.join("etc/apt/sources.list"));
-        cache_dir = Some(root.join("var/cache/fapt"));
-    }
-
+    let mut sources_entries = Vec::with_capacity(16);
     if let Some(prefix) = matches.value_of("sources-list") {
-        sources_list_prefix = Some(PathBuf::from(prefix));
-    }
-
-    if let Some(cache) = matches.value_of("cache-dir") {
-        cache_dir = Some(PathBuf::from(cache));
-    }
-
-    let cache_dir = cache_dir.ok_or_else(|| {
-        format_err!("A --cache-dir is required, please set it explicitly, or provide a --root-dir")
-    })?;
-
-    let mut sources_entries = Vec::new();
-    if let Some(prefix) = sources_list_prefix {
         for prefix in expand_dot_d(prefix)? {
             sources_entries.extend(
                 classic_sources_list::read(io::BufReader::new(fs::File::open(&prefix)?))
@@ -109,7 +82,7 @@ fn main() -> Result<(), failure::Error> {
         }
     }
 
-    if let Some(lines) = matches.values_of("release-url") {
+    if let Some(lines) = matches.values_of("sources-line") {
         for line in lines {
             let entries = classic_sources_list::read(io::Cursor::new(line))
                 .with_context(|_| format_err!("parsing command line: {:?}", line))?;
@@ -132,11 +105,11 @@ fn main() -> Result<(), failure::Error> {
     if sources_entries.is_empty() {
         bail!(concat!(
             "No sources-list entries; either specify a non-empty",
-            "--sources-list, or provide some --release-urls"
+            "--sources-list, or provide some --sources-lines"
         ));
     }
 
-    let mut system = fapt_pkg::System::cache_dirs_only(cache_dir.join("lists"))?;
+    let mut system = fapt_pkg::System::cache_only()?;
     system.add_sources_entries(sources_entries.clone().into_iter());
     if let Some(keyring_paths) = matches.values_of_os("keyring") {
         for keyring_path in keyring_paths {
@@ -147,6 +120,8 @@ fn main() -> Result<(), failure::Error> {
                 )?;
             }
         }
+    } else {
+        commands::add_builtin_keys(&mut system);
     }
 
     system.set_arches(&arches);
