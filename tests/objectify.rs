@@ -1,5 +1,7 @@
 use std::collections::HashMap;
+use std::io;
 
+use failure::format_err;
 use failure::Error;
 use fapt::Package;
 
@@ -52,5 +54,22 @@ fn parse_provides() -> Result<(), Error> {
     let bin = p.as_bin().unwrap();
     assert_eq!(3, bin.provides.len());
     assert_eq!(HashMap::new(), p.unparsed);
+    Ok(())
+}
+
+#[test]
+fn trusty() -> Result<(), Error> {
+    for section in fapt::sections_in_reader(
+        io::Cursor::new(&include_bytes!("lists/trusty.list")[..]),
+        "trusty.list".to_string(),
+    ) {
+        let section = section?;
+        let p = Package::parse(&mut fapt::rfc822::scan(&section).collect_to_map()?)?;
+        assert!(!p.name.is_empty());
+        let bin = p.as_bin().expect("bin package");
+
+        // TODO: this is not .. working
+        // assert_eq!(1, bin.file.as_ref().ok_or_else(|| format_err!("bin has file: {:?}", p.name))?.size);
+    }
     Ok(())
 }
