@@ -35,8 +35,18 @@ pub struct Binary {
 }
 
 pub fn parse_bin(it: &mut rfc822::Map) -> Result<Binary, Error> {
-    // TODO: clearly `parse_file` is supposed to be called here somewhere
-    let file = None;
+    let file = if it.contains_key("Filename") {
+        Some(super::types::File {
+            name: it.remove_value("Filename").one_line_req()?.to_string(),
+            size: it.remove_value("Size").one_line_req()?.parse()?,
+            md5: it.remove_value("MD5sum").one_line_req()?.to_string(),
+            sha1: it.remove_value("SHA1").one_line_req()?.to_string(),
+            sha256: it.remove_value("SHA256").one_line_req()?.to_string(),
+            sha512: String::new(),
+        })
+    } else {
+        None
+    };
 
     // TODO: this is missing in a couple of cases in dpkg/status; pretty crap
     let installed_size = it

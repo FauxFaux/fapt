@@ -69,7 +69,13 @@ fn trusty() -> Result<(), Error> {
         let bin = p.as_bin().expect("bin package");
 
         // TODO: this is not .. working
-        // assert_eq!(1, bin.file.as_ref().ok_or_else(|| format_err!("bin has file: {:?}", p.name))?.size);
+        assert_eq!(
+            1,
+            bin.file
+                .as_ref()
+                .ok_or_else(|| format_err!("bin has file: {:?}", p.name))?
+                .size
+        );
     }
     Ok(())
 }
