@@ -74,14 +74,14 @@ impl<'a> Iterator for Scanner<'a> {
     }
 }
 
-pub fn parse_date(date: &str) -> Result<DateTime<Utc>, Error> {
+pub(crate) fn parse_date(date: &str) -> Result<DateTime<Utc>, Error> {
     use chrono::offset::TimeZone;
     let signed_epoch = mailparse::dateparse(date)
         .map_err(|msg| format_err!("parsing {:?} as date: {}", date, msg))?;
     Ok(chrono::Utc.timestamp(signed_epoch, 0))
 }
 
-pub struct ByteSections<R> {
+pub(crate) struct ByteSections<R> {
     pub(crate) name: String,
     from: io::BufReader<R>,
 }
