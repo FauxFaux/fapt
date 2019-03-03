@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use failure::err_msg;
 use fapt::commands;
-use fapt::RfcMapExt;
+use fapt::rfc822::RfcMapExt;
 
 fn main() -> Result<(), failure::Error> {
     let mut fapt = fapt::System::cache_only()?;

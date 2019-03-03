@@ -1,6 +1,6 @@
 use failure::Error;
 use fapt::commands;
-use fapt::Package;
+use fapt::types::Package;
 use fapt::System;
 
 fn main() -> Result<(), Error> {

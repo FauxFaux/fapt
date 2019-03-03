@@ -7,11 +7,11 @@ use failure::Error;
 
 use crate::classic_sources_list;
 use crate::lists;
+use crate::rfc822::RfcMapExt;
 use crate::system::DownloadedList;
 use crate::system::ListingWalker;
 use crate::system::Section;
 use crate::system::System;
-use crate::RfcMapExt;
 
 pub fn add_builtin_keys(system: &mut System) {
     system

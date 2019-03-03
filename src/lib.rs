@@ -13,6 +13,5 @@ mod system;
 
 pub use crate::lists::sections_in_reader;
 pub use crate::parse::rfc822;
-pub use crate::parse::rfc822::RfcMapExt;
-pub use crate::parse::types::Package;
+pub use crate::parse::types;
 pub use crate::system::System;

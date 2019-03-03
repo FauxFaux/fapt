@@ -15,7 +15,7 @@ use crate::classic_sources_list::Entry;
 use crate::lists;
 use crate::parse::rfc822;
 use crate::release;
-use crate::Package;
+use crate::types::Package;
 
 pub struct System {
     pub(crate) lists_dir: PathBuf,
