@@ -2,15 +2,11 @@ use std::collections::HashMap;
 use std::io;
 use std::path::PathBuf;
 
-use failure::bail;
 use failure::err_msg;
-use failure::format_err;
 use failure::Error;
 
 use crate::classic_sources_list;
-use crate::deps::dep_graph::DepGraph;
 use crate::lists;
-use crate::parse::types::Package;
 use crate::system::DownloadedList;
 use crate::system::ListingWalker;
 use crate::system::Section;
@@ -72,117 +68,6 @@ impl Iterator for AllParagraphs {
     }
 }
 
-pub fn dodgy_dep_graph(system: &System) -> Result<(), Error> {
-    let mut dep_graph = DepGraph::new();
-
-    for section in system.open_status()? {
-        let section = section?;
-
-        // BORROW CHECKER
-        let installed_msg = "install ok installed";
-
-        let package = match Package::parse(&mut section.as_map()?) {
-            Ok(package) => package,
-            Err(e) => {
-                if section.as_map()?.remove_value("Status").required()? != &[installed_msg] {
-                    return Ok(());
-                } else {
-                    bail!(e.context(format_err!("parsing:\n{}", section.into_string())))
-                }
-            }
-        };
-
-        // TODO: panic?
-        if installed_msg != package.unparsed["Status"].join(" ") {
-            return Ok(());
-        }
-
-        dep_graph.insert(package)?;
-    }
-
-    let mut unexplained: Vec<usize> = Vec::with_capacity(100);
-    let mut depended: Vec<usize> = Vec::with_capacity(100);
-    let mut alt_depended: Vec<usize> = Vec::with_capacity(100);
-    let mut only_recommended: Vec<usize> = Vec::with_capacity(100);
-
-    let mut leaves = dep_graph.what_kinda();
-
-    leaves.depends.extend(vec![
-        (0, vec![dep_graph.find_named("ubuntu-minimal")]),
-        (0, vec![dep_graph.find_named("ubuntu-standard")]),
-    ]);
-
-    'packages: for p in dep_graph.iter() {
-        for (_src, dest) in &leaves.depends {
-            assert!(!dest.is_empty());
-            if dest.contains(&p) {
-                match dest.len() {
-                    0 => unreachable!(),
-                    1 => {
-                        depended.push(p);
-                        continue 'packages;
-                    }
-                    _ => {
-                        alt_depended.push(p);
-                        continue 'packages;
-                    }
-                }
-            }
-        }
-
-        for (_src, dest) in &leaves.recommends {
-            if dest.contains(&p) {
-                only_recommended.push(p);
-                continue 'packages;
-            }
-        }
-
-        unexplained.push(p);
-    }
-
-    if false {
-        println!("Packages are clearly required");
-        println!("=============================");
-        println!();
-
-        for p in stringify_package_list(&dep_graph, depended) {
-            println!("{}", p);
-        }
-
-        println!();
-        println!();
-        println!("Packages may sometimes be required");
-        println!("==================================");
-        println!();
-
-        for p in stringify_package_list(&dep_graph, alt_depended) {
-            println!("{}", p);
-        }
-
-        println!();
-        println!();
-        println!("Packages are recommended by something");
-        println!("=====================================");
-        println!();
-
-        for p in stringify_package_list(&dep_graph, only_recommended) {
-            println!("{}", p);
-        }
-
-        println!();
-        println!();
-        println!("Unexplained packages");
-        println!("====================");
-        println!();
-    }
-
-    for p in stringify_package_list(&dep_graph, unexplained) {
-        println!("{}", p);
-    }
-
-    Ok(())
-}
-
 pub fn source_ninja(system: &System) -> Result<(), Error> {
     for list in system.listings()? {
         for section in system.open_listing(&list)? {
@@ -196,18 +81,6 @@ pub fn source_ninja(system: &System) -> Result<(), Error> {
         }
     }
     Ok(())
-}
-
-fn stringify_package_list<I: IntoIterator<Item = usize>>(
-    dep_graph: &DepGraph,
-    it: I,
-) -> impl Iterator<Item = String> {
-    let mut vec: Vec<String> = it
-        .into_iter()
-        .map(|id| format!("{}", dep_graph.get(id).name))
-        .collect();
-    vec.sort_unstable();
-    vec.into_iter()
 }
 
 // Sigh, I've already written this.

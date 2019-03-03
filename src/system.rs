@@ -39,10 +39,10 @@ impl System {
             .cache_dir()
             .to_path_buf();
         cache_dir.push("lists");
-        Self::cache_dirs_only(cache_dir)
+        Self::cache_only_in(cache_dir)
     }
 
-    pub fn cache_dirs_only<P: AsRef<Path>>(lists_dir: P) -> Result<Self, Error> {
+    pub fn cache_only_in<P: AsRef<Path>>(lists_dir: P) -> Result<Self, Error> {
         fs::create_dir_all(lists_dir.as_ref())?;
 
         let client = if let Ok(proxy) = env::var("http_proxy") {

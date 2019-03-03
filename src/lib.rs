@@ -4,7 +4,6 @@ extern crate nom;
 mod checksum;
 pub mod classic_sources_list;
 pub mod commands;
-mod deps;
 mod fetch;
 mod lists;
 mod parse;
@@ -12,7 +11,6 @@ mod release;
 mod signing;
 mod system;
 
-pub use crate::deps::package_list::PackageList;
 pub use crate::lists::sections_in_reader;
 pub use crate::parse::rfc822;
 pub use crate::parse::rfc822::RfcMapExt;

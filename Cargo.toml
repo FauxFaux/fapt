@@ -52,7 +52,3 @@ version = "0.1"
 [[bin]]
 name = "fapt"
 required-features = ["binaries"]
-
-[[example]]
-name = "list_latest_source_list"
-required-features = ["binaries"]
