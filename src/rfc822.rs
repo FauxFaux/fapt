@@ -1,3 +1,7 @@
+//! Low-level access to `deb822` files.
+//!
+//! `deb822` is a spec-violating extension to `rfc822`, the email format.
+
 use std::collections::HashMap;
 use std::io;
 use std::io::BufRead;
@@ -13,21 +17,26 @@ use failure::Error;
 use failure::ResultExt;
 use insideout::InsideOut;
 
-pub type Line<'s> = (&'s str, Vec<&'s str>);
+/// A _Field_ from a _Block_, consisting of a _Key_ and a list of one-or-more lines.
+pub type Field<'s> = (&'s str, Vec<&'s str>);
+
+/// A mapping from _Key_ to one-or-more lines.
 pub type Map<'s> = HashMap<&'s str, Vec<&'s str>>;
 
-pub fn scan(block: &str) -> Scanner {
-    Scanner {
+/// Produce an iterator over the _Fields_ in a _Block_.
+pub fn fields_in_block(block: &str) -> Fields {
+    Fields {
         it: block.lines().peekable(),
     }
 }
 
+/// Iterate over the _Fields_ in a _Block_.
 #[derive(Clone, Debug)]
-pub struct Scanner<'a> {
+pub struct Fields<'a> {
     it: Peekable<Lines<'a>>,
 }
 
-impl<'a> Scanner<'a> {
+impl<'a> Fields<'a> {
     pub fn collect_to_map(self) -> Result<Map<'a>, Error> {
         let mut ret = HashMap::with_capacity(32);
         for val in self {
@@ -38,8 +47,8 @@ impl<'a> Scanner<'a> {
     }
 }
 
-impl<'a> Iterator for Scanner<'a> {
-    type Item = Result<Line<'a>, Error>;
+impl<'a> Iterator for Fields<'a> {
+    type Item = Result<Field<'a>, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let line = match self.it.next() {
@@ -81,25 +90,25 @@ pub(crate) fn parse_date(date: &str) -> Result<DateTime<Utc>, Error> {
     Ok(chrono::Utc.timestamp(signed_epoch, 0))
 }
 
-pub(crate) struct ByteSections<R> {
+pub(crate) struct ByteBlocks<R> {
     pub(crate) name: String,
     from: io::BufReader<R>,
 }
 
-impl<R: Read> ByteSections<R> {
+impl<R: Read> ByteBlocks<R> {
     pub fn new(from: R, name: String) -> Self {
-        ByteSections {
+        ByteBlocks {
             name,
             from: io::BufReader::new(from),
         }
     }
 
-    pub fn into_string_sections(self) -> StringSections<R> {
-        StringSections { inner: self }
+    pub fn into_string_blocks(self) -> Blocks<R> {
+        Blocks { inner: self }
     }
 }
 
-impl<R: Read> Iterator for ByteSections<R> {
+impl<R: Read> Iterator for ByteBlocks<R> {
     type Item = Result<Vec<u8>, Error>;
 
     #[inline]
@@ -125,11 +134,18 @@ impl<R: Read> Iterator for ByteSections<R> {
     }
 }
 
-pub struct StringSections<R> {
-    pub(crate) inner: ByteSections<R>,
+/// An iterator over _Blocks_.
+pub struct Blocks<R> {
+    pub(crate) inner: ByteBlocks<R>,
 }
 
-impl<R: Read> Iterator for StringSections<R> {
+impl<R: Read> Blocks<R> {
+    pub fn new(from: R, name: String) -> Self {
+        ByteBlocks::new(from, name).into_string_blocks()
+    }
+}
+
+impl<R: Read> Iterator for Blocks<R> {
     type Item = Result<String, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -144,10 +160,11 @@ fn one_line<'a>(lines: &[&'a str]) -> Result<&'a str, Error> {
     Ok(lines[0])
 }
 
-pub fn joined(lines: &[&str]) -> String {
+pub(crate) fn joined(lines: &[&str]) -> String {
     lines.join(" ")
 }
 
+/// Helpers for dealing with an `Map`.
 pub trait RfcMapExt {
     fn get(&self, key: &str) -> Option<&Vec<&str>>;
     fn remove(&mut self, key: &str) -> Option<Vec<&str>>;
@@ -176,6 +193,8 @@ impl<'s> RfcMapExt for HashMap<&'s str, Vec<&'s str>> {
     }
 }
 
+/// An optional list-of-lines from a `Map`, which carries
+/// the original _Key_ along, for error reporting purposes.
 pub struct Value<'k, T> {
     pub key: &'k str,
     pub val: Option<T>,
@@ -248,16 +267,16 @@ impl<'k, 's, T: AsRef<[&'s str]>> Value<'k, T> {
 mod tests {
     use failure::Error;
 
+    use super::fields_in_block;
     use super::parse_date;
-    use super::scan;
-    use super::Line;
+    use super::Field;
 
     #[test]
     fn single_line_header() {
         assert_eq!(
             vec![("Foo", vec!["bar"])],
-            scan("Foo: bar\n")
-                .collect::<Result<Vec<Line>, Error>>()
+            fields_in_block("Foo: bar\n")
+                .collect::<Result<Vec<Field>, Error>>()
                 .unwrap()
         );
     }
@@ -266,8 +285,8 @@ mod tests {
     fn multi_line_header() {
         assert_eq!(
             vec![("Foo", vec!["bar", "baz"])],
-            scan("Foo:\n bar\n baz\n")
-                .collect::<Result<Vec<Line>, Error>>()
+            fields_in_block("Foo:\n bar\n baz\n")
+                .collect::<Result<Vec<Field>, Error>>()
                 .unwrap()
         );
     }
@@ -276,19 +295,19 @@ mod tests {
     fn multi_line_joined() {
         assert_eq!(
             vec![("Foo", vec!["bar", "baz", "quux"])],
-            scan("Foo: bar\n baz\n quux\n")
-                .collect::<Result<Vec<Line>, Error>>()
+            fields_in_block("Foo: bar\n baz\n quux\n")
+                .collect::<Result<Vec<Field>, Error>>()
                 .unwrap()
         );
     }
 
     #[test]
     fn walkies() {
-        use super::ByteSections;
+        use super::ByteBlocks;
         use std::io;
 
         let parts: Result<Vec<Vec<u8>>, Error> =
-            ByteSections::new(io::Cursor::new(b"foo\nbar\n\nbaz\n"), String::new()).collect();
+            ByteBlocks::new(io::Cursor::new(b"foo\nbar\n\nbaz\n"), String::new()).collect();
         assert_eq!(
             vec![b"foo\nbar\n".to_vec(), b"baz\n".to_vec()],
             parts.unwrap()

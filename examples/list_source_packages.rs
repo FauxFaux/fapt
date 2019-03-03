@@ -1,8 +1,8 @@
 use std::env;
 
 use fapt::commands;
-use fapt::system::System;
 use fapt::rfc822::RfcMapExt;
+use fapt::system::System;
 
 fn main() -> Result<(), failure::Error> {
     let args: Vec<String> = env::args().skip(1).collect();

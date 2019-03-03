@@ -11,11 +11,11 @@ use failure::ResultExt;
 use gpgrv::Keyring;
 use reqwest;
 
-use crate::classic_sources_list::Entry;
 use crate::lists;
 use crate::parse::Package;
 use crate::release;
 use crate::rfc822;
+use crate::sources_list::Entry;
 
 pub struct System {
     pub(crate) lists_dir: PathBuf,
@@ -135,13 +135,13 @@ impl System {
         status.push("status");
 
         Ok(ListingWalker {
-            inner: lists::sections_in_reader(fs::File::open(status)?, "status".to_string()),
+            inner: rfc822::Blocks::new(fs::File::open(status)?, "status".to_string()),
         })
     }
 }
 
 pub struct ListingWalker {
-    pub(crate) inner: rfc822::StringSections<fs::File>,
+    pub(crate) inner: rfc822::Blocks<fs::File>,
 }
 
 impl Iterator for ListingWalker {
@@ -165,7 +165,7 @@ pub struct Section {
 
 impl Section {
     pub fn as_map(&self) -> Result<rfc822::Map, Error> {
-        rfc822::scan(&self.inner).collect_to_map()
+        rfc822::fields_in_block(&self.inner).collect_to_map()
     }
 
     pub fn as_pkg(&self) -> Result<Package, Error> {

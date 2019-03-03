@@ -219,19 +219,15 @@ pub fn sections_in<P: AsRef<Path>>(
     release: &Release,
     listing: &Listing,
     lists_dir: P,
-) -> Result<rfc822::StringSections<fs::File>, Error> {
+) -> Result<rfc822::Blocks<fs::File>, Error> {
     let local_path = lists_dir
         .as_ref()
         .join(find_file_easy(release, listing)?.local_name());
-    Ok(sections_in_reader(
+    Ok(rfc822::Blocks::new(
         fs::File::open(&local_path)
             .with_context(|_| format_err!("Couldn't open {:?}", local_path))?,
         format!("{:?}", local_path),
     ))
-}
-
-pub fn sections_in_reader<R: 'static + Read>(input: R, name: String) -> rfc822::StringSections<R> {
-    rfc822::ByteSections::new(input, name).into_string_sections()
 }
 
 pub fn find_file_easy(release: &Release, listing: &Listing) -> Result<DownloadableListing, Error> {

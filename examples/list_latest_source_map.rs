@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use failure::err_msg;
 use fapt::commands;
-use fapt::system::System;
 use fapt::rfc822::RfcMapExt;
+use fapt::system::System;
 
 fn main() -> Result<(), failure::Error> {
     let mut fapt = System::cache_only()?;

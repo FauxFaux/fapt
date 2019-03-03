@@ -9,8 +9,8 @@ use failure::ensure;
 use failure::format_err;
 use failure::Error;
 use failure::ResultExt;
-use fapt::classic_sources_list;
 use fapt::commands;
+use fapt::sources_list;
 use fapt::system::System;
 
 fn main() -> Result<(), failure::Error> {
@@ -77,7 +77,7 @@ fn main() -> Result<(), failure::Error> {
     if let Some(prefix) = matches.value_of("sources-list") {
         for prefix in expand_dot_d(prefix)? {
             sources_entries.extend(
-                classic_sources_list::read(io::BufReader::new(fs::File::open(&prefix)?))
+                sources_list::read(io::BufReader::new(fs::File::open(&prefix)?))
                     .with_context(|_| format_err!("loading sources.list: {:?}", prefix))?,
             );
         }
@@ -85,7 +85,7 @@ fn main() -> Result<(), failure::Error> {
 
     if let Some(lines) = matches.values_of("sources-line") {
         for line in lines {
-            let entries = classic_sources_list::read(io::Cursor::new(line))
+            let entries = sources_list::read(io::Cursor::new(line))
                 .with_context(|_| format_err!("parsing command line: {:?}", line))?;
 
             ensure!(

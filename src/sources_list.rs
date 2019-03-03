@@ -79,14 +79,17 @@ fn read_single_line_number(line: &str, no: usize) -> Result<Vec<Entry>, Error> {
 }
 
 pub fn read<R: BufRead>(from: R) -> Result<Vec<Entry>, Error> {
-    from.lines()
+    Ok(from
+        .lines()
         .enumerate()
         .map(|(no, line)| match line {
             Ok(line) => read_single_line_number(&line, no),
             Err(e) => Err(format_err!("reading around line {}: {:?}", no, e)),
         })
-        .collect::<Result<Vec<Vec<Entry>>, Error>>()
-        .map(|vec_vec| vec_vec.into_iter().flat_map(|x| x).collect())
+        .collect::<Result<Vec<Vec<Entry>>, Error>>()?
+        .into_iter()
+        .flat_map(|x| x)
+        .collect())
 }
 
 #[cfg(test)]

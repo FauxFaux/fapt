@@ -19,12 +19,12 @@ use reqwest;
 use reqwest::Url;
 
 use crate::checksum::Hashes;
-use crate::classic_sources_list::Entry;
 use crate::fetch::fetch;
 use crate::fetch::Download;
 use crate::rfc822;
 use crate::rfc822::RfcMapExt;
 use crate::signing::GpgClient;
+use crate::sources_list::Entry;
 
 pub struct RequestedReleases {
     releases: Vec<(RequestedRelease, Vec<Entry>)>,
@@ -226,7 +226,7 @@ pub fn parse_release_file<P: AsRef<Path>>(path: P) -> Result<ReleaseFile, Error>
 }
 
 fn parse_release(release: &str) -> Result<ReleaseFile, Error> {
-    let mut data = rfc822::scan(release).collect_to_map()?;
+    let mut data = rfc822::fields_in_block(release).collect_to_map()?;
     Ok(ReleaseFile {
         origin: data.remove_value("Origin").one_line_req()?.to_string(),
         label: data.remove_value("Label").one_line_req()?.to_string(),

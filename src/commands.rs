@@ -5,9 +5,9 @@ use std::path::PathBuf;
 use failure::err_msg;
 use failure::Error;
 
-use crate::classic_sources_list;
 use crate::lists;
 use crate::rfc822::RfcMapExt;
+use crate::sources_list;
 use crate::system::DownloadedList;
 use crate::system::ListingWalker;
 use crate::system::Section;
@@ -23,9 +23,7 @@ pub fn add_sources_entries_from_str<S: AsRef<str>>(
     system: &mut System,
     string: S,
 ) -> Result<(), Error> {
-    system.add_sources_entries(classic_sources_list::read(io::Cursor::new(
-        string.as_ref(),
-    ))?);
+    system.add_sources_entries(sources_list::read(io::Cursor::new(string.as_ref()))?);
     Ok(())
 }
 

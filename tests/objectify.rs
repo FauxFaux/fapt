@@ -6,7 +6,7 @@ use failure::Error;
 use fapt::parse::Package;
 
 fn parse(pkg: &str) -> Result<Package, Error> {
-    Package::parse(&mut fapt::rfc822::scan(pkg).collect_to_map()?)
+    Package::parse(&mut fapt::rfc822::fields_in_block(pkg).collect_to_map()?)
 }
 
 #[test]
@@ -59,12 +59,12 @@ fn parse_provides() -> Result<(), Error> {
 
 #[test]
 fn trusty() -> Result<(), Error> {
-    for section in fapt::sections_in_reader(
+    for section in fapt::rfc822::Blocks::new(
         io::Cursor::new(&include_bytes!("lists/trusty.list")[..]),
         "trusty.list".to_string(),
     ) {
         let section = section?;
-        let p = Package::parse(&mut fapt::rfc822::scan(&section).collect_to_map()?)?;
+        let p = Package::parse(&mut fapt::rfc822::fields_in_block(&section).collect_to_map()?)?;
         assert!(!p.name.is_empty());
         let bin = p.as_bin().expect("bin package");
 

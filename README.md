@@ -54,5 +54,9 @@ This is interpreted as:
     * `contrib/source/Sources`
  3. Download them all.
 
-This result (ignoring verification and compression) is now a list of _Paragraphs_.
-Each _Paragraph_ describes a package, either a source or binary package.
+This result (ignoring verification and compression) is now a list of _Blocks_.
+
+Each _Block_ contains multiple _Fields_.
+
+Each group of _Fields_ probably describes a _Package_,
+either a _source_ or _binary_ package.
