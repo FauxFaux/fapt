@@ -18,7 +18,7 @@ fn main() -> Result<(), failure::Error> {
     commands::add_builtin_keys(&mut fapt);
     fapt.update()?;
 
-    for section in commands::all_paragraphs(&fapt)? {
+    for section in commands::all_blocks(&fapt)? {
         let section = section?;
         let map = section.as_map()?;
         let pkg = map.get_value("Package").one_line_req()?;

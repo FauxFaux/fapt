@@ -22,6 +22,7 @@ pub enum PackageType {
     Binary(bin::Binary),
 }
 
+/// The main package type.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Package {
     pub name: String,

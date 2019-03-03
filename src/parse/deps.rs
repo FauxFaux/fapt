@@ -11,11 +11,13 @@ use nom::types::CompleteStr;
 use super::arch::Arch;
 use crate::rfc822;
 
+/// One-or-more alternate dependencies from a dependency list. e.g. `foo (>2.1) | bar [!i386 !amd64]`
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Dependency {
     pub alternate: Vec<SingleDependency>,
 }
 
+/// A dependency specification, e.g. `foo (>2.1) [!linux] <first>`
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct SingleDependency {
     pub package: String,
@@ -26,12 +28,14 @@ pub struct SingleDependency {
     pub stage_filter: Vec<String>,
 }
 
+/// A constraint on a version, e.g. `>2.1`
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Constraint {
     pub version: String,
     pub operator: ConstraintOperator,
 }
 
+/// An operator inside a constraint, e.g. `>`, `<`, `<=`, ...
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ConstraintOperator {
     Ge,

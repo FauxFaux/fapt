@@ -3,13 +3,15 @@ use failure::Error;
 use crate::rfc822;
 use crate::rfc822::RfcMapExt;
 
+/// A version control system entry, e.g. `git Debian https://salsa.debian.org/foo/bar.git`
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Vcs {
-    pub description: String,
     pub vcs: VcsType,
     pub tag: VcsTag,
+    pub description: String,
 }
 
+/// The name of the VCS tool/ecosystem used, e.g. `git`, `bzr`, ...
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum VcsType {
     Browser,
@@ -23,6 +25,7 @@ pub enum VcsType {
     Svn,
 }
 
+/// The type of the VCS entry, e.g. `Original`, `Debian`, `Upstream`, ...
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum VcsTag {
     Vcs,

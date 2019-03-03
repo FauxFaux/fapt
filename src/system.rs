@@ -1,3 +1,15 @@
+//! Lower level operations on a [crate::system::System].
+//!
+//! ```
+//! # fn main() -> Result<(), failure::Error> {
+//! # use fapt::system::System;
+//! let fapt = System::cache_only()?;
+//! // ...
+//! fapt.update()?;
+//! # Ok(())
+//! # }
+//! ```
+
 use std::env;
 use std::fs;
 use std::io::Read;
@@ -17,6 +29,7 @@ use crate::release;
 use crate::rfc822;
 use crate::sources_list::Entry;
 
+/// The core object, tying together configuration, caching, and listing.
 pub struct System {
     pub(crate) lists_dir: PathBuf,
     dpkg_database: Option<PathBuf>,
@@ -26,6 +39,7 @@ pub struct System {
     client: reqwest::Client,
 }
 
+/// A _Listing_ that has been downloaded, and the _Release_ it came from.
 #[derive(Debug, Clone)]
 pub struct DownloadedList {
     pub release: release::Release,
@@ -33,6 +47,7 @@ pub struct DownloadedList {
 }
 
 impl System {
+    /// Produce a `System` with no configuration, using the user's cache directory.
     pub fn cache_only() -> Result<Self, Error> {
         let mut cache_dir = directories::ProjectDirs::from("xxx", "fau", "fapt")
             .ok_or(err_msg("couldn't find HOME's data directories"))?
@@ -42,6 +57,7 @@ impl System {
         Self::cache_only_in(cache_dir)
     }
 
+    /// Produce a `System` with no configuration, using a specified cache directory.
     pub fn cache_only_in<P: AsRef<Path>>(lists_dir: P) -> Result<Self, Error> {
         fs::create_dir_all(lists_dir.as_ref())?;
 
@@ -63,23 +79,38 @@ impl System {
         })
     }
 
+    /// Add prepared sources entries.
+    ///
+    /// These can be acquired from [crate::sources_list]. It is not recommended that you
+    /// build them by hand.
     pub fn add_sources_entries<I: IntoIterator<Item = Entry>>(&mut self, entries: I) {
         self.sources_entries.extend(entries);
     }
 
+    /// Configure the architectures this system is using.
+    ///
+    /// The first architecture is the "primary" architecture.
     pub fn set_arches<S: ToString, I: IntoIterator<Item = S>>(&mut self, arches: I) {
         self.arches = arches.into_iter().map(|x| x.to_string()).collect();
     }
 
+    /// Configure the location of the `dpkg` database.
+    ///
+    /// This can be used to view `status` information, i.e. information on
+    /// currently installed packages.
     pub fn set_dpkg_database<P: AsRef<Path>>(&mut self, dpkg: P) {
         self.dpkg_database = Some(dpkg.as_ref().to_path_buf());
     }
 
+    /// Load GPG keys from an old-style keyring (i.e. not a keybox file).
+    ///
+    /// Note that this will reject invalid keyring files, unlike other `*apt` implementations.
     pub fn add_keys_from<R: Read>(&mut self, source: R) -> Result<(), Error> {
         self.keyring.append_keys_from(source)?;
         Ok(())
     }
 
+    /// Download any necessary _Listings_ for the configured _Sources Entries_.
     pub fn update(&self) -> Result<(), Error> {
         let requested =
             release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
@@ -99,6 +130,7 @@ impl System {
         Ok(())
     }
 
+    /// Explain the configured _Listings_.
     pub fn listings(&self) -> Result<Vec<DownloadedList>, Error> {
         let releases =
             release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
@@ -120,13 +152,15 @@ impl System {
         Ok(ret)
     }
 
-    pub fn open_listing(&self, list: &DownloadedList) -> Result<ListingWalker, Error> {
-        Ok(ListingWalker {
+    /// Open a `DownloadedList`, to access the packages inside it.
+    pub fn open_listing(&self, list: &DownloadedList) -> Result<ListingBlocks, Error> {
+        Ok(ListingBlocks {
             inner: lists::sections_in(&list.release, &list.listing, &self.lists_dir)?,
         })
     }
 
-    pub fn open_status(&self) -> Result<ListingWalker, Error> {
+    /// Open the `dpkg` `status` database, to access the packages inside it.
+    pub fn open_status(&self) -> Result<ListingBlocks, Error> {
         let mut status = self
             .dpkg_database
             .as_ref()
@@ -134,22 +168,23 @@ impl System {
             .to_path_buf();
         status.push("status");
 
-        Ok(ListingWalker {
+        Ok(ListingBlocks {
             inner: rfc822::Blocks::new(fs::File::open(status)?, "status".to_string()),
         })
     }
 }
 
-pub struct ListingWalker {
+/// The _Blocks_ of a _Listing_.
+pub struct ListingBlocks {
     pub(crate) inner: rfc822::Blocks<fs::File>,
 }
 
-impl Iterator for ListingWalker {
-    type Item = Result<Section, Error>;
+impl Iterator for ListingBlocks {
+    type Item = Result<NamedBlock, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.inner.next().map(|v| {
-            v.map(|inner| Section {
+            v.map(|inner| NamedBlock {
                 inner,
                 locality: self.inner.inner.name.to_string(),
             })
@@ -157,13 +192,14 @@ impl Iterator for ListingWalker {
     }
 }
 
+/// A _Block_ from a _Listing_, with a name (for error reporting).
 #[derive(Clone, Debug)]
-pub struct Section {
+pub struct NamedBlock {
     locality: String,
     inner: String,
 }
 
-impl Section {
+impl NamedBlock {
     pub fn as_map(&self) -> Result<rfc822::Map, Error> {
         rfc822::fields_in_block(&self.inner).collect_to_map()
     }

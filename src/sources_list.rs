@@ -1,3 +1,5 @@
+//! Load `Entry` objects from from a _classic_ sources list. (e.g. `/etc/*apt/sources.list`).
+
 use std::io::BufRead;
 
 use failure::bail;
@@ -5,6 +7,7 @@ use failure::format_err;
 use failure::Error;
 use failure::ResultExt;
 
+/// Our representation of a classic sources list entry.
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Entry {
     pub src: bool,
@@ -78,6 +81,7 @@ fn read_single_line_number(line: &str, no: usize) -> Result<Vec<Entry>, Error> {
     Ok(read_single_line(line).with_context(|_| format_err!("parsing line {}", no + 1))?)
 }
 
+/// Read `Entry` objects from some `sources.list` lines.
 pub fn read<R: BufRead>(from: R) -> Result<Vec<Entry>, Error> {
     Ok(from
         .lines()

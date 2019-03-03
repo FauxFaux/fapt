@@ -1,3 +1,5 @@
+//! Higher level operations on a [crate::system::System].
+
 use std::collections::HashMap;
 use std::io;
 use std::path::PathBuf;
@@ -9,16 +11,22 @@ use crate::lists;
 use crate::rfc822::RfcMapExt;
 use crate::sources_list;
 use crate::system::DownloadedList;
-use crate::system::ListingWalker;
-use crate::system::Section;
+use crate::system::ListingBlocks;
+use crate::system::NamedBlock;
 use crate::system::System;
 
+/// Use some set of bundled GPG keys.
+///
+/// These may be sufficient for talking to Debian or Ubuntu mirrors.
+/// If you know what keys you actually want, or are using a real system,
+/// please use the keys from there instead.
 pub fn add_builtin_keys(system: &mut System) {
     system
         .add_keys_from(io::Cursor::new(distro_keyring::supported_keys()))
         .expect("static data");
 }
 
+/// Shorthand for `add_sources_entries` taking a string.
 pub fn add_sources_entries_from_str<S: AsRef<str>>(
     system: &mut System,
     string: S,
@@ -27,26 +35,31 @@ pub fn add_sources_entries_from_str<S: AsRef<str>>(
     Ok(())
 }
 
-pub fn all_paragraphs(system: &System) -> Result<AllParagraphs, Error> {
+/// Walk through all the _Blocks_ (packages!) in a _System_,
+/// ignoring which _Release_ they came from.
+///
+/// If you care about the _Release_, use `listings()` and `open_listing()` directly.
+pub fn all_blocks(system: &System) -> Result<AllBlocks, Error> {
     let mut listings = system.listings()?;
     let current = system.open_listing(&listings.pop().unwrap())?;
-    Ok(AllParagraphs {
+    Ok(AllBlocks {
         lists_dir: system.lists_dir.to_path_buf(),
         listings,
         current,
     })
 }
 
-pub struct AllParagraphs {
+/// Iterate over all of the _Blocks_ in all _Listings_.
+pub struct AllBlocks {
     lists_dir: PathBuf,
     listings: Vec<DownloadedList>,
-    current: ListingWalker,
+    current: ListingBlocks,
 }
 
-impl Iterator for AllParagraphs {
-    type Item = Result<Section, Error>;
+impl Iterator for AllBlocks {
+    type Item = Result<NamedBlock, Error>;
 
-    fn next(&mut self) -> Option<Result<Section, Error>> {
+    fn next(&mut self) -> Option<Result<NamedBlock, Error>> {
         loop {
             if let Some(paragraph) = self.current.next() {
                 return Some(paragraph);
@@ -57,7 +70,7 @@ impl Iterator for AllParagraphs {
                     Ok(inner) => inner,
                     Err(e) => return Some(Err(e)),
                 };
-                self.current = ListingWalker { inner };
+                self.current = ListingBlocks { inner };
                 continue;
             }
 
@@ -66,6 +79,7 @@ impl Iterator for AllParagraphs {
     }
 }
 
+/// Generate the `.ninja` file (to stdout) for every package in the _System_.
 pub fn source_ninja(system: &System) -> Result<(), Error> {
     for list in system.listings()? {
         for section in system.open_listing(&list)? {

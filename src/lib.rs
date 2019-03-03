@@ -1,4 +1,6 @@
+//! A collection of tools for dealing with Debian/Ubuntu-style _Packages_ and _Repositories_.
 //!
+//! A _System_ can download _Package_ _Listings_ according to some _Sources Lists_.
 
 #[macro_use]
 extern crate nom;

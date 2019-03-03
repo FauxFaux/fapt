@@ -15,6 +15,7 @@ use crate::rfc822;
 use crate::rfc822::RfcMapExt;
 use std::collections::HashSet;
 
+/// Source package specific fields.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Source {
     pub format: SourceFormat,
@@ -36,6 +37,7 @@ pub struct Source {
     pub uploaders: Vec<Identity>,
 }
 
+/// The `Files` making up a source package
 // TODO: This is *very* similar to a ReleaseContent
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SourceArchive {
@@ -45,6 +47,7 @@ pub struct SourceArchive {
     pub sha256: Option<crate::checksum::SHA256>,
 }
 
+/// Information on the binary packages built from a source package.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SourceBinary {
     pub name: String,
@@ -55,6 +58,7 @@ pub struct SourceBinary {
     pub extras: Vec<String>,
 }
 
+/// The Debian "format" name for the source layout
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum SourceFormat {
     Original,

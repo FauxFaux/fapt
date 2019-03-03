@@ -4,6 +4,10 @@ use std::str::FromStr;
 use failure::bail;
 use failure::Error;
 
+/// An architecture specifier, such as `amd64`, or `linux-any`.
+///
+/// `any` and `all` are currently both represented by an absence of specifier.
+/// This is likely a flaw.
 #[derive(Copy, Clone, Debug, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct Arch {
     kernel: Option<Kernel>,
@@ -84,7 +88,8 @@ impl FromStr for Arch {
 pub type Arches = HashSet<Arch>;
 
 macro_rules! strum {
-    ($name:ident, $($variant:ident($str:expr),)*) => {
+    ($doc:literal, $name:ident, $($variant:ident($str:expr),)*) => {
+        #[doc = $doc]
         #[derive(Copy, Clone, Debug, Hash, PartialOrd, Ord, PartialEq, Eq)]
         pub enum $name {
             $($variant,)*
@@ -103,6 +108,7 @@ macro_rules! strum {
 }
 
 strum!(
+    "A host kernel-and-ecosystem, e.g. `linux`, `musl-linux`, `kfreebsd`, ...",
     Kernel,
     Aix("aix"),
     Darwin("darwin"),
@@ -123,6 +129,7 @@ strum!(
 );
 
 strum!(
+    "A host cpu architecture and configuration, e.g. `amd64`, `x32`, `arm64ilp32`, ...",
     Cpu,
     Native("native"),
     Alpha("alpha"),

@@ -8,6 +8,7 @@ use super::deps::Dependency;
 use super::pkg;
 use crate::rfc822;
 
+/// Binary package specific fields.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Binary {
     // "File" is missing in e.g. dpkg/status, but never in Packages as far as I've seen

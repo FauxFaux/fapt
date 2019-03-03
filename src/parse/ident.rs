@@ -4,6 +4,7 @@ use failure::Error;
 use nom::types::CompleteStr;
 use nom::Err;
 
+/// A user identity, e.g. `John Smith <john@smi.th>`
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Identity {
     pub name: String,

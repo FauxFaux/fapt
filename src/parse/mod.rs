@@ -1,3 +1,5 @@
+//! These types are used to represent a [crate::parse::Package].
+
 mod arch;
 mod bin;
 mod deps;
