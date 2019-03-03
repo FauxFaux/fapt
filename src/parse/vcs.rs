@@ -1,7 +1,7 @@
 use failure::Error;
 
-use super::rfc822;
-use super::rfc822::RfcMapExt;
+use crate::rfc822;
+use crate::rfc822::RfcMapExt;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Vcs {

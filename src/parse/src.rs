@@ -9,10 +9,10 @@ use insideout::InsideOut;
 use super::deps::parse_dep;
 use super::deps::Dependency;
 use super::ident::Identity;
-use super::rfc822;
-use super::rfc822::RfcMapExt;
-use super::types;
+use super::pkg;
 use super::vcs;
+use crate::rfc822;
+use crate::rfc822::RfcMapExt;
 use std::collections::HashSet;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -51,7 +51,7 @@ pub struct SourceBinary {
     pub style: String,
     pub section: String,
 
-    pub priority: types::Priority,
+    pub priority: pkg::Priority,
     pub extras: Vec<String>,
 }
 
@@ -63,7 +63,7 @@ pub enum SourceFormat {
     Git3dot0,
 }
 
-pub fn parse_src(map: &mut rfc822::Map) -> Result<Source, Error> {
+pub(super) fn parse_src(map: &mut rfc822::Map) -> Result<Source, Error> {
     Ok(Source {
         format: parse_format(map.remove_value("Format").one_line_req()?)?,
         binaries: take_package_list(map)?,
@@ -95,7 +95,7 @@ pub fn parse_src(map: &mut rfc822::Map) -> Result<Source, Error> {
     })
 }
 
-pub fn parse_format(string: &str) -> Result<SourceFormat, Error> {
+pub(super) fn parse_format(string: &str) -> Result<SourceFormat, Error> {
     Ok(match string {
         "3.0 (quilt)" => SourceFormat::Quilt3dot0,
         "1.0" => SourceFormat::Original,
@@ -105,7 +105,7 @@ pub fn parse_format(string: &str) -> Result<SourceFormat, Error> {
     })
 }
 
-pub fn take_package_list(map: &mut rfc822::Map) -> Result<Vec<SourceBinary>, Error> {
+pub(super) fn take_package_list(map: &mut rfc822::Map) -> Result<Vec<SourceBinary>, Error> {
     let package_list = match map.remove("Package-List") {
         Some(list) => list,
         None => {
@@ -148,7 +148,7 @@ pub fn take_package_list(map: &mut rfc822::Map) -> Result<Vec<SourceBinary>, Err
             name: name.to_string(),
             style: parts[1].to_string(),
             section: parts[2].to_string(),
-            priority: super::parse_priority(parts[3])?,
+            priority: super::pkg::parse_priority(parts[3])?,
             extras: parts[4..].into_iter().map(|s| s.to_string()).collect(),
         });
     }
@@ -162,7 +162,7 @@ pub fn take_package_list(map: &mut rfc822::Map) -> Result<Vec<SourceBinary>, Err
     Ok(binaries)
 }
 
-pub fn take_files(map: &mut rfc822::Map) -> Result<Vec<SourceArchive>, Error> {
+pub(super) fn take_files(map: &mut rfc822::Map) -> Result<Vec<SourceArchive>, Error> {
     use crate::checksum::parse_md5;
     use crate::checksum::parse_sha256;
     use crate::release::take_checksums;

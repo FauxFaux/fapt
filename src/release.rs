@@ -22,8 +22,8 @@ use crate::checksum::Hashes;
 use crate::classic_sources_list::Entry;
 use crate::fetch::fetch;
 use crate::fetch::Download;
-use crate::parse::rfc822;
-use crate::parse::rfc822::RfcMapExt;
+use crate::rfc822;
+use crate::rfc822::RfcMapExt;
 use crate::signing::GpgClient;
 
 pub struct RequestedReleases {

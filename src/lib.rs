@@ -6,12 +6,11 @@ pub mod classic_sources_list;
 pub mod commands;
 mod fetch;
 mod lists;
-mod parse;
+pub mod parse;
 mod release;
+pub mod rfc822;
 mod signing;
 mod system;
 
 pub use crate::lists::sections_in_reader;
-pub use crate::parse::rfc822;
-pub use crate::parse::types;
 pub use crate::system::System;

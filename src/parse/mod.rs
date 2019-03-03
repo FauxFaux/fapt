@@ -1,35 +1,27 @@
-// TODO: pub
-pub mod arch;
-pub mod bin;
-pub mod deps;
+mod arch;
+mod bin;
+mod deps;
 mod ident;
-pub mod rfc822;
+mod pkg;
 mod src;
-pub mod types;
 mod vcs;
 
-use failure::bail;
-use failure::Error;
-
-use self::types::Priority;
-
-fn parse_priority(string: &str) -> Result<Priority, Error> {
-    Ok(match string {
-        "required" => Priority::Required,
-        "important" => Priority::Important,
-        "standard" => Priority::Standard,
-        "optional" => Priority::Optional,
-        "extra" => Priority::Extra,
-        "source" => Priority::Source,
-        "unknown" => Priority::Unknown,
-        other => bail!("unsupported priority: '{}'", other),
-    })
-}
-
-fn yes_no(value: &str) -> Result<bool, Error> {
-    match value {
-        "yes" => Ok(true),
-        "no" => Ok(false),
-        other => bail!("invalid value for yes/no: {:?}", other),
-    }
-}
+pub use self::arch::Arch;
+pub use self::arch::Cpu;
+pub use self::arch::Kernel;
+pub use self::bin::Binary;
+pub use self::deps::Constraint;
+pub use self::deps::ConstraintOperator;
+pub use self::deps::Dependency;
+pub use self::deps::SingleDependency;
+pub use self::ident::Identity;
+pub use self::pkg::Package;
+pub use self::pkg::PackageType;
+pub use self::pkg::Priority;
+pub use self::src::Source;
+pub use self::src::SourceArchive;
+pub use self::src::SourceBinary;
+pub use self::src::SourceFormat;
+pub use self::vcs::Vcs;
+pub use self::vcs::VcsTag;
+pub use self::vcs::VcsType;

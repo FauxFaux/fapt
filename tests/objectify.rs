@@ -3,7 +3,7 @@ use std::io;
 
 use failure::format_err;
 use failure::Error;
-use fapt::types::Package;
+use fapt::parse::Package;
 
 fn parse(pkg: &str) -> Result<Package, Error> {
     Package::parse(&mut fapt::rfc822::scan(pkg).collect_to_map()?)

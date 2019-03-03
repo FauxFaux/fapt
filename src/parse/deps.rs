@@ -9,7 +9,7 @@ use insideout::InsideOut;
 use nom::types::CompleteStr;
 
 use super::arch::Arch;
-use super::rfc822;
+use crate::rfc822;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Dependency {

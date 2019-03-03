@@ -1,16 +1,17 @@
+use failure::bail;
 use failure::Error;
 use insideout::InsideOut;
 
+use self::rfc822::RfcMapExt;
 use super::deps::parse_dep;
 use super::deps::Dependency;
-use super::rfc822;
-use super::rfc822::RfcMapExt;
-use super::types;
+use super::pkg;
+use crate::rfc822;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Binary {
     // "File" is missing in e.g. dpkg/status, but never in Packages as far as I've seen
-    pub file: Option<types::File>,
+    pub file: Option<pkg::File>,
 
     pub essential: bool,
     pub build_essential: bool,
@@ -34,9 +35,9 @@ pub struct Binary {
     pub provides: Vec<Dependency>,
 }
 
-pub fn parse_bin(it: &mut rfc822::Map) -> Result<Binary, Error> {
+pub(super) fn parse_bin(it: &mut rfc822::Map) -> Result<Binary, Error> {
     let file = if it.contains_key("Filename") {
-        Some(super::types::File {
+        Some(super::pkg::File {
             name: it.remove_value("Filename").one_line_req()?.to_string(),
             size: it.remove_value("Size").one_line_req()?.parse()?,
             md5: it.remove_value("MD5sum").one_line_req()?.to_string(),
@@ -59,14 +60,14 @@ pub fn parse_bin(it: &mut rfc822::Map) -> Result<Binary, Error> {
     let essential = it
         .remove_value("Essential")
         .one_line()?
-        .map(|line| super::yes_no(line))
+        .map(|line| yes_no(line))
         .inside_out()?
         .unwrap_or(false);
 
     let build_essential = it
         .remove_value("Build-Essential")
         .one_line()?
-        .map(|line| super::yes_no(line))
+        .map(|line| yes_no(line))
         .inside_out()?
         .unwrap_or(false);
 
@@ -88,4 +89,12 @@ pub fn parse_bin(it: &mut rfc822::Map) -> Result<Binary, Error> {
         replaces: parse_dep(&it.remove("Replaces").unwrap_or_else(Vec::new))?,
         provides: parse_dep(&it.remove("Provides").unwrap_or_else(Vec::new))?,
     })
+}
+
+fn yes_no(value: &str) -> Result<bool, Error> {
+    match value {
+        "yes" => Ok(true),
+        "no" => Ok(false),
+        other => bail!("invalid value for yes/no: {:?}", other),
+    }
 }

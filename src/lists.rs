@@ -6,7 +6,7 @@ use std::io::SeekFrom;
 use std::io::Write;
 use std::path::Path;
 
-use crate::parse::rfc822;
+use crate::rfc822;
 use failure::format_err;
 use failure::Error;
 use failure::ResultExt;

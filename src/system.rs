@@ -13,9 +13,9 @@ use reqwest;
 
 use crate::classic_sources_list::Entry;
 use crate::lists;
-use crate::parse::rfc822;
+use crate::parse::Package;
 use crate::release;
-use crate::types::Package;
+use crate::rfc822;
 
 pub struct System {
     pub(crate) lists_dir: PathBuf,

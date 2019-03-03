@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+use failure::bail;
 use failure::err_msg;
 use failure::format_err;
 use failure::Error;
@@ -10,9 +11,9 @@ use insideout::InsideOut;
 use super::arch;
 use super::bin;
 use super::ident;
-use super::rfc822;
-use super::rfc822::RfcMapExt;
 use super::src;
+use crate::rfc822;
+use crate::rfc822::RfcMapExt;
 
 /// The parsed top-level types for package
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -127,7 +128,7 @@ fn parse_pkg(map: &mut rfc822::Map, style: PackageType) -> Result<Package, Error
         priority: map
             .remove_value("Priority")
             .one_line()?
-            .map(|p| super::parse_priority(p))
+            .map(|p| parse_priority(p))
             .inside_out()?
             .unwrap_or(Priority::Unknown),
         arches,
@@ -145,5 +146,18 @@ fn parse_pkg(map: &mut rfc822::Map, style: PackageType) -> Result<Package, Error
                 )
             })
             .collect(),
+    })
+}
+
+pub fn parse_priority(string: &str) -> Result<Priority, Error> {
+    Ok(match string {
+        "required" => Priority::Required,
+        "important" => Priority::Important,
+        "standard" => Priority::Standard,
+        "optional" => Priority::Optional,
+        "extra" => Priority::Extra,
+        "source" => Priority::Source,
+        "unknown" => Priority::Unknown,
+        other => bail!("unsupported priority: '{}'", other),
     })
 }
