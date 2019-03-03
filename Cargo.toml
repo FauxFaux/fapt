@@ -1,12 +1,27 @@
 [package]
 authors = ["Chris West (Faux) <git@goeswhere.com>"]
+categories = [
+    "os",
+    "parsing",
+]
 description = "Faux' apt package manager for Debian"
 license = "MIT OR Apache-2.0"
 name = "fapt"
+readme = "README.md"
 repository = "https://github.com/FauxFaux/fapt"
 version = "0.1.0"
 
 edition = "2018"
+
+exclude = [
+    "tests/lists/trusty.list",
+]
+
+
+[badges.appveyor]
+branch = "master"
+repository = "FauxFaux/fapt"
+service = "github"
 
 [badges.travis-ci]
 repository = "FauxFaux/fapt"

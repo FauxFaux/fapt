@@ -1,5 +1,9 @@
 # Faux' apt
 
+[![Build status](https://api.travis-ci.org/FauxFaux/fapt.png)](https://travis-ci.org/FauxFaux/fapt)
+[![Build status](https://ci.appveyor.com/api/projects/status/daao4tjdcnojue5m/branch/master?svg=true)](https://ci.appveyor.com/project/FauxFaux/fapt/branch/master)
+[![](https://img.shields.io/crates/v/fapt.svg)](https://crates.io/crates/fapt)
+
 This is a library-like tool for interacting with Debian/Ubuntu package metadata,
 like one would expect from `apt` or `aptitude`. These tools are not arranged as
 libraries, however, so it is rather hard to drive them in this manner.
@@ -13,13 +17,12 @@ replacement for `apt`.
 It is intended to give access to the data when necessary, for example:
 
 ```rust
-let mut fapt = fapt::System::cache_dirs_only(".fapt-lists")?;
-commands::add_sources_entries_from_str(&mut fapt, "deb http...")?;
+let mut fapt = System::cache_only()?;
+commands::add_sources_entries_from_str(&mut fapt, src_line)?;
 commands::add_builtin_keys(&mut fapt);
 fapt.update()?;
 
-for list in fapt.listings()? {
-    for package in fapt.open_listing(&list)? {
+for block in commands::all_blocks(&fapt)? {
 ```
 
 This can be seen in one of the examples:
@@ -33,6 +36,12 @@ Downloading: https://deb.debian.org/debian/dists/buster/main/source/by-hash/SHA2
 0xffff
 ...
 ```
+
+There is also support for parsing these `HashMap<String, Strings>`s into a proper object.
+
+This difference between the two APIs can be seen in the `list_latest_source_map` (for the map API),
+and the `list_latest_source_obj` (for the object API). The `map` API is more stable, as it does
+less work, and leaves parsing and error handling to you.
 
 
 ### Data model
