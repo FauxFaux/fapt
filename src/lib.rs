@@ -10,7 +10,6 @@ pub mod parse;
 mod release;
 pub mod rfc822;
 mod signing;
-mod system;
+pub mod system;
 
 pub use crate::lists::sections_in_reader;
-pub use crate::system::System;

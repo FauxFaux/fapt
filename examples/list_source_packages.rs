@@ -1,6 +1,7 @@
 use std::env;
 
 use fapt::commands;
+use fapt::system::System;
 use fapt::rfc822::RfcMapExt;
 
 fn main() -> Result<(), failure::Error> {
@@ -12,7 +13,7 @@ fn main() -> Result<(), failure::Error> {
         args.join(" ")
     };
 
-    let mut fapt = fapt::System::cache_only()?;
+    let mut fapt = System::cache_only()?;
     commands::add_sources_entries_from_str(&mut fapt, src_line)?;
     commands::add_builtin_keys(&mut fapt);
     fapt.update()?;

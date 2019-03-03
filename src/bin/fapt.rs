@@ -11,6 +11,7 @@ use failure::Error;
 use failure::ResultExt;
 use fapt::classic_sources_list;
 use fapt::commands;
+use fapt::system::System;
 
 fn main() -> Result<(), failure::Error> {
     let matches = App::new("Faux' apt")
@@ -109,7 +110,7 @@ fn main() -> Result<(), failure::Error> {
         ));
     }
 
-    let mut system = fapt::System::cache_only()?;
+    let mut system = System::cache_only()?;
     system.add_sources_entries(sources_entries.clone().into_iter());
     if let Some(keyring_paths) = matches.values_of_os("keyring") {
         for keyring_path in keyring_paths {

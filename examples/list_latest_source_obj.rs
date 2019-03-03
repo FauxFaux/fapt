@@ -2,9 +2,10 @@ use std::collections::HashMap;
 
 use failure::err_msg;
 use fapt::commands;
+use fapt::system;
 
 fn main() -> Result<(), failure::Error> {
-    let mut fapt = fapt::System::cache_only()?;
+    let mut fapt = system::System::cache_only()?;
     commands::add_sources_entries_from_str(
         &mut fapt,
         "deb-src http://deb.debian.org/debian sid main contrib",

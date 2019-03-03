@@ -1,7 +1,7 @@
 use failure::Error;
 use fapt::commands;
 use fapt::parse::Package;
-use fapt::System;
+use fapt::system::System;
 
 fn main() -> Result<(), Error> {
     let mut fapt = System::cache_only()?;
@@ -15,6 +15,9 @@ debs http://deb.debian.org/debian       stable           main contrib non-free
 debs http://deb.debian.org/debian       oldstable        main contrib non-free
 
 debs http://archive.ubuntu.com/ubuntu/  disco            main universe multiverse restricted
+
+debs http://archive.ubuntu.com/ubuntu/  bionic           main universe multiverse restricted
+debs http://archive.ubuntu.com/ubuntu/  bionic-updates   main universe multiverse restricted
 
 debs http://archive.ubuntu.com/ubuntu/  xenial           main universe multiverse restricted
 debs http://archive.ubuntu.com/ubuntu/  xenial-updates   main universe multiverse restricted
