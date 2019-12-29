@@ -33,13 +33,13 @@ binaries = ["clap"]
 deb-version = "0.1"
 distro-keyring = "0.1"
 chrono = "0.4"
-directories = "1"
+directories = "2"
 failure = "0.1"
 filetime = "0.2"
 gpgrv = "0.2"
-hex = "0.3"
+hex = "0.4"
 insideout = "0.2"
-mailparse = "0.6"
+mailparse = "0.10"
 md-5 = "0.8"
 nom = "4"
 reqwest = "0.9"
@@ -62,7 +62,7 @@ version = "1"
 
 [dependencies.jemallocator]
 optional = true
-version = "0.1"
+version = "0.3"
 
 [[bin]]
 name = "fapt"
