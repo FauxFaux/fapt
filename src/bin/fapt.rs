@@ -3,17 +3,17 @@ use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::ensure;
+use anyhow::Context;
+use anyhow::Error;
 use clap::{App, AppSettings, Arg, SubCommand};
-use failure::bail;
-use failure::ensure;
-use failure::format_err;
-use failure::Error;
-use failure::ResultExt;
 use fapt::commands;
 use fapt::sources_list;
 use fapt::system::System;
 
-fn main() -> Result<(), failure::Error> {
+fn main() -> Result<(), anyhow::Error> {
     let matches = App::new("Faux' apt")
         .setting(AppSettings::SubcommandRequired)
         .arg(
@@ -78,7 +78,7 @@ fn main() -> Result<(), failure::Error> {
         for prefix in expand_dot_d(prefix)? {
             sources_entries.extend(
                 sources_list::read(io::BufReader::new(fs::File::open(&prefix)?))
-                    .with_context(|_| format_err!("loading sources.list: {:?}", prefix))?,
+                    .with_context(|| anyhow!("loading sources.list: {:?}", prefix))?,
             );
         }
     }
@@ -86,7 +86,7 @@ fn main() -> Result<(), failure::Error> {
     if let Some(lines) = matches.values_of("sources-line") {
         for line in lines {
             let entries = sources_list::read(io::Cursor::new(line))
-                .with_context(|_| format_err!("parsing command line: {:?}", line))?;
+                .with_context(|| anyhow!("parsing command line: {:?}", line))?;
 
             ensure!(
                 !entries.is_empty(),
@@ -117,7 +117,7 @@ fn main() -> Result<(), failure::Error> {
             for path in expand_dot_d(keyring_path)? {
                 system.add_keys_from(
                     fs::File::open(&path)
-                        .with_context(|_| format_err!("opening key file: {:?}", path))?,
+                        .with_context(|| anyhow!("opening key file: {:?}", path))?,
                 )?;
             }
         }

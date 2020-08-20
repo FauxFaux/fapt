@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use failure::bail;
-use failure::ensure;
-use failure::err_msg;
-use failure::Error;
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::ensure;
+use anyhow::Error;
 use insideout::InsideOut;
 
 use super::deps::parse_dep;
@@ -171,7 +171,7 @@ pub(super) fn take_files(map: &mut rfc822::Map) -> Result<Vec<SourceArchive>, Er
     use crate::checksum::parse_sha256;
     use crate::release::take_checksums;
     let file_and_size_to_md5 =
-        take_checksums(map, "Files")?.ok_or_else(|| err_msg("Files required"))?;
+        take_checksums(map, "Files")?.ok_or_else(|| anyhow!("Files required"))?;
     let mut file_and_size_to_sha256 =
         take_checksums(map, "Checksums-Sha256")?.unwrap_or_else(HashMap::new);
 

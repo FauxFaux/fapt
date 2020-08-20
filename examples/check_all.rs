@@ -1,4 +1,4 @@
-use failure::Error;
+use anyhow::Error;
 use fapt::commands;
 use fapt::parse::Package;
 use fapt::system::System;

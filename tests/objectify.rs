@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::io;
 
-use failure::format_err;
-use failure::Error;
+use anyhow::anyhow;
+use anyhow::Error;
 use fapt::parse::Package;
 
 fn parse(pkg: &str) -> Result<Package, Error> {
@@ -73,7 +73,7 @@ fn trusty() -> Result<(), Error> {
             1,
             bin.file
                 .as_ref()
-                .ok_or_else(|| format_err!("bin has file: {:?}", p.name))?
+                .ok_or_else(|| anyhow!("bin has file: {:?}", p.name))?
                 .size
         );
     }

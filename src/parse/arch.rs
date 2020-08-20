@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 use std::str::FromStr;
 
-use failure::bail;
-use failure::Error;
+use anyhow::bail;
+use anyhow::Error;
 
 /// An architecture specifier, such as `amd64`, or `linux-any`.
 ///

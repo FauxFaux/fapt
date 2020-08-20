@@ -2,8 +2,8 @@ use std::fmt;
 use std::io;
 use std::io::Read;
 
-use failure::ensure;
-use failure::Error;
+use anyhow::ensure;
+use anyhow::Error;
 use hex;
 use hex::FromHex;
 use sha2::Digest;

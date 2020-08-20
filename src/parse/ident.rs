@@ -1,6 +1,6 @@
-use failure::bail;
-use failure::format_err;
-use failure::Error;
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Error;
 use nom::types::CompleteStr;
 use nom::Err;
 
@@ -59,10 +59,10 @@ fn process_escapes(from: &str) -> Result<String, Error> {
                 Some(c) if b'x' == c => result.push(parse_ascii_hex(
                     bytes
                         .next()
-                        .ok_or_else(|| format_err!("\\x must be followed by a character"))?,
+                        .ok_or_else(|| anyhow!("\\x must be followed by a character"))?,
                     bytes
                         .next()
-                        .ok_or_else(|| format_err!("\\xX must be followed"))?,
+                        .ok_or_else(|| anyhow!("\\xX must be followed"))?,
                 )?),
                 Some(c) => bail!("unsupported escape: {:?}", c),
                 None => bail!("\\ at end of string"),

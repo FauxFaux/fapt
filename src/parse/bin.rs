@@ -1,5 +1,5 @@
-use failure::bail;
-use failure::Error;
+use anyhow::bail;
+use anyhow::Error;
 use insideout::InsideOut;
 
 use self::rfc822::RfcMapExt;

@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use failure::err_msg;
+use anyhow::anyhow;
 use fapt::commands;
 use fapt::rfc822::RfcMapExt;
 use fapt::system::System;
 
-fn main() -> Result<(), failure::Error> {
+fn main() -> Result<(), anyhow::Error> {
     let mut fapt = System::cache_only()?;
     commands::add_sources_entries_from_str(
         &mut fapt,
@@ -23,7 +23,7 @@ fn main() -> Result<(), failure::Error> {
             let map = section.as_map()?;
             let files_section = map
                 .get("Files")
-                .ok_or_else(|| err_msg("no file in package"))?;
+                .ok_or_else(|| anyhow!("no file in package"))?;
             let pkg = map.get_value("Package").one_line_req()?;
             let version = map.get_value("Version").one_line_req()?;
             let dir = map.get_value("Directory").one_line_req()?;

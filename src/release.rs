@@ -7,12 +7,12 @@ use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 
+use anyhow::anyhow;
+use anyhow::ensure;
+use anyhow::Context;
+use anyhow::Error;
 use chrono::DateTime;
 use chrono::Utc;
-use failure::ensure;
-use failure::format_err;
-use failure::Error;
-use failure::ResultExt;
 use gpgrv::Keyring;
 use insideout::InsideOut;
 use reqwest;
@@ -193,7 +193,7 @@ impl RequestedReleases {
                     gpg.verify_detached(&dest, detatched_signature, verified)
                 }
             }
-            .with_context(|_| format_err!("verifying {:?} at {:?}", release, dest))?;
+            .with_context(|| anyhow!("verifying {:?} at {:?}", release, dest))?;
         }
 
         Ok(())
@@ -217,12 +217,14 @@ pub fn parse_release_file<P: AsRef<Path>>(path: P) -> Result<ReleaseFile, Error>
     let mut file = String::with_capacity(100 * 1024);
     io::BufReader::new(
         fs::File::open(path.as_ref())
-            .with_context(|_| format_err!("finding release file: {:?}", path.as_ref()))?,
+            .with_context(|| anyhow!("finding release file: {:?}", path.as_ref()))?,
     )
     .read_to_string(&mut file)
-    .with_context(|_| format_err!("reading release file: {:?}", path.as_ref()))?;
-    Ok(parse_release(&file)
-        .with_context(|_| format_err!("parsing release file {:?}", path.as_ref()))?)
+    .with_context(|| anyhow!("reading release file: {:?}", path.as_ref()))?;
+    Ok(
+        parse_release(&file)
+            .with_context(|| anyhow!("parsing release file {:?}", path.as_ref()))?,
+    )
 }
 
 fn parse_release(release: &str) -> Result<ReleaseFile, Error> {
@@ -254,7 +256,7 @@ fn parse_release(release: &str) -> Result<ReleaseFile, Error> {
 fn load_contents(data: &mut HashMap<&str, Vec<&str>>) -> Result<Vec<ReleaseContent>, Error> {
     let md5s = take_checksums(data, "MD5Sum")?;
     let sha256s = take_checksums(data, "SHA256")?
-        .ok_or_else(|| format_err!("sha256sums missing from release file; refusing to process"))?;
+        .ok_or_else(|| anyhow!("sha256sums missing from release file; refusing to process"))?;
 
     let mut ret = Vec::with_capacity(sha256s.len());
 

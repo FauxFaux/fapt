@@ -9,12 +9,12 @@ use std::io::Read;
 use std::iter::Peekable;
 use std::str::Lines;
 
+use anyhow::anyhow;
+use anyhow::ensure;
+use anyhow::Context;
+use anyhow::Error;
 use chrono::DateTime;
 use chrono::Utc;
-use failure::ensure;
-use failure::format_err;
-use failure::Error;
-use failure::ResultExt;
 use insideout::InsideOut;
 
 /// A _Field_ from a _Block_, consisting of a _Key_ and a list of one-or-more lines.
@@ -58,7 +58,7 @@ impl<'a> Iterator for Fields<'a> {
 
         let colon = match line.find(':') {
             Some(colon) => colon,
-            None => return Some(Err(format_err!("expected a key: in {:?}", line))),
+            None => return Some(Err(anyhow!("expected a key: in {:?}", line))),
         };
 
         let (key, first_val) = line.split_at(colon);
@@ -85,8 +85,8 @@ impl<'a> Iterator for Fields<'a> {
 
 pub(crate) fn parse_date(date: &str) -> Result<DateTime<Utc>, Error> {
     use chrono::offset::TimeZone;
-    let signed_epoch = mailparse::dateparse(date)
-        .map_err(|msg| format_err!("parsing {:?} as date: {}", date, msg))?;
+    let signed_epoch =
+        mailparse::dateparse(date).map_err(|msg| anyhow!("parsing {:?} as date: {}", date, msg))?;
     Ok(chrono::Utc.timestamp(signed_epoch, 0))
 }
 
@@ -205,7 +205,7 @@ impl<'k, 's, T: AsRef<[&'s str]>> Value<'k, T> {
         Ok(self
             .val
             .as_ref()
-            .ok_or_else(|| format_err!("{:?} required", self.key))?
+            .ok_or_else(|| anyhow!("{:?} required", self.key))?
             .as_ref())
     }
 
@@ -215,7 +215,7 @@ impl<'k, 's, T: AsRef<[&'s str]>> Value<'k, T> {
             .as_ref()
             .map(|lines| one_line(lines.as_ref()))
             .inside_out()
-            .with_context(|_| format_err!("{:?} should be one line", self.key))?)
+            .with_context(|| anyhow!("{:?} should be one line", self.key))?)
     }
 
     pub fn one_line_owned(&self) -> Result<Option<String>, Error> {
@@ -224,7 +224,7 @@ impl<'k, 's, T: AsRef<[&'s str]>> Value<'k, T> {
 
     pub fn one_line_req(&self) -> Result<&'s str, Error> {
         self.one_line()
-            .and_then(|o| o.ok_or_else(|| format_err!("{:?} required", self.key)))
+            .and_then(|o| o.ok_or_else(|| anyhow!("{:?} required", self.key)))
     }
 
     pub fn joined_lines(&self) -> Option<String> {
@@ -233,7 +233,7 @@ impl<'k, 's, T: AsRef<[&'s str]>> Value<'k, T> {
 
     pub fn joined_lines_req(&self) -> Result<String, Error> {
         self.joined_lines()
-            .ok_or_else(|| format_err!("{:?} required", self.key))
+            .ok_or_else(|| anyhow!("{:?} required", self.key))
     }
 
     pub fn split_comma(&self) -> Result<Vec<&'s str>, Error> {
@@ -265,7 +265,7 @@ impl<'k, 's, T: AsRef<[&'s str]>> Value<'k, T> {
 
 #[cfg(test)]
 mod tests {
-    use failure::Error;
+    use anyhow::Error;
 
     use super::fields_in_block;
     use super::parse_date;

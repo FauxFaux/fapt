@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use failure::bail;
-use failure::err_msg;
-use failure::format_err;
-use failure::Error;
-use failure::ResultExt;
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Error;
 use insideout::InsideOut;
 
 use super::arch;
@@ -74,21 +73,21 @@ impl Package {
         let name = map
             .get_value("Package")
             .one_line_req()
-            .with_context(|_| format_err!("no Package: {:?}", map))?
+            .with_context(|| anyhow!("no Package: {:?}", map))?
             .to_string();
 
         let style = if map.contains_key("Binary") {
             // Binary indicates that it's a source package *producing* that binary
             PackageType::Source(
-                src::parse_src(map).with_context(|_| format_err!("source fields in {:?}", name))?,
+                src::parse_src(map).with_context(|| anyhow!("source fields in {:?}", name))?,
             )
         } else {
             PackageType::Binary(
-                bin::parse_bin(map).with_context(|_| format_err!("binary fields in {:?}", name))?,
+                bin::parse_bin(map).with_context(|| anyhow!("binary fields in {:?}", name))?,
             )
         };
 
-        Ok(parse_pkg(map, style).with_context(|_| format_err!("shared fields in {:?}", name))?)
+        Ok(parse_pkg(map, style).with_context(|| anyhow!("shared fields in {:?}", name))?)
     }
 
     pub fn as_src(&self) -> Option<&src::Source> {
@@ -114,7 +113,7 @@ fn parse_pkg(map: &mut rfc822::Map, style: PackageType) -> Result<Package, Error
         .split_whitespace()
         .map(|s| s.parse())
         .collect::<Result<HashSet<arch::Arch>, Error>>()
-        .with_context(|_| err_msg("reading Architecture"))?;
+        .with_context(|| anyhow!("reading Architecture"))?;
 
     let original_maintainer = map
         .remove_value("Original-Maintainer")

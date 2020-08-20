@@ -2,10 +2,10 @@
 
 use std::io::BufRead;
 
-use failure::bail;
-use failure::format_err;
-use failure::Error;
-use failure::ResultExt;
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Error;
 
 /// Our representation of a classic sources list entry.
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -32,7 +32,7 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
 
     let src = parts
         .next()
-        .ok_or_else(|| format_err!("deb{{,s,-src}} section required"))?;
+        .ok_or_else(|| anyhow!("deb{{,s,-src}} section required"))?;
     let arch = match parts.peek() {
         Some(&val) if val.starts_with("[") => {
             parts.next();
@@ -44,10 +44,10 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
 
     let url = parts
         .next()
-        .ok_or_else(|| format_err!("url section required"))?;
+        .ok_or_else(|| anyhow!("url section required"))?;
     let suite = parts
         .next()
-        .ok_or_else(|| format_err!("suite section required"))?;
+        .ok_or_else(|| anyhow!("suite section required"))?;
 
     let components: Vec<&str> = parts.collect();
 
@@ -78,7 +78,7 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
 }
 
 fn read_single_line_number(line: &str, no: usize) -> Result<Vec<Entry>, Error> {
-    Ok(read_single_line(line).with_context(|_| format_err!("parsing line {}", no + 1))?)
+    Ok(read_single_line(line).with_context(|| anyhow!("parsing line {}", no + 1))?)
 }
 
 /// Read `Entry` objects from some `sources.list` lines.
@@ -88,7 +88,7 @@ pub fn read<R: BufRead>(from: R) -> Result<Vec<Entry>, Error> {
         .enumerate()
         .map(|(no, line)| match line {
             Ok(line) => read_single_line_number(&line, no),
-            Err(e) => Err(format_err!("reading around line {}: {:?}", no, e)),
+            Err(e) => Err(anyhow!("reading around line {}: {:?}", no, e)),
         })
         .collect::<Result<Vec<Vec<Entry>>, Error>>()?
         .into_iter()

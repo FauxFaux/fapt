@@ -1,10 +1,10 @@
 use std::cmp;
 use std::collections::HashSet;
 
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
 use deb_version::compare_versions;
-use failure::format_err;
-use failure::Error;
-use failure::ResultExt;
 use insideout::InsideOut;
 use nom::types::CompleteStr;
 
@@ -54,8 +54,8 @@ pub fn read(val: &str) -> Result<Vec<Dependency>, Error> {
     match parse(CompleteStr(val)) {
         Ok((CompleteStr(""), val)) => Ok(val.into_iter().collect::<Result<_, Error>>()?),
         Err(NomErr::Incomplete(_)) => unreachable!(),
-        Ok((trailing, _)) => Err(format_err!("trailing data: '{:?}'", trailing)),
-        other => Err(format_err!("nom error: {:?}", other)),
+        Ok((trailing, _)) => Err(anyhow!("trailing data: '{:?}'", trailing)),
+        other => Err(anyhow!("nom error: {:?}", other)),
     }
 }
 
@@ -104,21 +104,21 @@ named!(package_name<CompleteStr, CompleteStr>, take_while1_s!(is_package_name_ch
 named!(version<CompleteStr, CompleteStr>, take_while1_s!(is_version_char));
 
 named!(version_constraint<CompleteStr, Constraint>,
-    ws!(do_parse!(
-        tag!("(") >>
-        operator: alt!(
-            tag!(">=") => { |_| ConstraintOperator::Ge } |
-            tag!("<=") => { |_| ConstraintOperator::Le } |
-            tag!(">>") => { |_| ConstraintOperator::Gt } |
-            tag!("<<") => { |_| ConstraintOperator::Lt } |
-            tag!(">") => { |_| ConstraintOperator::Gt } |
-            tag!("<") => { |_| ConstraintOperator::Lt } |
-            tag!("=") => { |_| ConstraintOperator::Eq }
-        ) >>
-        version: version >>
-        tag!(")") >>
-        ( Constraint::new(operator, version.0) )
-    )));
+ws!(do_parse!(
+    tag!("(") >>
+    operator: alt!(
+        tag!(">=") => { |_| ConstraintOperator::Ge } |
+        tag!("<=") => { |_| ConstraintOperator::Le } |
+        tag!(">>") => { |_| ConstraintOperator::Gt } |
+        tag!("<<") => { |_| ConstraintOperator::Lt } |
+        tag!(">") => { |_| ConstraintOperator::Gt } |
+        tag!("<") => { |_| ConstraintOperator::Lt } |
+        tag!("=") => { |_| ConstraintOperator::Eq }
+    ) >>
+    version: version >>
+    tag!(")") >>
+    ( Constraint::new(operator, version.0) )
+)));
 
 named!(arch_part<CompleteStr, (bool, CompleteStr)>,
     do_parse!(
@@ -175,14 +175,14 @@ fn build_single_dep(
         arch: arch
             .map(|s| to_arch(s))
             .inside_out()
-            .with_context(|_| format_err!("explicit arch in dep {:?}", package))?,
+            .with_context(|| anyhow!("explicit arch in dep {:?}", package))?,
         version_constraints,
         arch_filter: arch_filter
             .unwrap_or_else(Vec::new)
             .into_iter()
             .map(|(positive, arch)| to_arch(arch).map(|a| (positive, a)))
             .collect::<Result<HashSet<(bool, Arch)>, Error>>()
-            .with_context(|_| format_err!("arch filter in dep {:?}", package))?,
+            .with_context(|| anyhow!("arch filter in dep {:?}", package))?,
         stage_filter: stage_filter.into_iter().map(|x| x.0.to_string()).collect(),
         package,
     })

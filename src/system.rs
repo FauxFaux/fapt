@@ -1,7 +1,7 @@
 //! Lower level operations on a [crate::system::System].
 //!
 //! ```
-//! # fn main() -> Result<(), failure::Error> {
+//! # fn main() -> Result<(), anyhow::Error> {
 //! # use fapt::system::System;
 //! let fapt = System::cache_only()?;
 //! // ...
@@ -16,10 +16,9 @@ use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 
-use failure::err_msg;
-use failure::format_err;
-use failure::Error;
-use failure::ResultExt;
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
 use gpgrv::Keyring;
 use reqwest;
 
@@ -50,7 +49,7 @@ impl System {
     /// Produce a `System` with no configuration, using the user's cache directory.
     pub fn cache_only() -> Result<Self, Error> {
         let mut cache_dir = directories::ProjectDirs::from("xxx", "fau", "fapt")
-            .ok_or(err_msg("couldn't find HOME's data directories"))?
+            .ok_or(anyhow!("couldn't find HOME's data directories"))?
             .cache_dir()
             .to_path_buf();
         cache_dir.push("lists");
@@ -114,18 +113,18 @@ impl System {
     pub fn update(&self) -> Result<(), Error> {
         let requested =
             release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
-                .with_context(|_| format_err!("parsing sources entries"))?;
+                .with_context(|| anyhow!("parsing sources entries"))?;
 
         requested
             .download(&self.lists_dir, &self.keyring, &self.client)
-            .with_context(|_| format_err!("downloading releases"))?;
+            .with_context(|| anyhow!("downloading releases"))?;
 
         let releases = requested
             .parse(&self.lists_dir)
-            .with_context(|_| format_err!("parsing releases"))?;
+            .with_context(|| anyhow!("parsing releases"))?;
 
         lists::download_files(&self.client, &self.lists_dir, &releases)
-            .with_context(|_| format_err!("downloading release content"))?;
+            .with_context(|| anyhow!("downloading release content"))?;
 
         Ok(())
     }
@@ -134,9 +133,9 @@ impl System {
     pub fn listings(&self) -> Result<Vec<DownloadedList>, Error> {
         let releases =
             release::RequestedReleases::from_sources_lists(&self.sources_entries, &self.arches)
-                .with_context(|_| format_err!("parsing sources entries"))?
+                .with_context(|| anyhow!("parsing sources entries"))?
                 .parse(&self.lists_dir)
-                .with_context(|_| format_err!("parsing releases"))?;
+                .with_context(|| anyhow!("parsing releases"))?;
 
         let mut ret = Vec::with_capacity(releases.len() * 4);
 
@@ -164,7 +163,7 @@ impl System {
         let mut status = self
             .dpkg_database
             .as_ref()
-            .ok_or_else(|| format_err!("dpkg database not set"))?
+            .ok_or_else(|| anyhow!("dpkg database not set"))?
             .to_path_buf();
         status.push("status");
 

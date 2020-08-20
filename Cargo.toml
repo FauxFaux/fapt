@@ -30,13 +30,13 @@ repository = "FauxFaux/fapt"
 binaries = ["clap"]
 
 [dependencies]
+anyhow = "1"
 deb-version = "0.1"
 distro-keyring = "0.1"
 chrono = "0.4"
 directories = "2"
-failure = "0.1"
 filetime = "0.2"
-gpgrv = "0.2"
+gpgrv = "0.3"
 hex = "0.4"
 insideout = "0.2"
 mailparse = "0.10"

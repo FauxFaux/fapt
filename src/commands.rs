@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use std::io;
 use std::path::PathBuf;
 
-use failure::err_msg;
-use failure::Error;
+use anyhow::anyhow;
+use anyhow::Error;
 
 use crate::lists;
 use crate::rfc822::RfcMapExt;
@@ -111,14 +111,14 @@ fn print_ninja_source(map: &HashMap<&str, Vec<&str>>) -> Result<(), Error> {
 
     let dsc = map
         .get("Files")
-        .ok_or_else(|| err_msg("expecting Files"))?
+        .ok_or_else(|| anyhow!("expecting Files"))?
         .iter()
         .filter(|line| line.ends_with(".dsc"))
         .next()
-        .ok_or_else(|| err_msg("expecting a .dsc"))?
+        .ok_or_else(|| anyhow!("expecting a .dsc"))?
         .split_whitespace()
         .nth(2)
-        .ok_or_else(|| err_msg("expecting valid dsc block"))?;
+        .ok_or_else(|| anyhow!("expecting valid dsc block"))?;
 
     let size: u64 = map["Files"]
         .iter()

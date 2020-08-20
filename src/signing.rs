@@ -2,9 +2,9 @@ use std::fs;
 use std::io;
 use std::path::Path;
 
-use failure::format_err;
-use failure::Error;
-use failure::ResultExt;
+use anyhow::anyhow;
+use anyhow::Context;
+use anyhow::Error;
 use gpgrv::Keyring;
 use tempfile_fast::PersistableTempFile;
 
@@ -22,19 +22,19 @@ impl<'k> GpgClient<'k> {
         file: P,
         dest: Q,
     ) -> Result<(), Error> {
-        let from = fs::File::open(file).with_context(|_| format_err!("opening input file"))?;
+        let from = fs::File::open(file).with_context(|| anyhow!("opening input file"))?;
         let to = PersistableTempFile::new_in(
             dest.as_ref()
                 .parent()
-                .ok_or_else(|| format_err!("full path please"))?,
+                .ok_or_else(|| anyhow!("full path please"))?,
         )
-        .with_context(|_| format_err!("creating temporary file"))?;
+        .with_context(|| anyhow!("creating temporary file"))?;
 
         gpgrv::verify_message(io::BufReader::new(from), &to, &self.keyring)?;
 
         to.persist_by_rename(dest)
             .map_err(|e| e.error)
-            .with_context(|_| format_err!("persisting output file"))?;
+            .with_context(|| anyhow!("persisting output file"))?;
 
         Ok(())
     }
@@ -47,10 +47,9 @@ impl<'k> GpgClient<'k> {
     ) -> Result<(), Error> {
         gpgrv::verify_detached(
             io::BufReader::new(
-                fs::File::open(signature)
-                    .with_context(|_| format_err!("opening signature file"))?,
+                fs::File::open(signature).with_context(|| anyhow!("opening signature file"))?,
             ),
-            fs::File::open(file.as_ref()).with_context(|_| format_err!("opening input file"))?,
+            fs::File::open(file.as_ref()).with_context(|| anyhow!("opening input file"))?,
             &self.keyring,
         )?;
         fs::copy(file, dest)?;

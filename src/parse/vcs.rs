@@ -1,4 +1,4 @@
-use failure::Error;
+use anyhow::Error;
 
 use crate::rfc822;
 use crate::rfc822::RfcMapExt;

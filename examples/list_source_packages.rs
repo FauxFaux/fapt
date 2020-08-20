@@ -4,7 +4,7 @@ use fapt::commands;
 use fapt::rfc822::RfcMapExt;
 use fapt::system::System;
 
-fn main() -> Result<(), failure::Error> {
+fn main() -> Result<(), anyhow::Error> {
     let args: Vec<String> = env::args().skip(1).collect();
 
     let src_line = if args.is_empty() {

@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use failure::err_msg;
+use anyhow::anyhow;
 use fapt::commands;
 use fapt::system;
 
-fn main() -> Result<(), failure::Error> {
+fn main() -> Result<(), anyhow::Error> {
     let mut fapt = system::System::cache_only()?;
     commands::add_sources_entries_from_str(
         &mut fapt,
@@ -19,7 +19,7 @@ fn main() -> Result<(), failure::Error> {
     for list in fapt.listings()? {
         for section in fapt.open_listing(&list)? {
             let pkg = section?.as_pkg()?;
-            let src = pkg.as_src().ok_or(err_msg("non-source package found"))?;
+            let src = pkg.as_src().ok_or(anyhow!("non-source package found"))?;
 
             let mut urls = Vec::with_capacity(4);
 

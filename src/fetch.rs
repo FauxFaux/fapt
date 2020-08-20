@@ -4,12 +4,12 @@ use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 
+use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Context;
+use anyhow::Error;
 use chrono::DateTime;
 use chrono::Utc;
-use failure::bail;
-use failure::format_err;
-use failure::Error;
-use failure::ResultExt;
 use filetime;
 use reqwest;
 use reqwest::header;
@@ -36,7 +36,7 @@ pub fn fetch(client: &reqwest::Client, downloads: &[Download]) -> Result<(), Err
         write!(io::stderr(), "Downloading: {} ... ", download.from)?;
         io::stderr().flush()?;
         fetch_single(client, download)
-            .with_context(|_| format_err!("downloading {} to {:?}", download.from, download.to))?;
+            .with_context(|| anyhow!("downloading {} to {:?}", download.from, download.to))?;
     }
 
     Ok(())
@@ -50,9 +50,7 @@ fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<(), Err
         req = req.header(header::IF_MODIFIED_SINCE, when.to_rfc2822());
     }
 
-    let mut resp = req
-        .send()
-        .with_context(|_| format_err!("initiating request"))?;
+    let mut resp = req.send().with_context(|| anyhow!("initiating request"))?;
 
     let status = resp.status();
     if reqwest::StatusCode::NOT_MODIFIED == status {
@@ -68,24 +66,23 @@ fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<(), Err
     let parent = download
         .to
         .parent()
-        .ok_or_else(|| format_err!("path must have parent"))?;
+        .ok_or_else(|| anyhow!("path must have parent"))?;
 
-    fs::create_dir_all(parent)
-        .with_context(|_| format_err!("creating directories: {:?}", parent))?;
+    fs::create_dir_all(parent).with_context(|| anyhow!("creating directories: {:?}", parent))?;
 
     let mut tmp = PersistableTempFile::new_in(parent)
-        .with_context(|_| format_err!("couldn't create temporary file"))?;
+        .with_context(|| anyhow!("couldn't create temporary file"))?;
 
     if let Some(len) = resp.headers().get(header::CONTENT_LENGTH) {
         tmp.set_len(len.to_str()?.parse()?)
-            .with_context(|_| format_err!("pretending to allocate space"))?;
+            .with_context(|| anyhow!("pretending to allocate space"))?;
     }
 
-    io::copy(&mut resp, &mut tmp).with_context(|_| format_err!("copying data"))?;
+    io::copy(&mut resp, &mut tmp).with_context(|| anyhow!("copying data"))?;
 
     tmp.persist_by_rename(&download.to)
         .map_err(|e| e.error)
-        .with_context(|_| format_err!("persisting result"))?;
+        .with_context(|| anyhow!("persisting result"))?;
 
     if let Some(modified) = resp.headers().get(header::LAST_MODIFIED) {
         let date = DateTime::parse_from_rfc2822(modified.to_str()?)?;
