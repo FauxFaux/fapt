@@ -156,7 +156,7 @@ impl RequestedReleases {
         &self,
         lists_dir: P,
         keyring: &Keyring,
-        client: &reqwest::Client,
+        client: &reqwest::blocking::Client,
     ) -> Result<(), Error> {
         let lists_dir = lists_dir.as_ref();
 

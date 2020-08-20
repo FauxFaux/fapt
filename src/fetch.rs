@@ -29,7 +29,7 @@ impl Download {
     }
 }
 
-pub fn fetch(client: &reqwest::Client, downloads: &[Download]) -> Result<(), Error> {
+pub fn fetch(client: &reqwest::blocking::Client, downloads: &[Download]) -> Result<(), Error> {
     // TODO: reqwest parallel API, when it's stable
 
     for download in downloads {
@@ -42,7 +42,7 @@ pub fn fetch(client: &reqwest::Client, downloads: &[Download]) -> Result<(), Err
     Ok(())
 }
 
-fn fetch_single(client: &reqwest::Client, download: &Download) -> Result<(), Error> {
+fn fetch_single(client: &reqwest::blocking::Client, download: &Download) -> Result<(), Error> {
     let mut req = client.get(download.from.as_ref());
 
     if download.to.exists() {
