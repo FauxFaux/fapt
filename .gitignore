@@ -8,3 +8,6 @@ tmp/
 .ninja*
 .fapt-lists/
 .gdb_history
+
+src/*.egg-info
+src/*.so
