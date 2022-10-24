@@ -26,47 +26,73 @@ use crate::rfc822::RfcMapExt;
 use crate::signing::GpgClient;
 use crate::sources_list::Entry;
 
+use pyo3::prelude::pyclass;
+
 pub struct RequestedReleases {
     releases: Vec<(RequestedRelease, Vec<Entry>)>,
 }
 
 #[derive(Clone, PartialOrd, Ord, Hash, PartialEq, Eq, Debug)]
+#[pyclass]
 pub struct RequestedRelease {
     mirror: Url,
     /// This can also be called "suite" in some places,
     /// e.g. "unstable" (suite) == "sid" (codename)
+    #[pyo3(get)]
     codename: String,
 
+    #[pyo3(get)]
     pub arches: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
+#[pyclass]
 pub struct ReleaseFile {
+    #[pyo3(get)]
     origin: String,
+    #[pyo3(get)]
     label: String,
+    #[pyo3(get)]
     suite: Option<String>,
+    #[pyo3(get)]
     codename: Option<String>,
+    #[pyo3(get)]
     changelogs: Option<String>,
+    #[pyo3(get)]
     date: DateTime<Utc>,
+    #[pyo3(get)]
     valid_until: Option<DateTime<Utc>>,
+    #[pyo3(get)]
     pub acquire_by_hash: bool,
+    #[pyo3(get)]
     pub arches: Vec<String>,
+    #[pyo3(get)]
     components: Vec<String>,
+    #[pyo3(get)]
     description: Option<String>,
+    #[pyo3(get)]
     pub contents: Vec<ReleaseContent>,
 }
 
 #[derive(Clone)]
+#[pyclass]
 pub struct ReleaseContent {
+    #[pyo3(get)]
     pub len: u64,
+    #[pyo3(get)]
     pub name: String,
+    #[pyo3(get)]
     pub hashes: Hashes,
 }
 
 #[derive(Debug, Clone)]
+#[pyclass]
 pub struct Release {
+    #[pyo3(get)]
     pub req: RequestedRelease,
+    #[pyo3(get)]
     pub sources_entries: Vec<Entry>,
+    #[pyo3(get)]
     pub file: ReleaseFile,
 }
 

@@ -45,7 +45,9 @@ pub struct System {
 #[derive(Debug, Clone)]
 #[pyclass]
 pub struct DownloadedList {
+    #[pyo3(get)]
     pub release: release::Release,
+    #[pyo3(get)]
     pub listing: lists::Listing,
 }
 
