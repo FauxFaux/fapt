@@ -8,41 +8,41 @@ use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Error;
-use clap::{App, AppSettings, Arg, SubCommand};
+use clap::{command, Arg, Command};
 use fapt::commands;
 use fapt::sources_list;
 use fapt::system::System;
 
 fn main() -> Result<(), anyhow::Error> {
-    let matches = App::new("Faux' apt")
-        .setting(AppSettings::SubcommandRequired)
+    let matches = command!()
+        .subcommand_required(true)
         .arg(
-            Arg::with_name("sources-list")
+            Arg::new("sources-list")
                 .long("sources-list")
                 .value_name("PREFIX")
                 .help("explicitly set the sources.list search path"),
         )
         .arg(
-            Arg::with_name("keyring")
+            Arg::new("keyring")
                 .long("keyring")
-                .multiple(true)
+                .num_args(..)
                 .number_of_values(1)
                 .value_name("PREFIX")
                 .help("explicitly add a keyring search path"),
         )
         .arg(
-            Arg::with_name("cache-dir")
+            Arg::new("cache-dir")
                 .long("cache-dir")
                 .short('c')
                 .value_name("DIRECTORY")
                 .help("explicitly set the cache directory"),
         )
         .arg(
-            Arg::with_name("sources-line")
+            Arg::new("sources-line")
                 .long("sources-line")
                 .short('r')
                 .value_name("LINE")
-                .multiple(true)
+                .num_args(..)
                 .number_of_values(1)
                 .help(concat!(
                     "a sources.list entry",
@@ -50,31 +50,31 @@ fn main() -> Result<(), anyhow::Error> {
                 )),
         )
         .arg(
-            Arg::with_name("arch")
+            Arg::new("arch")
                 .long("arch")
                 .short('a')
                 .value_name("ARCH")
-                .multiple(true)
+                .num_args(..)
                 .number_of_values(1)
                 .help("an explicit arch (e.g. 'amd64'); the first provided will be the 'primary'"),
         )
         .arg(
-            Arg::with_name("system-dpkg")
+            Arg::new("system-dpkg")
                 .long("system-dpkg")
                 .value_name("PATH")
                 .default_value("/var/lib/dpkg")
                 .help("dpkg database location"),
         )
         .subcommand(
-            SubCommand::with_name("update").help("just fetch necessary data for specified sources"),
+            Command::new("update"), // .help("just fetch necessary data for specified sources"),
         )
         .subcommand(
-            SubCommand::with_name("source-ninja").help("dump out all source packages as ninja"),
+            Command::new("source-ninja"), // .help("dump out all source packages as ninja"),
         )
         .get_matches();
 
     let mut sources_entries = Vec::with_capacity(16);
-    if let Some(prefix) = matches.value_of("sources-list") {
+    if let Some(prefix) = matches.get_one::<&str>("sources-list") {
         for prefix in expand_dot_d(prefix)? {
             sources_entries.extend(
                 sources_list::read(io::BufReader::new(fs::File::open(&prefix)?))
@@ -83,8 +83,8 @@ fn main() -> Result<(), anyhow::Error> {
         }
     }
 
-    if let Some(lines) = matches.values_of("sources-line") {
-        for line in lines {
+    if let Some(lines) = matches.get_many::<&str>("sources-line") {
+        for line in lines.copied() {
             let entries = sources_list::read(io::Cursor::new(line))
                 .with_context(|| anyhow!("parsing command line: {:?}", line))?;
 
@@ -98,8 +98,8 @@ fn main() -> Result<(), anyhow::Error> {
         }
     }
 
-    let arches = match matches.values_of("arch") {
-        Some(arches) => arches.collect(),
+    let arches = match matches.get_many("arch") {
+        Some(arches) => arches.copied().collect(),
         None => vec!["amd64"],
     };
 
@@ -112,7 +112,7 @@ fn main() -> Result<(), anyhow::Error> {
 
     let mut system = System::cache_only()?;
     system.add_sources_entries(sources_entries.clone().into_iter());
-    if let Some(keyring_paths) = matches.values_of_os("keyring") {
+    if let Some(keyring_paths) = matches.get_raw("keyring") {
         for keyring_path in keyring_paths {
             for path in expand_dot_d(keyring_path)? {
                 system.add_keys_from(
@@ -127,7 +127,7 @@ fn main() -> Result<(), anyhow::Error> {
 
     system.set_arches(&arches);
 
-    system.set_dpkg_database(matches.value_of("system-dpkg").unwrap());
+    system.set_dpkg_database(matches.get_one::<&Path>("system-dpkg").unwrap());
 
     match matches.subcommand() {
         Some(("source-ninja", _)) => {

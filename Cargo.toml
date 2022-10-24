@@ -48,7 +48,8 @@ tempfile-fast = "0.3"
 
 [dependencies.clap]
 optional = true
-version = "3"
+features = ["cargo"]
+version = "4"
 
 [dependencies.digest]
 features = ["std"]
