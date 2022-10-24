@@ -129,6 +129,7 @@ impl System {
     // XXX: pyo3 doesn't support generic parameters
     // (https://pyo3.rs/main/class.html#no-generic-parameters), this is a Python-specific
     // concrete method
+    #[pyo3(name = "add_sources_entries")]
     pub fn add_sources_entries_py(&mut self, entries: Vec<Entry>) {
         self.add_sources_entries(entries);
     }
