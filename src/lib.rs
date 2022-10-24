@@ -5,6 +5,8 @@
 #[macro_use]
 extern crate nom;
 
+use pyo3::prelude::{pymodule, PyModule, PyResult, Python};
+
 mod checksum;
 pub mod commands;
 mod fetch;
@@ -15,3 +17,9 @@ pub mod rfc822;
 mod signing;
 pub mod sources_list;
 pub mod system;
+
+#[pymodule]
+fn fapt(py: Python<'_>, m: &PyModule) -> PyResult<()> {
+    m.add_submodule(system::py_system(py)?)?;
+    Ok(())
+}

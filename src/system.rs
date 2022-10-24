@@ -28,7 +28,10 @@ use crate::release;
 use crate::rfc822;
 use crate::sources_list::Entry;
 
+use pyo3::prelude::{pyclass, pymethods, PyModule, PyResult, Python};
+
 /// The core object, tying together configuration, caching, and listing.
+#[pyclass]
 pub struct System {
     pub(crate) lists_dir: PathBuf,
     dpkg_database: Option<PathBuf>,
@@ -40,13 +43,17 @@ pub struct System {
 
 /// A _Listing_ that has been downloaded, and the _Release_ it came from.
 #[derive(Debug, Clone)]
+#[pyclass]
 pub struct DownloadedList {
     pub release: release::Release,
     pub listing: lists::Listing,
 }
 
+#[pymethods]
 impl System {
+    // Methods exposed to Python
     /// Produce a `System` with no configuration, using the user's cache directory.
+    #[staticmethod]
     pub fn cache_only() -> Result<Self, Error> {
         let mut cache_dir = directories::ProjectDirs::from("xxx", "fau", "fapt")
             .ok_or(anyhow!("couldn't find HOME's data directories"))?
@@ -54,59 +61,6 @@ impl System {
             .to_path_buf();
         cache_dir.push("lists");
         Self::cache_only_in(cache_dir)
-    }
-
-    /// Produce a `System` with no configuration, using a specified cache directory.
-    pub fn cache_only_in<P: AsRef<Path>>(lists_dir: P) -> Result<Self, Error> {
-        fs::create_dir_all(lists_dir.as_ref())?;
-
-        let client = if let Ok(proxy) = env::var("http_proxy") {
-            reqwest::blocking::Client::builder()
-                .proxy(reqwest::Proxy::http(&proxy)?)
-                .build()?
-        } else {
-            reqwest::blocking::Client::new()
-        };
-
-        Ok(System {
-            lists_dir: lists_dir.as_ref().to_path_buf(),
-            dpkg_database: None,
-            sources_entries: Vec::new(),
-            arches: Vec::new(),
-            keyring: Keyring::new(),
-            client,
-        })
-    }
-
-    /// Add prepared sources entries.
-    ///
-    /// These can be acquired from [crate::sources_list]. It is not recommended that you
-    /// build them by hand.
-    pub fn add_sources_entries<I: IntoIterator<Item = Entry>>(&mut self, entries: I) {
-        self.sources_entries.extend(entries);
-    }
-
-    /// Configure the architectures this system is using.
-    ///
-    /// The first architecture is the "primary" architecture.
-    pub fn set_arches<S: ToString, I: IntoIterator<Item = S>>(&mut self, arches: I) {
-        self.arches = arches.into_iter().map(|x| x.to_string()).collect();
-    }
-
-    /// Configure the location of the `dpkg` database.
-    ///
-    /// This can be used to view `status` information, i.e. information on
-    /// currently installed packages.
-    pub fn set_dpkg_database<P: AsRef<Path>>(&mut self, dpkg: P) {
-        self.dpkg_database = Some(dpkg.as_ref().to_path_buf());
-    }
-
-    /// Load GPG keys from an old-style keyring (i.e. not a keybox file).
-    ///
-    /// Note that this will reject invalid keyring files, unlike other `*apt` implementations.
-    pub fn add_keys_from<R: Read>(&mut self, source: R) -> Result<(), Error> {
-        self.keyring.append_keys_from(source)?;
-        Ok(())
     }
 
     /// Download any necessary _Listings_ for the configured _Sources Entries_.
@@ -173,7 +127,63 @@ impl System {
     }
 }
 
+impl System {
+    /// Produce a `System` with no configuration, using a specified cache directory.
+    pub fn cache_only_in<P: AsRef<Path>>(lists_dir: P) -> Result<Self, Error> {
+        fs::create_dir_all(lists_dir.as_ref())?;
+
+        let client = if let Ok(proxy) = env::var("http_proxy") {
+            reqwest::blocking::Client::builder()
+                .proxy(reqwest::Proxy::http(&proxy)?)
+                .build()?
+        } else {
+            reqwest::blocking::Client::new()
+        };
+
+        Ok(System {
+            lists_dir: lists_dir.as_ref().to_path_buf(),
+            dpkg_database: None,
+            sources_entries: Vec::new(),
+            arches: Vec::new(),
+            keyring: Keyring::new(),
+            client,
+        })
+    }
+
+    /// Add prepared sources entries.
+    ///
+    /// These can be acquired from [crate::sources_list]. It is not recommended that you
+    /// build them by hand.
+    pub fn add_sources_entries<I: IntoIterator<Item = Entry>>(&mut self, entries: I) {
+        self.sources_entries.extend(entries);
+    }
+
+    /// Configure the architectures this system is using.
+    ///
+    /// The first architecture is the "primary" architecture.
+    pub fn set_arches<S: ToString, I: IntoIterator<Item = S>>(&mut self, arches: I) {
+        self.arches = arches.into_iter().map(|x| x.to_string()).collect();
+    }
+
+    /// Configure the location of the `dpkg` database.
+    ///
+    /// This can be used to view `status` information, i.e. information on
+    /// currently installed packages.
+    pub fn set_dpkg_database<P: AsRef<Path>>(&mut self, dpkg: P) {
+        self.dpkg_database = Some(dpkg.as_ref().to_path_buf());
+    }
+
+    /// Load GPG keys from an old-style keyring (i.e. not a keybox file).
+    ///
+    /// Note that this will reject invalid keyring files, unlike other `*apt` implementations.
+    pub fn add_keys_from<R: Read>(&mut self, source: R) -> Result<(), Error> {
+        self.keyring.append_keys_from(source)?;
+        Ok(())
+    }
+}
+
 /// The _Blocks_ of a _Listing_.
+#[pyclass]
 pub struct ListingBlocks {
     pub(crate) inner: rfc822::Blocks<fs::File>,
 }
@@ -210,4 +220,10 @@ impl NamedBlock {
     pub fn into_string(self) -> String {
         self.inner
     }
+}
+
+pub fn py_system(py: Python<'_>) -> PyResult<&PyModule> {
+    let mut m = PyModule::new(py, "system")?;
+    m.add_class::<System>()?;
+    Ok(m)
 }
