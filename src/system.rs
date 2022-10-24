@@ -125,6 +125,13 @@ impl System {
             inner: rfc822::Blocks::new(fs::File::open(status)?, "status".to_string()),
         })
     }
+
+    // XXX: pyo3 doesn't support generic parameters
+    // (https://pyo3.rs/main/class.html#no-generic-parameters), this is a Python-specific
+    // concrete method
+    pub fn add_sources_entries_py(&mut self, entries: Vec<Entry>) {
+        self.add_sources_entries(entries);
+    }
 }
 
 impl System {
