@@ -20,6 +20,7 @@ pub mod system;
 
 #[pymodule]
 fn fapt(py: Python<'_>, m: &PyModule) -> PyResult<()> {
+    m.add_submodule(commands::py_commands(py)?)?;
     m.add_submodule(sources_list::py_sources_list(py)?)?;
     m.add_submodule(system::py_system(py)?)?;
     Ok(())
