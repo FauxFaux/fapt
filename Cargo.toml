@@ -40,9 +40,9 @@ gpgrv = "0.3"
 hex = "0.4"
 insideout = "0.2"
 mailparse = "0.10"
-md-5 = "0.9"
+md-5 = "0.10"
 nom = "4"
-sha2 = "0.9"
+sha2 = "0.10"
 tempfile = "3"
 tempfile-fast = "0.3"
 
@@ -52,7 +52,7 @@ version = "2"
 
 [dependencies.digest]
 features = ["std"]
-version = "0.9"
+version = "0.10"
 
 [dependencies.flate2]
 default-features = false
