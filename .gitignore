@@ -11,3 +11,4 @@ tmp/
 
 src/*.egg-info
 src/*.so
+venv/
