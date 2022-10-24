@@ -42,6 +42,7 @@ insideout = "0.2"
 mailparse = "0.13"
 md-5 = "0.10"
 nom = "4"
+pyo3 = { version = "0.17.2", features = ["anyhow", "extension-module"] }
 sha2 = "0.10"
 tempfile = "3"
 tempfile-fast = "0.3"
@@ -71,3 +72,7 @@ version = "0.3"
 [[bin]]
 name = "fapt"
 required-features = ["binaries"]
+
+[lib]
+name = "fapt"
+crate-type = ["cdylib", "lib"]
