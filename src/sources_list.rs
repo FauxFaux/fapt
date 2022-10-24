@@ -7,7 +7,8 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 
-use pyo3::prelude::{pyclass, pymethods, PyModule, PyResult, Python};
+use pyo3::basic::CompareOp;
+use pyo3::prelude::{pyclass, pymethods, IntoPy, Py, PyAny, PyModule, PyResult, Python};
 
 /// Our representation of a classic sources list entry.
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -36,6 +37,14 @@ impl Entry {
             suite_codename,
             components,
             arch,
+        }
+    }
+
+    fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> Py<PyAny> {
+        match op {
+            CompareOp::Eq => (self == other).into_py(py),
+            CompareOp::Ne => (self != other).into_py(py),
+            _ => py.NotImplemented(),
         }
     }
 }
