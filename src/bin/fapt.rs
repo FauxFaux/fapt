@@ -33,14 +33,14 @@ fn main() -> Result<(), anyhow::Error> {
         .arg(
             Arg::with_name("cache-dir")
                 .long("cache-dir")
-                .short("c")
+                .short('c')
                 .value_name("DIRECTORY")
                 .help("explicitly set the cache directory"),
         )
         .arg(
             Arg::with_name("sources-line")
                 .long("sources-line")
-                .short("r")
+                .short('r')
                 .value_name("LINE")
                 .multiple(true)
                 .number_of_values(1)
@@ -52,7 +52,7 @@ fn main() -> Result<(), anyhow::Error> {
         .arg(
             Arg::with_name("arch")
                 .long("arch")
-                .short("a")
+                .short('a')
                 .value_name("ARCH")
                 .multiple(true)
                 .number_of_values(1)
@@ -130,10 +130,10 @@ fn main() -> Result<(), anyhow::Error> {
     system.set_dpkg_database(matches.value_of("system-dpkg").unwrap());
 
     match matches.subcommand() {
-        ("source-ninja", Some(_)) => {
+        Some(("source-ninja", _)) => {
             commands::source_ninja(&system)?;
         }
-        ("update", _) => {
+        Some(("update", _)) => {
             system.update()?;
         }
         _ => unreachable!(),
