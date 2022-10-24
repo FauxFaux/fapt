@@ -9,12 +9,17 @@ use hex::FromHex;
 use sha2::Digest;
 use sha2::Sha256;
 
+use pyo3::prelude::pyclass;
+
 pub type MD5 = [u8; 16];
 pub type SHA256 = [u8; 32];
 
 #[derive(Copy, Clone, Hash, PartialEq, Eq)]
+#[pyclass]
 pub struct Hashes {
+    #[pyo3(get)]
     pub md5: MD5,
+    #[pyo3(get)]
     pub sha256: SHA256,
 }
 

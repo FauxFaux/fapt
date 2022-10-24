@@ -22,6 +22,8 @@ use crate::fetch;
 use crate::release::Release;
 use crate::release::ReleaseContent;
 
+use pyo3::prelude::pyclass;
+
 #[derive(Debug)]
 pub enum Compression {
     None,
@@ -58,10 +60,15 @@ impl DownloadableListing {
 // directory: "binary",
 // name: "packages"
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[pyclass]
 pub struct Listing {
+    #[pyo3(get)]
     pub component: String,
+    #[pyo3(get)]
     pub arch: Option<String>,
+    #[pyo3(get)]
     pub directory: String,
+    #[pyo3(get)]
     pub name: String,
 }
 

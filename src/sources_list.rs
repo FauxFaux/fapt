@@ -7,14 +7,46 @@ use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
 
+use pyo3::basic::CompareOp;
+use pyo3::prelude::{pyclass, pymethods, IntoPy, Py, PyAny, PyModule, PyResult, Python};
+
 /// Our representation of a classic sources list entry.
 #[derive(Debug, PartialEq, Eq, Clone)]
+#[pyclass]
 pub struct Entry {
     pub src: bool,
     pub url: String,
     pub suite_codename: String,
     pub components: Vec<String>,
     pub arch: Option<String>,
+}
+
+#[pymethods]
+impl Entry {
+    #[new]
+    fn py_new(
+        src: bool,
+        url: String,
+        suite_codename: String,
+        components: Vec<String>,
+        arch: Option<String>,
+    ) -> Self {
+        Entry {
+            src,
+            url,
+            suite_codename,
+            components,
+            arch,
+        }
+    }
+
+    fn __richcmp__(&self, py: Python<'_>, other: &Self, op: CompareOp) -> Py<PyAny> {
+        match op {
+            CompareOp::Eq => (self == other).into_py(py),
+            CompareOp::Ne => (self != other).into_py(py),
+            _ => py.NotImplemented(),
+        }
+    }
 }
 
 fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
@@ -131,4 +163,10 @@ deb-src http://foo  bar  baz quux
             .unwrap()
         );
     }
+}
+
+pub fn py_sources_list(py: Python<'_>) -> PyResult<&PyModule> {
+    let mut m = PyModule::new(py, "sources_list")?;
+    m.add_class::<Entry>()?;
+    Ok(m)
 }

@@ -15,11 +15,14 @@ use crate::system::ListingBlocks;
 use crate::system::NamedBlock;
 use crate::system::System;
 
+use pyo3::prelude::{pyfunction, wrap_pyfunction, PyModule, PyResult, Python};
+
 /// Use some set of bundled GPG keys.
 ///
 /// These may be sufficient for talking to Debian or Ubuntu mirrors.
 /// If you know what keys you actually want, or are using a real system,
 /// please use the keys from there instead.
+#[pyfunction]
 pub fn add_builtin_keys(system: &mut System) {
     system
         .add_keys_from(io::Cursor::new(distro_keyring::supported_keys()))
@@ -181,4 +184,10 @@ fn print_ninja_binary(map: &HashMap<&str, Vec<&str>>) -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+pub fn py_commands(py: Python<'_>) -> PyResult<&PyModule> {
+    let mut m = PyModule::new(py, "commands")?;
+    m.add_function(wrap_pyfunction!(add_builtin_keys, m)?)?;
+    Ok(m)
 }
