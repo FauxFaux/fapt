@@ -35,7 +35,7 @@ pub struct RequestedRelease {
     mirror: Url,
     /// This can also be called "suite" in some places,
     /// e.g. "unstable" (suite) == "sid" (codename)
-    codename: String,
+    pub codename: String,
 
     pub arches: Vec<String>,
 }
