@@ -44,7 +44,7 @@ pub struct Package {
 pub struct File {
     pub name: String,
     pub size: u64,
-    pub md5: String,
+    pub md5: Option<String>,
     pub sha1: String,
     pub sha256: String,
     pub sha512: String,
