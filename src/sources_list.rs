@@ -18,35 +18,40 @@ pub struct Entry {
     pub untrusted: bool,
 }
 
+#[derive(Default)]
 struct ParsedOpts {
     arch: Option<String>,
     untrusted: Option<bool>,
 }
 
-fn parse_opts(opts: &str) -> ParsedOpts {
-    if opts.contains(" ") {
-        panic!("only one option per line supported")
-    }
-    let parts: Vec<_> = opts
-        .strip_prefix("[")
-        .expect("opening [")
-        .strip_suffix("]")
-        .expect("closing ]")
-        .split("=")
-        .collect();
-    match parts.len() {
-        2 => match parts[0] {
-            "arch" => ParsedOpts {
-                arch: Some(parts[1].to_string()),
-                untrusted: None,
+fn parse_opts(opts: Option<&str>) -> ParsedOpts {
+    if let Some(opts) = opts {
+        if opts.contains(" ") {
+            panic!("only one option per line supported")
+        }
+        let parts: Vec<_> = opts
+            .strip_prefix("[")
+            .expect("opening [")
+            .strip_suffix("]")
+            .expect("closing ]")
+            .split("=")
+            .collect();
+        match parts.len() {
+            2 => match parts[0] {
+                "arch" => ParsedOpts {
+                    arch: Some(parts[1].to_string()),
+                    untrusted: None,
+                },
+                "untrusted" => ParsedOpts {
+                    arch: None,
+                    untrusted: Some(parts[1] == "yes"),
+                },
+                other => panic!("unknown option: {}", other),
             },
-            "untrusted" => ParsedOpts {
-                arch: None,
-                untrusted: Some(parts[1] == "yes"),
-            },
-            other => panic!("unknown option: {}", other),
-        },
-        _ => panic!("multiple = in option"),
+            _ => panic!("multiple = in option"),
+        }
+    } else {
+        ParsedOpts::default()
     }
 }
 
@@ -93,11 +98,7 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
 
     let mut ret = Vec::with_capacity(srcs.len());
 
-    let (arch, untrusted) = if let Some(parsed_opts) = opts.map(|opts| parse_opts(opts)) {
-        (parsed_opts.arch, parsed_opts.untrusted)
-    } else {
-        (None, None)
-    };
+    let parsed_opts = parse_opts(opts);
     for src in srcs {
         ret.push(Entry {
             src: *src,
@@ -108,8 +109,8 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
             },
             suite_codename: suite.to_string(),
             components: components.iter().map(|x| x.to_string()).collect(),
-            arch: arch.clone(),
-            untrusted: untrusted.unwrap_or(false),
+            arch: parsed_opts.arch.clone(),
+            untrusted: parsed_opts.untrusted.unwrap_or(false),
         });
     }
 
