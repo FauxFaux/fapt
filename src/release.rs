@@ -38,6 +38,7 @@ pub struct RequestedRelease {
     pub codename: String,
 
     pub arches: Vec<String>,
+    pub untrusted: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -139,6 +140,7 @@ impl RequestedReleases {
                 mirror: Url::parse(&entry.url)?,
                 codename: entry.suite_codename.to_string(),
                 arches: arches.to_vec(),
+                untrusted: entry.untrusted,
             }) {
                 hash_map::Entry::Vacant(vacancy) => {
                     vacancy.insert(vec![entry.clone()]);
@@ -173,7 +175,7 @@ impl RequestedReleases {
                     &dest,
                 )],
             ) {
-                Ok(_) => gpg.read_clearsigned(&dest, &verified, true),
+                Ok(_) => gpg.read_clearsigned(&dest, &verified, !release.untrusted),
                 Err(_) => {
                     let mut detatched_signature = dest.as_os_str().to_os_string();
                     detatched_signature.push(".gpg");

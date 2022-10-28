@@ -15,6 +15,7 @@ pub struct Entry {
     pub suite_codename: String,
     pub components: Vec<String>,
     pub arch: Option<String>,
+    pub untrusted: bool,
 }
 
 fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
@@ -71,6 +72,7 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
             suite_codename: suite.to_string(),
             components: components.iter().map(|x| x.to_string()).collect(),
             arch: arch.map(|arch| arch.to_string()),
+            untrusted: false,
         });
     }
 
@@ -113,6 +115,7 @@ mod tests {
                     url: "http://foo/".to_string(),
                     suite_codename: "bar".to_string(),
                     components: vec!["baz".to_string(), "quux".to_string()],
+                    untrusted: false,
                 },
                 Entry {
                     src: true,
@@ -120,6 +123,7 @@ mod tests {
                     url: "http://foo/".to_string(),
                     suite_codename: "bar".to_string(),
                     components: vec!["baz".to_string(), "quux".to_string()],
+                    untrusted: false,
                 },
             ],
             read(io::Cursor::new(
