@@ -24,19 +24,10 @@ struct ParsedOpts {
     untrusted: Option<bool>,
 }
 
-fn parse_opts(opts: Option<&str>) -> Result<ParsedOpts, Error> {
+fn parse_opts(opt_parts: Vec<&str>) -> Result<ParsedOpts, Error> {
     let mut ret = ParsedOpts::default();
-    if let Some(opts) = opts {
-        if opts.contains(" ") {
-            bail!("only one option per line supported")
-        }
-        let parts: Vec<_> = opts
-            .strip_prefix("[")
-            .expect("opening [")
-            .strip_suffix("]")
-            .expect("closing ]")
-            .split("=")
-            .collect();
+    for opt in opt_parts {
+        let parts: Vec<_> = opt.split("=").collect();
         match parts.len() {
             2 => match parts[0] {
                 "arch" => ret.arch = Some(parts[1].to_string()),
@@ -45,7 +36,7 @@ fn parse_opts(opts: Option<&str>) -> Result<ParsedOpts, Error> {
             },
             _ => bail!("multiple = in option"),
         }
-    };
+    }
     Ok(ret)
 }
 
@@ -65,14 +56,27 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
     let src = parts
         .next()
         .ok_or_else(|| anyhow!("deb{{,s,-src}} section required"))?;
-    let opts = match parts.peek() {
-        Some(&val) if val.starts_with("[") => {
+
+    let mut opt_parts = vec![];
+    if let Some(&(mut val)) = parts.peek() {
+        if val.starts_with("[") {
+            val = val.strip_prefix("[").expect("opening [");
             parts.next();
-            Some(val)
+            loop {
+                if val.ends_with("]") {
+                    opt_parts.push(val.strip_suffix("]").expect("closing ]"));
+                    break;
+                }
+                opt_parts.push(val);
+                match parts.next() {
+                    Some(next) => {
+                        val = next;
+                    }
+                    None => bail!("unexpected end of line reading options"),
+                }
+            }
         }
-        Some(_) => None,
-        None => bail!("unexpected end of line looking for arch or url"),
-    };
+    }
 
     let url = parts
         .next()
@@ -92,7 +96,7 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
 
     let mut ret = Vec::with_capacity(srcs.len());
 
-    let parsed_opts = parse_opts(opts)?;
+    let parsed_opts = parse_opts(opt_parts)?;
     for src in srcs {
         ret.push(Entry {
             src: *src,
@@ -222,6 +226,26 @@ deb [untrusted=yes] http://foo  bar  baz quux
             read(io::Cursor::new(
                 r"
 deb [untrusted=yeppers] http://foo  bar  baz quux
+",
+            ))
+            .unwrap()
+        );
+    }
+
+    #[test]
+    fn multiple_opt() {
+        assert_eq!(
+            vec![Entry {
+                src: false,
+                arch: Some("amd64".to_string()),
+                url: "http://foo/".to_string(),
+                suite_codename: "bar".to_string(),
+                components: vec!["baz".to_string(), "quux".to_string()],
+                untrusted: true,
+            },],
+            read(io::Cursor::new(
+                r"
+deb [untrusted=yes arch=amd64] http://foo  bar  baz quux
 ",
             ))
             .unwrap()
