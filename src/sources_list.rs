@@ -24,10 +24,10 @@ struct ParsedOpts {
     untrusted: Option<bool>,
 }
 
-fn parse_opts(opts: Option<&str>) -> ParsedOpts {
-    if let Some(opts) = opts {
+fn parse_opts(opts: Option<&str>) -> Result<ParsedOpts, Error> {
+    Ok(if let Some(opts) = opts {
         if opts.contains(" ") {
-            panic!("only one option per line supported")
+            bail!("only one option per line supported")
         }
         let parts: Vec<_> = opts
             .strip_prefix("[")
@@ -46,13 +46,13 @@ fn parse_opts(opts: Option<&str>) -> ParsedOpts {
                     arch: None,
                     untrusted: Some(parts[1] == "yes"),
                 },
-                other => panic!("unknown option: {}", other),
+                other => bail!("unknown option: {}", other),
             },
-            _ => panic!("multiple = in option"),
+            _ => bail!("multiple = in option"),
         }
     } else {
         ParsedOpts::default()
-    }
+    })
 }
 
 fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
@@ -98,7 +98,7 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
 
     let mut ret = Vec::with_capacity(srcs.len());
 
-    let parsed_opts = parse_opts(opts);
+    let parsed_opts = parse_opts(opts)?;
     for src in srcs {
         ret.push(Entry {
             src: *src,
