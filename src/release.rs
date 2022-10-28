@@ -185,14 +185,18 @@ impl RequestedReleases {
                         &[Download::from_to(release.dists()?.join("Release")?, &dest)],
                     )?;
 
-                    fetch(
-                        client,
-                        &[Download::from_to(
-                            release.dists()?.join("Release.gpg")?,
-                            &detatched_signature,
-                        )],
-                    )?;
-                    gpg.verify_detached(&dest, detatched_signature, verified)
+                    if !release.untrusted {
+                        fetch(
+                            client,
+                            &[Download::from_to(
+                                release.dists()?.join("Release.gpg")?,
+                                &detatched_signature,
+                            )],
+                        )?;
+                        gpg.verify_detached(&dest, detatched_signature, verified)
+                    } else {
+                        Ok(())
+                    }
                 }
             }
             .with_context(|| anyhow!("verifying {:?} at {:?}", release, dest))?;
