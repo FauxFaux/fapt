@@ -25,7 +25,8 @@ struct ParsedOpts {
 }
 
 fn parse_opts(opts: Option<&str>) -> Result<ParsedOpts, Error> {
-    Ok(if let Some(opts) = opts {
+    let mut ret = ParsedOpts::default();
+    if let Some(opts) = opts {
         if opts.contains(" ") {
             bail!("only one option per line supported")
         }
@@ -38,21 +39,14 @@ fn parse_opts(opts: Option<&str>) -> Result<ParsedOpts, Error> {
             .collect();
         match parts.len() {
             2 => match parts[0] {
-                "arch" => ParsedOpts {
-                    arch: Some(parts[1].to_string()),
-                    untrusted: None,
-                },
-                "untrusted" => ParsedOpts {
-                    arch: None,
-                    untrusted: Some(parts[1] == "yes"),
-                },
+                "arch" => ret.arch = Some(parts[1].to_string()),
+                "untrusted" => ret.untrusted = Some(parts[1] == "yes"),
                 other => bail!("unknown option: {}", other),
             },
             _ => bail!("multiple = in option"),
         }
-    } else {
-        ParsedOpts::default()
-    })
+    };
+    Ok(ret)
 }
 
 fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
