@@ -18,6 +18,28 @@ pub struct Entry {
     pub untrusted: bool,
 }
 
+fn parse_opts(opts: &str) -> &str {
+    if opts.contains(" ") {
+        panic!("only one option per line supported")
+    }
+    let parts: Vec<_> = opts
+        .strip_prefix("[")
+        .expect("opening [")
+        .strip_suffix("]")
+        .expect("closing ]")
+        .split("=")
+        .collect();
+    match parts.len() {
+        2 => {
+            if parts[0] != "arch" {
+                panic!("unknown option: {}", parts[0])
+            }
+            parts[1]
+        }
+        _ => panic!("multiple = in option"),
+    }
+}
+
 fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
     let line = match line.find('#') {
         Some(comment) => &line[..comment],
@@ -34,7 +56,7 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
     let src = parts
         .next()
         .ok_or_else(|| anyhow!("deb{{,s,-src}} section required"))?;
-    let arch = match parts.peek() {
+    let opts = match parts.peek() {
         Some(&val) if val.starts_with("[") => {
             parts.next();
             Some(val)
@@ -61,6 +83,7 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
 
     let mut ret = Vec::with_capacity(srcs.len());
 
+    let arch = opts.map(|opts| parse_opts(opts));
     for src in srcs {
         ret.push(Entry {
             src: *src,
@@ -130,6 +153,26 @@ mod tests {
                 r"
 deb     http://foo  bar  baz quux
 deb-src http://foo  bar  baz quux
+",
+            ))
+            .unwrap()
+        );
+    }
+
+    #[test]
+    fn arch() {
+        assert_eq!(
+            vec![Entry {
+                src: false,
+                arch: Some("amd64".to_string()),
+                url: "http://foo/".to_string(),
+                suite_codename: "bar".to_string(),
+                components: vec!["baz".to_string(), "quux".to_string()],
+                untrusted: false,
+            },],
+            read(io::Cursor::new(
+                r"
+deb [arch=amd64] http://foo  bar  baz quux
 ",
             ))
             .unwrap()
