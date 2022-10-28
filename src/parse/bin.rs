@@ -41,7 +41,7 @@ pub(super) fn parse_bin(it: &mut rfc822::Map) -> Result<Binary, Error> {
         Some(super::pkg::File {
             name: it.remove_value("Filename").one_line_req()?.to_string(),
             size: it.remove_value("Size").one_line_req()?.parse()?,
-            md5: it.remove_value("MD5sum").one_line_req()?.to_string(),
+            md5: it.remove_value("MD5sum").one_line_owned()?,
             sha1: it.remove_value("SHA1").one_line_req()?.to_string(),
             sha256: it.remove_value("SHA256").one_line_req()?.to_string(),
             sha512: String::new(),
