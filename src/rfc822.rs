@@ -56,6 +56,9 @@ impl<'a> Iterator for Fields<'a> {
             None => return None,
         };
 
+        if line.len() == 0 {
+            return None;
+        }
         let colon = match line.find(':') {
             Some(colon) => colon,
             None => return Some(Err(anyhow!("expected a key: in {:?}", line))),
@@ -311,6 +314,16 @@ mod tests {
         assert_eq!(
             vec![b"foo\nbar\n".to_vec(), b"baz\n".to_vec()],
             parts.unwrap()
+        );
+    }
+
+    #[test]
+    fn trailing_whitespace() {
+        assert_eq!(
+            vec![("Foo", vec!["bar"])],
+            fields_in_block("Foo: bar\n\n\n")
+                .collect::<Result<Vec<Field>, Error>>()
+                .unwrap()
         );
     }
 
