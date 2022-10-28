@@ -18,7 +18,11 @@ pub struct Entry {
     pub untrusted: bool,
 }
 
-fn parse_opts(opts: &str) -> &str {
+struct ParsedOpts {
+    arch: String,
+}
+
+fn parse_opts(opts: &str) -> ParsedOpts {
     if opts.contains(" ") {
         panic!("only one option per line supported")
     }
@@ -34,7 +38,9 @@ fn parse_opts(opts: &str) -> &str {
             if parts[0] != "arch" {
                 panic!("unknown option: {}", parts[0])
             }
-            parts[1]
+            ParsedOpts {
+                arch: parts[1].to_string(),
+            }
         }
         _ => panic!("multiple = in option"),
     }
@@ -83,7 +89,7 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
 
     let mut ret = Vec::with_capacity(srcs.len());
 
-    let arch = opts.map(|opts| parse_opts(opts));
+    let parsed_opts = opts.map(|opts| parse_opts(opts));
     for src in srcs {
         ret.push(Entry {
             src: *src,
@@ -94,7 +100,9 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
             },
             suite_codename: suite.to_string(),
             components: components.iter().map(|x| x.to_string()).collect(),
-            arch: arch.map(|arch| arch.to_string()),
+            arch: parsed_opts
+                .as_ref()
+                .map(|parsed_opts| parsed_opts.arch.clone()),
             untrusted: false,
         });
     }
