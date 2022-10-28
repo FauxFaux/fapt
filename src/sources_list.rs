@@ -19,7 +19,7 @@ pub struct Entry {
 }
 
 struct ParsedOpts {
-    arch: String,
+    arch: Option<String>,
 }
 
 fn parse_opts(opts: &str) -> ParsedOpts {
@@ -34,14 +34,12 @@ fn parse_opts(opts: &str) -> ParsedOpts {
         .split("=")
         .collect();
     match parts.len() {
-        2 => {
-            if parts[0] != "arch" {
-                panic!("unknown option: {}", parts[0])
-            }
-            ParsedOpts {
-                arch: parts[1].to_string(),
-            }
-        }
+        2 => match parts[0] {
+            "arch" => ParsedOpts {
+                arch: Some(parts[1].to_string()),
+            },
+            other => panic!("unknown option: {}", other),
+        },
         _ => panic!("multiple = in option"),
     }
 }
@@ -89,7 +87,11 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
 
     let mut ret = Vec::with_capacity(srcs.len());
 
-    let parsed_opts = opts.map(|opts| parse_opts(opts));
+    let arch = if let Some(parsed_opts) = opts.map(|opts| parse_opts(opts)) {
+        parsed_opts.arch
+    } else {
+        None
+    };
     for src in srcs {
         ret.push(Entry {
             src: *src,
@@ -100,9 +102,7 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
             },
             suite_codename: suite.to_string(),
             components: components.iter().map(|x| x.to_string()).collect(),
-            arch: parsed_opts
-                .as_ref()
-                .map(|parsed_opts| parsed_opts.arch.clone()),
+            arch: arch.clone(),
             untrusted: false,
         });
     }
