@@ -173,7 +173,7 @@ impl RequestedReleases {
                     &dest,
                 )],
             ) {
-                Ok(_) => gpg.verify_clearsigned(&dest, &verified),
+                Ok(_) => gpg.read_clearsigned(&dest, &verified, true),
                 Err(_) => {
                     let mut detatched_signature = dest.as_os_str().to_os_string();
                     detatched_signature.push(".gpg");
