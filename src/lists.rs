@@ -183,7 +183,7 @@ pub fn selected_listings(release: &Release) -> Vec<Listing> {
                     }
 
                     if let Some(ref entry_arch) = entry.arch {
-                        if arch != entry_arch {
+                        if !entry_arch.contains(arch) {
                             continue;
                         }
                     }
