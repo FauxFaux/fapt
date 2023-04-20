@@ -38,6 +38,7 @@ pub struct RequestedRelease {
     pub codename: String,
 
     pub arches: Vec<String>,
+    pub untrusted: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -139,6 +140,7 @@ impl RequestedReleases {
                 mirror: Url::parse(&entry.url)?,
                 codename: entry.suite_codename.to_string(),
                 arches: arches.to_vec(),
+                untrusted: entry.untrusted,
             }) {
                 hash_map::Entry::Vacant(vacancy) => {
                     vacancy.insert(vec![entry.clone()]);
@@ -173,7 +175,7 @@ impl RequestedReleases {
                     &dest,
                 )],
             ) {
-                Ok(_) => gpg.verify_clearsigned(&dest, &verified),
+                Ok(_) => gpg.read_clearsigned(&dest, &verified, !release.untrusted),
                 Err(_) => {
                     let mut detatched_signature = dest.as_os_str().to_os_string();
                     detatched_signature.push(".gpg");
@@ -183,14 +185,18 @@ impl RequestedReleases {
                         &[Download::from_to(release.dists()?.join("Release")?, &dest)],
                     )?;
 
-                    fetch(
-                        client,
-                        &[Download::from_to(
-                            release.dists()?.join("Release.gpg")?,
-                            &detatched_signature,
-                        )],
-                    )?;
-                    gpg.verify_detached(&dest, detatched_signature, verified)
+                    if !release.untrusted {
+                        fetch(
+                            client,
+                            &[Download::from_to(
+                                release.dists()?.join("Release.gpg")?,
+                                &detatched_signature,
+                            )],
+                        )?;
+                        gpg.verify_detached(&dest, detatched_signature, verified)
+                    } else {
+                        Ok(())
+                    }
                 }
             }
             .with_context(|| anyhow!("verifying {:?} at {:?}", release, dest))?;
