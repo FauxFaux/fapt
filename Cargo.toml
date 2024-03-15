@@ -31,10 +31,10 @@ binaries = ["clap"]
 
 [dependencies]
 anyhow = "1"
-deb-version = "0.1"
-distro-keyring = "0.1"
 chrono = "0.4"
+deb-version = "0.1"
 directories = "4"
+distro-keyring = "0.1"
 filetime = "0.2"
 gpgrv = "0.4"
 hex = "0.4"
