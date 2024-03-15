@@ -1,6 +1,5 @@
 # Faux' apt
 
-[![Build status](https://api.travis-ci.org/FauxFaux/fapt.png)](https://travis-ci.org/FauxFaux/fapt)
 [![Build status](https://ci.appveyor.com/api/projects/status/daao4tjdcnojue5m/branch/master?svg=true)](https://ci.appveyor.com/project/FauxFaux/fapt/branch/master)
 [![](https://img.shields.io/crates/v/fapt.svg)](https://crates.io/crates/fapt)
 
