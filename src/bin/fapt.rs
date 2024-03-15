@@ -74,7 +74,7 @@ fn main() -> Result<(), anyhow::Error> {
         .get_matches();
 
     let mut sources_entries = Vec::with_capacity(16);
-    if let Some(prefix) = matches.get_one::<&str>("sources-list") {
+    if let Some(prefix) = matches.get_one::<String>("sources-list") {
         for prefix in expand_dot_d(prefix)? {
             sources_entries.extend(
                 sources_list::read(io::BufReader::new(fs::File::open(&prefix)?))
@@ -83,8 +83,8 @@ fn main() -> Result<(), anyhow::Error> {
         }
     }
 
-    if let Some(lines) = matches.get_many::<&str>("sources-line") {
-        for line in lines.copied() {
+    if let Some(lines) = matches.get_many::<String>("sources-line") {
+        for line in lines {
             let entries = sources_list::read(io::Cursor::new(line))
                 .with_context(|| anyhow!("parsing command line: {:?}", line))?;
 
@@ -127,7 +127,7 @@ fn main() -> Result<(), anyhow::Error> {
 
     system.set_arches(&arches);
 
-    system.set_dpkg_database(matches.get_one::<&Path>("system-dpkg").unwrap());
+    system.set_dpkg_database(matches.get_one::<String>("system-dpkg").unwrap());
 
     match matches.subcommand() {
         Some(("source-ninja", _)) => {
