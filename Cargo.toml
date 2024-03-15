@@ -32,41 +32,24 @@ binaries = ["clap"]
 [dependencies]
 anyhow = "1"
 chrono = "0.4"
+clap = { version = "4", optional = true, features = ["cargo"] }
 deb-version = "0.1"
+digest = { version = "0.10", features = ["std"] }
 directories = "4"
 distro-keyring = "0.1"
 filetime = "0.2"
+flate2 = "1.0.12"
 gpgrv = "0.4"
 hex = "0.4"
 insideout = "0.2"
+jemallocator = { version = "0.3", optional = true }
 mailparse = "0.13"
 md-5 = "0.10"
 nom = "4"
+reqwest = { version = "0.10", features = ["blocking"] }
 sha2 = "0.10"
 tempfile = "3"
 tempfile-fast = "0.3"
-
-[dependencies.clap]
-optional = true
-features = ["cargo"]
-version = "4"
-
-[dependencies.digest]
-features = ["std"]
-version = "0.10"
-
-[dependencies.flate2]
-default-features = false
-features = ["rust_backend"]
-version = "1"
-
-[dependencies.reqwest]
-features = ["blocking"]
-version = "0.10"
-
-[dependencies.jemallocator]
-optional = true
-version = "0.3"
 
 [[bin]]
 name = "fapt"
