@@ -36,7 +36,7 @@ clap = { version = "4", optional = true, features = ["cargo", "derive"] }
 deb-version = "0.1"
 digest = { version = "0.10", features = ["std"] }
 directories = "5"
-distro-keyring = "0.1"
+distro-keyring = "0.2"
 filetime = "0.2"
 flate2 = "1.0.12"
 gpgrv = "0.4"
