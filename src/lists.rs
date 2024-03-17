@@ -11,7 +11,6 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use flate2::bufread::GzDecoder;
-use hex;
 use reqwest::blocking::Client;
 use reqwest::Url;
 use tempfile_fast::PersistableTempFile;

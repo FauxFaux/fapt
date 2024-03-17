@@ -15,7 +15,6 @@ use chrono::DateTime;
 use chrono::Utc;
 use gpgrv::Keyring;
 use insideout::InsideOut;
-use reqwest;
 use reqwest::Url;
 
 use crate::checksum::Hashes;

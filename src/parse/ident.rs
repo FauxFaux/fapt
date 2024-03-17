@@ -1,8 +1,8 @@
 use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::Error;
-use nom::types::CompleteStr;
-use nom::Err;
+use nom::bytes::complete::{tag, take_until};
+use nom::{Err, IResult};
 
 /// A user identity, e.g. `John Smith <john@smi.th>`
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -11,20 +11,22 @@ pub struct Identity {
     pub email: String,
 }
 
-named!(ident<CompleteStr, Result<Identity, Error>>,
-    do_parse!(
-        name: take_until_and_consume_s!(" <") >>
-        email: take_until_and_consume_s!(">") >>
-        ( process_escapes(name.0.trim()).map(|name|
-            Identity {
-                name: name.to_string(),
-                email: email.0.to_string(),
-            })
-        )
-    )
-);
+fn ident(from: &str) -> IResult<&str, Result<Identity, Error>> {
+    let (from, name) = take_until(" <")(from)?;
+    let (from, _) = tag(" <")(from)?;
+    println!("name: {:?}", name);
+    print!("from: {:?}", from);
+    let (from, email) = take_until(">")(from)?;
+    let (from, _) = tag(">")(from)?;
+    let identity = process_escapes(name.trim()).map(|name| Identity {
+        name: name.to_string(),
+        email: email.to_string(),
+    });
 
-named!(parse<CompleteStr, Vec<Result<Identity, Error>>>,
+    Ok((from, identity))
+}
+
+named!(parse<&str, Vec<Result<Identity, Error>>>,
     ws!(
         terminated!(
             separated_list!(
@@ -37,8 +39,8 @@ named!(parse<CompleteStr, Vec<Result<Identity, Error>>>,
 );
 
 pub fn read(from: &str) -> Result<Vec<Identity>, Error> {
-    match parse(CompleteStr(from)) {
-        Ok((CompleteStr(""), vec)) => vec.into_iter().collect::<Result<Vec<Identity>, Error>>(),
+    match parse(from) {
+        Ok(("", vec)) => vec.into_iter().collect::<Result<Vec<Identity>, Error>>(),
         Ok((tailing, _)) => bail!(
             "parsing {:?} finished early, trailing garbage: {:?}",
             from,
@@ -83,6 +85,8 @@ fn parse_ascii_hex(first: u8, second: u8) -> Result<u8, Error> {
 
 #[cfg(test)]
 mod tests {
+    use crate::parse::ident::ident;
+
     #[test]
     fn backslash() {
         use super::process_escapes;
@@ -99,6 +103,16 @@ mod tests {
     fn read() {
         use super::read;
         use super::Identity;
+
+        let (rem, res) = ident("foo <bar>").unwrap();
+        assert_eq!("", rem);
+        assert_eq!(
+            Identity {
+                name: "foo".to_string(),
+                email: "bar".to_string(),
+            },
+            res.unwrap()
+        );
 
         assert_eq!(
             vec![

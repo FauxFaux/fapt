@@ -20,7 +20,6 @@ use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
 use gpgrv::Keyring;
-use reqwest;
 
 use crate::lists;
 use crate::parse::Package;

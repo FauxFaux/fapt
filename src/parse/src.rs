@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::ensure;
 use anyhow::Error;
+use anyhow::{anyhow, Context};
 use insideout::InsideOut;
 
 use super::deps::parse_dep;
@@ -70,29 +70,36 @@ pub enum SourceFormat {
 pub(super) fn parse_src(map: &mut rfc822::Map) -> Result<Source, Error> {
     Ok(Source {
         format: parse_format(map.remove_value("Format").one_line_req()?)?,
-        binaries: take_package_list(map)?,
-        files: take_files(map)?,
+        binaries: take_package_list(map).context("binaries")?,
+        files: take_files(map).context("files")?,
         directory: map.remove_value("Directory").one_line_req()?.to_string(),
-        vcs: super::vcs::extract(map)?,
+        vcs: super::vcs::extract(map).context("vcs")?,
         // TODO: Option<> instead of empty string?
         standards_version: map
             .remove_value("Standards-Version")
             .one_line()?
             .unwrap_or("")
             .to_string(),
-        build_dep: parse_dep(&map.remove("Build-Depends").unwrap_or_else(Vec::new))?,
-        build_dep_arch: parse_dep(&map.remove("Build-Depends-Arch").unwrap_or_else(Vec::new))?,
-        build_dep_indep: parse_dep(&map.remove("Build-Depends-Indep").unwrap_or_else(Vec::new))?,
-        build_conflict: parse_dep(&map.remove("Build-Conflicts").unwrap_or_else(Vec::new))?,
+        build_dep: parse_dep(&map.remove("Build-Depends").unwrap_or_else(Vec::new))
+            .context("build_dep")?,
+        build_dep_arch: parse_dep(&map.remove("Build-Depends-Arch").unwrap_or_else(Vec::new))
+            .context("build_dep_arch")?,
+        build_dep_indep: parse_dep(&map.remove("Build-Depends-Indep").unwrap_or_else(Vec::new))
+            .context("build_dep_indep")?,
+        build_conflict: parse_dep(&map.remove("Build-Conflicts").unwrap_or_else(Vec::new))
+            .context("build_conflict")?,
         build_conflict_arch: parse_dep(
             &map.remove("Build-Conflicts-Arch").unwrap_or_else(Vec::new),
-        )?,
+        )
+        .context("build_conflict_arch")?,
         build_conflict_indep: parse_dep(
             &map.remove("Build-Conflicts-Indep").unwrap_or_else(Vec::new),
-        )?,
+        )
+        .context("build_conflict_indep")?,
         uploaders: map
             .remove_value("Uploaders")
-            .one_line()?
+            .one_line()
+            .context("uploaders")?
             .map(|line| super::ident::read(line))
             .inside_out()?
             .unwrap_or_else(Vec::new),

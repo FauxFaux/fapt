@@ -4,7 +4,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::{anyhow, bail, ensure, Context, Error, Result};
-use clap::{command, Parser, Subcommand, ArgAction};
+use clap::{command, Parser, Subcommand};
 use fapt::commands;
 use fapt::sources_list;
 use fapt::system::System;
@@ -26,7 +26,7 @@ struct Cli {
     /// an explicit arch (e.g. 'amd64'); the first provided will be the 'primary'
     arch: Option<Vec<String>>,
     /// dpkg database location
-    #[clap(long, value_name = "PATH", default_value = "/var/lib/dpkg" )]
+    #[clap(long, value_name = "PATH", default_value = "/var/lib/dpkg")]
     system_dpkg: PathBuf,
     #[command(subcommand)]
     subcommand: Sub,

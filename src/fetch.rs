@@ -10,8 +10,6 @@ use anyhow::Context;
 use anyhow::Error;
 use chrono::DateTime;
 use chrono::Utc;
-use filetime;
-use reqwest;
 use reqwest::header;
 use tempfile_fast::PersistableTempFile;
 

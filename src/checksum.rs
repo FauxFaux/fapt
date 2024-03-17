@@ -4,7 +4,6 @@ use std::io::Read;
 
 use anyhow::ensure;
 use anyhow::Error;
-use hex;
 use hex::FromHex;
 use sha2::Digest;
 use sha2::Sha256;

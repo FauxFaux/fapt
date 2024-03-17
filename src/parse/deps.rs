@@ -6,7 +6,14 @@ use anyhow::Context;
 use anyhow::Error;
 use deb_version::compare_versions;
 use insideout::InsideOut;
-use nom::types::CompleteStr;
+use nom::branch::alt;
+use nom::bytes::complete;
+use nom::bytes::complete::{tag, take_while};
+use nom::character::complete::multispace0;
+use nom::combinator::opt;
+use nom::multi::{many0, many1, separated_nonempty_list};
+use nom::sequence::delimited;
+use nom::IResult;
 
 use super::arch::Arch;
 use crate::rfc822;
@@ -50,10 +57,8 @@ pub fn parse_dep(multi_str: &[&str]) -> Result<Vec<Dependency>, Error> {
 }
 
 pub fn read(val: &str) -> Result<Vec<Dependency>, Error> {
-    use nom::Err as NomErr;
-    match parse(CompleteStr(val)) {
-        Ok((CompleteStr(""), val)) => Ok(val.into_iter().collect::<Result<_, Error>>()?),
-        Err(NomErr::Incomplete(_)) => unreachable!(),
+    match parse(val) {
+        Ok(("", val)) => Ok(val.into_iter().collect::<Result<_, Error>>()?),
         Ok((trailing, _)) => Err(anyhow!("trailing data: '{:?}'", trailing)),
         other => Err(anyhow!("nom error: {:?}", other)),
     }
@@ -100,75 +105,99 @@ impl ConstraintOperator {
     }
 }
 
-named!(package_name<CompleteStr, CompleteStr>, take_while1_s!(is_package_name_char));
-named!(version<CompleteStr, CompleteStr>, take_while1_s!(is_version_char));
+fn package_name(i: &str) -> IResult<&str, &str> {
+    complete::take_while1(is_package_name_char)(i)
+}
 
-named!(version_constraint<CompleteStr, Constraint>,
-ws!(do_parse!(
-    tag!("(") >>
-    operator: alt!(
-        tag!(">=") => { |_| ConstraintOperator::Ge } |
-        tag!("<=") => { |_| ConstraintOperator::Le } |
-        tag!(">>") => { |_| ConstraintOperator::Gt } |
-        tag!("<<") => { |_| ConstraintOperator::Lt } |
-        tag!(">") => { |_| ConstraintOperator::Gt } |
-        tag!("<") => { |_| ConstraintOperator::Lt } |
-        tag!("=") => { |_| ConstraintOperator::Eq }
-    ) >>
-    version: version >>
-    tag!(")") >>
-    ( Constraint::new(operator, version.0) )
-)));
+fn version(i: &str) -> IResult<&str, &str> {
+    complete::take_while1(is_version_char)(i)
+}
 
-named!(arch_part<CompleteStr, (bool, CompleteStr)>,
-    do_parse!(
-        bang: opt!(tag!("!")) >>
-        arch: take_while1_s!(is_arch_char) >>
-        ( (bang.is_none(), arch) )
-    )
-);
+fn version_constraint(i: &str) -> IResult<&str, Constraint> {
+    let (i, _) = multispace0(i)?;
+    let (i, _) = complete::tag("(")(i)?;
+    let (i, operator) = alt((
+        complete::tag(">="),
+        complete::tag("<="),
+        complete::tag(">>"),
+        complete::tag("<<"),
+        complete::tag(">"),
+        complete::tag("<"),
+        complete::tag("="),
+    ))(i)?;
+    let (i, _) = many0(complete::tag(" "))(i)?;
+    let operator = match operator {
+        ">=" => ConstraintOperator::Ge,
+        "<=" => ConstraintOperator::Le,
+        ">>" => ConstraintOperator::Gt,
+        "<<" => ConstraintOperator::Lt,
+        ">" => ConstraintOperator::Gt,
+        "<" => ConstraintOperator::Lt,
+        "=" => ConstraintOperator::Eq,
+        _ => unreachable!(),
+    };
+    let (i, version) = version(i)?;
+    let (i, _) = complete::tag(")")(i)?;
+    Ok((i, Constraint::new(operator, version)))
+}
 
-named!(arch_filter<CompleteStr, Vec<(bool, CompleteStr)>>,
-    delimited!(
-        tag!("["),
-        ws!(many1!(ws!(arch_part))),
-        tag!("]")
-    )
-);
+fn arch_part(i: &str) -> IResult<&str, (bool, &str)> {
+    let (i, bang) = opt(complete::tag("!"))(i)?;
+    let (i, arch) = complete::take_while1(is_arch_char)(i)?;
+    Ok((i, (bang.is_none(), arch)))
+}
 
-named!(stage_filter<CompleteStr, CompleteStr>,
-    delimited!(
-        tag!("<"),
-        take_until_s!(">"),
-        tag!(">")
-    )
-);
+fn arch_filter(i: &str) -> IResult<&str, Vec<(bool, &str)>> {
+    let (i, _) = complete::tag("[")(i)?;
+    let (i, arches) = many1(arch_part)(i)?;
+    let (i, _) = complete::tag("]")(i)?;
+    Ok((i, arches))
+}
 
-named!(arch_suffix<CompleteStr, CompleteStr>,
-    preceded!(tag!(":"), take_while1_s!(is_arch_char))
-);
+fn stage_filter(i: &str) -> IResult<&str, &str> {
+    let (i, _) = complete::tag("<")(i)?;
+    let (i, stage) = complete::take_until(">")(i)?;
+    let (i, _) = complete::tag(">")(i)?;
+    Ok((i, stage))
+}
 
-named!(single<CompleteStr, Result<SingleDependency, Error>>,
-    ws!(do_parse!(
-        package: package_name >>
-        arch: opt!(complete!(arch_suffix)) >>
-        version_constraints: ws!(many0!(complete!(version_constraint))) >>
-        arch_filter: ws!(opt!(arch_filter)) >>
-        stage_filter: ws!(many0!(complete!(stage_filter))) >>
-        ( build_single_dep(package, arch, version_constraints, arch_filter, stage_filter) )
+fn arch_suffix(i: &str) -> IResult<&str, &str> {
+    let (i, _) = complete::tag(":")(i)?;
+    complete::take_while1(is_arch_char)(i)
+}
+
+fn single(i: &str) -> IResult<&str, Result<SingleDependency, Error>> {
+    let (i, package) = package_name(i)?;
+    let (i, _) = multispace0(i)?;
+    let (i, arch) = opt(arch_suffix)(i)?;
+    let (i, _) = multispace0(i)?;
+    let (i, version_constraints) = many0(version_constraint)(i)?;
+    let (i, _) = multispace0(i)?;
+    let (i, arch_filter) = opt(arch_filter)(i)?;
+    let (i, _) = multispace0(i)?;
+    let (i, stage_filter) = many0(stage_filter)(i)?;
+    Ok((
+        i,
+        build_single_dep(
+            package,
+            arch,
+            version_constraints,
+            arch_filter,
+            stage_filter,
+        ),
     ))
-);
+}
 
-fn to_arch(s: CompleteStr) -> Result<Arch, Error> {
+fn to_arch(s: &str) -> Result<Arch, Error> {
     Ok(s.parse()?)
 }
 
 fn build_single_dep(
-    package: CompleteStr,
-    arch: Option<CompleteStr>,
+    package: &str,
+    arch: Option<&str>,
     version_constraints: Vec<Constraint>,
-    arch_filter: Option<Vec<(bool, CompleteStr)>>,
-    stage_filter: Vec<CompleteStr>,
+    arch_filter: Option<Vec<(bool, &str)>>,
+    stage_filter: Vec<&str>,
 ) -> Result<SingleDependency, Error> {
     let package = package.to_string();
     Ok(SingleDependency {
@@ -183,20 +212,17 @@ fn build_single_dep(
             .map(|(positive, arch)| to_arch(arch).map(|a| (positive, a)))
             .collect::<Result<HashSet<(bool, Arch)>, Error>>()
             .with_context(|| anyhow!("arch filter in dep {:?}", package))?,
-        stage_filter: stage_filter.into_iter().map(|x| x.0.to_string()).collect(),
+        stage_filter: stage_filter.into_iter().map(|x| x.to_string()).collect(),
         package,
     })
 }
 
-named!(dep<CompleteStr, Result<Dependency, Error>>,
-    ws!(do_parse!(
-        alternate: ws!(separated_nonempty_list!(
-            complete!(tag!("|")),
-            single)
-        ) >>
-        ( build_dep(alternate) )
-    ))
-);
+fn dep(i: &str) -> IResult<&str, Result<Dependency, Error>> {
+    let (i, _) = multispace0(i)?;
+    let (i, alternate) =
+        separated_nonempty_list(delimited(multispace0, tag("|"), multispace0), single)(i)?;
+    Ok((i, build_dep(alternate)))
+}
 
 fn build_dep(alternate: Vec<Result<SingleDependency, Error>>) -> Result<Dependency, Error> {
     Ok(Dependency {
@@ -204,7 +230,7 @@ fn build_dep(alternate: Vec<Result<SingleDependency, Error>>) -> Result<Dependen
     })
 }
 
-named!(parse<CompleteStr, Vec<Result<Dependency, Error>>>,
+named!(parse<&str, Vec<Result<Dependency, Error>>>,
     ws!(
         separated_list!(
             complete!(tag!(",")),
@@ -215,33 +241,43 @@ named!(parse<CompleteStr, Vec<Result<Dependency, Error>>>,
 
 #[test]
 fn check() {
-    assert_eq!(
-        (CompleteStr(""), CompleteStr("foo")),
-        package_name(CompleteStr("foo")).unwrap()
-    );
-    assert_eq!(
-        (CompleteStr(" bar"), CompleteStr("foo")),
-        package_name(CompleteStr("foo bar")).unwrap()
-    );
+    assert_eq!(("", "foo"), package_name("foo").unwrap());
+    assert_eq!((" bar", "foo"), package_name("foo bar").unwrap());
 
     assert_eq!(
-        (
-            CompleteStr(""),
-            Constraint::new(ConstraintOperator::Gt, "1")
-        ),
-        version_constraint(CompleteStr("(>> 1)")).unwrap()
+        ("", Constraint::new(ConstraintOperator::Gt, "1")),
+        version_constraint("(>> 1)").unwrap()
     );
 
-    println!("{:?}", single(CompleteStr("foo (>> 1) (<< 9) [linux-any]")));
-    println!("{:?}", single(CompleteStr("foo [!amd64 !i386]")));
-    println!("{:?}", single(CompleteStr("foo")));
-    println!("{:?}", dep(CompleteStr("foo|baz")));
-    println!("{:?}", dep(CompleteStr("foo | baz")));
-    println!("{:?}", parse(CompleteStr("foo, baz")));
+    assert_eq!("foo", package_name("foo").unwrap().1);
+    assert_eq!("1", version("1").unwrap().1);
+    assert_eq!((false, "foo"), arch_part("!foo").unwrap().1);
+    assert_eq!((true, "foo"), arch_part("foo").unwrap().1);
+    assert_eq!(
+        Constraint {
+            version: "1".to_string(),
+            operator: ConstraintOperator::Gt
+        },
+        version_constraint("(>> 1)").unwrap().1
+    );
+
+    println!("{:?}", single("foo (>> 1) (<< 9) [linux-any]"));
+    println!("{:?}", single("foo [!amd64 !i386]"));
+    println!("{:?}", single("foo"));
+    println!("{:?}", dep("foo|baz"));
+    println!("{:?}", dep("foo | baz"));
+    println!("{:?}", parse("foo, baz"));
 
     named!(l<&str, Vec<&str>>,
         separated_nonempty_list!(complete!(tag!(",")), tag!("foo")));
     println!("{:?}", l("foo,foo"));
+}
+
+#[test]
+fn bare_single() {
+    let (rem, res) = single("foo").unwrap();
+    assert_eq!("foo", res.unwrap().package);
+    assert_eq!("", rem);
 }
 
 #[test]
