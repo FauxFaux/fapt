@@ -87,7 +87,9 @@ pub(crate) fn parse_date(date: &str) -> Result<DateTime<Utc>, Error> {
     use chrono::offset::TimeZone;
     let signed_epoch =
         mailparse::dateparse(date).map_err(|msg| anyhow!("parsing {:?} as date: {}", date, msg))?;
-    Ok(chrono::Utc.timestamp(signed_epoch, 0))
+    Utc.timestamp_opt(signed_epoch, 0)
+        .single()
+        .ok_or_else(|| anyhow!("ambiguous date"))
 }
 
 pub(crate) struct ByteBlocks<R> {

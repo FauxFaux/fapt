@@ -8,7 +8,7 @@ use deb_version::compare_versions;
 use insideout::InsideOut;
 use nom::branch::alt;
 use nom::bytes::complete;
-use nom::bytes::complete::{tag, take_while};
+use nom::bytes::complete::tag;
 use nom::character::complete::multispace0;
 use nom::combinator::opt;
 use nom::multi::{many0, many1, separated_nonempty_list};
