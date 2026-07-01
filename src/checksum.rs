@@ -4,6 +4,7 @@ use std::io::Read;
 
 use anyhow::ensure;
 use anyhow::Error;
+use digest_io::IoWrapper;
 use hex::FromHex;
 use sha2::Digest;
 use sha2::Sha256;
@@ -58,9 +59,9 @@ pub fn parse_sha256(hash: &str) -> Result<SHA256, Error> {
 
 // TODO: also check the md5?
 pub fn validate<R: Read>(mut file: R, checksum: Hashes) -> Result<(), Error> {
-    let mut func = Sha256::default();
+    let mut func = IoWrapper(Sha256::default());
     io::copy(&mut file, &mut func)?;
-    let result = func.finalize();
+    let result = func.0.finalize();
     ensure!(
         checksum.sha256 == result.as_slice(),
         "checksum mismatch: expected: {}, actual: {}",
