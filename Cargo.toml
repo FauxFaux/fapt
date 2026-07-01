@@ -32,7 +32,7 @@ chrono = "0.4"
 clap = { version = "4", optional = true, features = ["cargo", "derive"] }
 deb-version = "0.1"
 digest-io = "0.1"
-directories = "5"
+directories = "6"
 distro-keyring = "0.3"
 filetime = "0.2"
 flate2 = "1.0.12"
@@ -40,7 +40,7 @@ gpgrv = "0.5"
 hex = "0.4"
 insideout = "0.2"
 jemallocator = { version = "0.5", optional = true }
-mailparse = "0.14"
+mailparse = "0.16"
 nom = "5"
 reqwest = { version = "0.11", features = ["blocking"] }
 sha2 = "0.11"
