@@ -27,9 +27,9 @@ for block in commands::all_blocks(&fapt)? {
 This can be seen in one of the examples:
 ```text
 % cargo run -q --example \
-   list_source_packages deb-src https://deb.debian.org/debian buster main non-free
-Downloading: https://deb.debian.org/debian/dists/buster/InRelease ... complete.
-Downloading: https://deb.debian.org/debian/dists/buster/main/source/by-hash/SHA256/c3a1781dc47ba30d2c29eafd556d36917bb180c1f55c4862fedd48da28a2042f ... complete.
+   list_source_packages deb-src https://deb.debian.org/debian sid main non-free
+Downloading: https://deb.debian.org/debian/dists/sid/InRelease ... complete.
+Downloading: https://deb.debian.org/debian/dists/sid/main/source/by-hash/SHA256/c3a1781dc47ba30d2c29eafd556d36917bb180c1f55c4862fedd48da28a2042f ... complete.
 0ad
 0ad-data
 0xffff
