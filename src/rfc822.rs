@@ -24,7 +24,7 @@ pub type Field<'s> = (&'s str, Vec<&'s str>);
 pub type Map<'s> = HashMap<&'s str, Vec<&'s str>>;
 
 /// Produce an iterator over the _Fields_ in a _Block_.
-pub fn fields_in_block(block: &str) -> Fields {
+pub fn fields_in_block(block: &str) -> Fields<'_> {
     Fields {
         it: block.lines().peekable(),
     }
@@ -171,7 +171,7 @@ pub trait RfcMapExt {
     fn get(&self, key: &str) -> Option<&Vec<&str>>;
     fn remove(&mut self, key: &str) -> Option<Vec<&str>>;
 
-    fn get_value<'k, 'u>(&'u self, key: &'k str) -> Value<'k, &[&'u str]> {
+    fn get_value<'k, 'u>(&'u self, key: &'k str) -> Value<'k, &'u [&'u str]> {
         Value {
             key,
             val: self.get(key).map(|v| v.as_slice()),

@@ -198,7 +198,7 @@ pub struct NamedBlock {
 }
 
 impl NamedBlock {
-    pub fn as_map(&self) -> Result<rfc822::Map, Error> {
+    pub fn as_map(&self) -> Result<rfc822::Map<'_>, Error> {
         rfc822::fields_in_block(&self.inner).collect_to_map()
     }
 

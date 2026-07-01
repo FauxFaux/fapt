@@ -13,7 +13,7 @@ pub struct GpgClient<'k> {
 }
 
 impl<'k> GpgClient<'k> {
-    pub fn new(keyring: &Keyring) -> GpgClient {
+    pub fn new(keyring: &Keyring) -> GpgClient<'_> {
         GpgClient { keyring }
     }
 
