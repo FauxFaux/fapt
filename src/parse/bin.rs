@@ -1,10 +1,10 @@
-use anyhow::bail;
 use anyhow::Error;
+use anyhow::bail;
 use insideout::InsideOut;
 
 use self::rfc822::RfcMapExt;
-use super::deps::parse_dep;
 use super::deps::Dependency;
+use super::deps::parse_dep;
 use super::pkg;
 use crate::rfc822;
 

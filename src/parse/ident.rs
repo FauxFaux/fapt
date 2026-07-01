@@ -1,6 +1,6 @@
+use anyhow::Error;
 use anyhow::anyhow;
 use anyhow::bail;
-use anyhow::Error;
 use nom::bytes::complete::{tag, take_until};
 use nom::{Err, IResult};
 
@@ -101,8 +101,8 @@ mod tests {
 
     #[test]
     fn read() {
-        use super::read;
         use super::Identity;
+        use super::read;
 
         let (rem, res) = ident("foo <bar>").unwrap();
         assert_eq!("", rem);

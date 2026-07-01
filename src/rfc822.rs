@@ -9,10 +9,10 @@ use std::io::Read;
 use std::iter::Peekable;
 use std::str::Lines;
 
-use anyhow::anyhow;
-use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::anyhow;
+use anyhow::ensure;
 use chrono::DateTime;
 use chrono::Utc;
 use insideout::InsideOut;
@@ -269,9 +269,9 @@ impl<'k, 's, T: AsRef<[&'s str]>> Value<'k, T> {
 mod tests {
     use anyhow::Error;
 
+    use super::Field;
     use super::fields_in_block;
     use super::parse_date;
-    use super::Field;
 
     #[test]
     fn single_line_header() {

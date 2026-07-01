@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::anyhow;
+use anyhow::bail;
 use insideout::InsideOut;
 
 use super::arch;

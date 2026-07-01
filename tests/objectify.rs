@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::io;
 
-use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::anyhow;
 use fapt::parse::Package;
 
 fn parse(pkg: &str) -> Result<Package, Error> {

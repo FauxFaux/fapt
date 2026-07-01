@@ -1,11 +1,12 @@
 use std::cmp;
 use std::collections::HashSet;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::anyhow;
 use deb_version::compare_versions;
 use insideout::InsideOut;
+use nom::IResult;
 use nom::branch::alt;
 use nom::bytes::complete;
 use nom::bytes::complete::tag;
@@ -13,7 +14,6 @@ use nom::character::complete::multispace0;
 use nom::combinator::opt;
 use nom::multi::{many0, many1, separated_nonempty_list};
 use nom::sequence::delimited;
-use nom::IResult;
 
 use super::arch::Arch;
 use crate::rfc822;

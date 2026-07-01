@@ -7,12 +7,12 @@ use std::io::Write;
 use std::path::Path;
 
 use crate::rfc822;
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::anyhow;
 use flate2::bufread::GzDecoder;
-use reqwest::blocking::Client;
 use reqwest::Url;
+use reqwest::blocking::Client;
 use tempfile_fast::PersistableTempFile;
 
 use crate::checksum;

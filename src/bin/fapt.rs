@@ -3,8 +3,8 @@ use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 
-use anyhow::{anyhow, bail, ensure, Context, Error, Result};
-use clap::{command, Parser, Subcommand};
+use anyhow::{Context, Error, Result, anyhow, bail, ensure};
+use clap::{Parser, Subcommand, command};
 use fapt::commands;
 use fapt::sources_list;
 use fapt::system::System;

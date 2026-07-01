@@ -31,11 +31,13 @@ fn main() -> Result<(), anyhow::Error> {
                 urls.push(format!("{}/{}", src.directory, line.name));
             }
 
-            assert!(package_version_files
-                .entry(pkg.name.to_string())
-                .or_insert_with(HashMap::new)
-                .insert(pkg.version.to_string(), urls)
-                .is_none());
+            assert!(
+                package_version_files
+                    .entry(pkg.name.to_string())
+                    .or_insert_with(HashMap::new)
+                    .insert(pkg.version.to_string(), urls)
+                    .is_none()
+            );
         }
     }
 

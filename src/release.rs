@@ -1,5 +1,5 @@
-use std::collections::hash_map;
 use std::collections::HashMap;
+use std::collections::hash_map;
 use std::fmt;
 use std::fs;
 use std::io;
@@ -7,10 +7,10 @@ use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 
-use anyhow::anyhow;
-use anyhow::ensure;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::anyhow;
+use anyhow::ensure;
 use chrono::DateTime;
 use chrono::Utc;
 use gpgrv::Keyring;
@@ -18,8 +18,8 @@ use insideout::InsideOut;
 use reqwest::Url;
 
 use crate::checksum::Hashes;
-use crate::fetch::fetch;
 use crate::fetch::Download;
+use crate::fetch::fetch;
 use crate::rfc822;
 use crate::rfc822::RfcMapExt;
 use crate::signing::GpgClient;

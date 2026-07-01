@@ -2,10 +2,10 @@
 
 use std::io::BufRead;
 
-use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::anyhow;
+use anyhow::bail;
 
 /// Our representation of a classic sources list entry.
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -100,8 +100,8 @@ pub fn read<R: BufRead>(from: R) -> Result<Vec<Entry>, Error> {
 mod tests {
     use std::io;
 
-    use super::read;
     use super::Entry;
+    use super::read;
 
     #[test]
     fn simple() {

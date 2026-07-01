@@ -4,10 +4,10 @@ use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
 
-use anyhow::anyhow;
-use anyhow::bail;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::anyhow;
+use anyhow::bail;
 use chrono::DateTime;
 use chrono::Utc;
 use reqwest::header;

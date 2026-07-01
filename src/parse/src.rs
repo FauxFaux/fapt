@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
+use anyhow::Error;
 use anyhow::bail;
 use anyhow::ensure;
-use anyhow::Error;
-use anyhow::{anyhow, Context};
+use anyhow::{Context, anyhow};
 use insideout::InsideOut;
 
-use super::deps::parse_dep;
 use super::deps::Dependency;
+use super::deps::parse_dep;
 use super::ident::Identity;
 use super::pkg;
 use super::vcs;

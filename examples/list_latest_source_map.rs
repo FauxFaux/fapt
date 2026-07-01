@@ -39,11 +39,13 @@ fn main() -> Result<(), anyhow::Error> {
                 urls.push(format!("{}/{}", dir, file_name));
             }
 
-            assert!(package_version_files
-                .entry(pkg.to_string())
-                .or_insert_with(HashMap::new)
-                .insert(version.to_string(), urls)
-                .is_none());
+            assert!(
+                package_version_files
+                    .entry(pkg.to_string())
+                    .or_insert_with(HashMap::new)
+                    .insert(version.to_string(), urls)
+                    .is_none()
+            );
         }
     }
 

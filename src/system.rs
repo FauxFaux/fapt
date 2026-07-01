@@ -16,9 +16,9 @@ use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 
-use anyhow::anyhow;
 use anyhow::Context;
 use anyhow::Error;
+use anyhow::anyhow;
 use gpgrv::Keyring;
 
 use crate::lists;

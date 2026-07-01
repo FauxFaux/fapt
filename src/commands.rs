@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use std::io;
 use std::path::PathBuf;
 
-use anyhow::anyhow;
 use anyhow::Error;
+use anyhow::anyhow;
 
 use crate::lists;
 use crate::rfc822::RfcMapExt;
