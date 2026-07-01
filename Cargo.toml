@@ -19,12 +19,9 @@ exclude = [
 
 
 [badges.appveyor]
-branch = "master"
+branch = "main"
 repository = "FauxFaux/fapt"
 service = "github"
-
-[badges.travis-ci]
-repository = "FauxFaux/fapt"
 
 [features]
 binaries = ["clap"]
