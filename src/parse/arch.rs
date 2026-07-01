@@ -88,7 +88,7 @@ impl FromStr for Arch {
 pub type Arches = HashSet<Arch>;
 
 macro_rules! strum {
-    ($doc:literal, $name:ident, $($variant:ident($str:expr),)*) => {
+    ($doc:literal, $name:ident, $($variant:ident($str:expr_2021),)*) => {
         #[doc = $doc]
         #[derive(Copy, Clone, Debug, Hash, PartialOrd, Ord, PartialEq, Eq)]
         pub enum $name {
