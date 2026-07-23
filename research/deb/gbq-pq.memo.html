@@ -1,0 +1,507 @@
+<section class="View-module-scss-module__VeVOXq__content">
+    <div class="View-module-scss-module__VeVOXq__main">
+        <div class="Container-module-scss-module__DLp3Ka__default Container-module-scss-module__DLp3Ka__common">
+            <div class="znc BodyContentViewer-module-scss-module__3yJvva__headingAnchorStyle useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__insertButtonWrapper">
+                <h2 id="summary" data-line="0" class="code-line">
+                    <a class="header-anchor-link" href="#summary" aria-hidden="true"></a> Summary</h2>
+                <p data-line="2" class="code-line">Master the <code>gbp pq</code> command.</p>
+                <p data-line="4" class="code-line">The <code>gbp pq</code> command is used to generate a patch queue (a
+                    collection of patches for the upstream source code, located in <code>debian/patches/</code>) from
+                    Git commits.</p>
+                <h2 id="introduction" data-line="6" class="code-line">
+                    <a class="header-anchor-link" href="#introduction" aria-hidden="true"></a> Introduction</h2>
+                <p data-line="8" class="code-line">Many of you probably know about using <code>git-buildpackage</code>,
+                    which utilizes Git to create and maintain Debian packages.<br>
+                    As seen in the references, various people have written about <code>git-buildpackage</code>. However,
+                    until recently, I didn't fully understand it and ended up in a very difficult situation. This
+                    article explores which workflow for package maintenance leads to a better experience.</p>
+                <p data-line="11" class="code-line">This is the content of this article.</p>
+                <p data-line="13" class="code-line"><code>git-buildpackage</code> will be referred to as
+                    <code>gbp</code> below. The command name is also <code>gbp</code>, but it will only appear in
+                    examples, so it shouldn't be confusing.</p>
+                <p data-line="15" class="code-line"><code>gbp</code> is designed to meet maintenance requirements
+                    through its configuration to accommodate Debian packages from various backgrounds.</p>
+                <h3 id="who-is-this-article-for%3F" data-line="17" class="code-line">
+                    <a class="header-anchor-link" href="#who-is-this-article-for%3F" aria-hidden="true"></a> Who is this
+                    article for?</h3>
+                <p data-line="19" class="code-line">This is for myself, as writing an article and organizing information
+                    helps my future self.</p>
+                <h3 id="how-to-read-this-article" data-line="21" class="code-line">
+                    <a class="header-anchor-link" href="#how-to-read-this-article" aria-hidden="true"></a> How to read
+                    this article</h3>
+                <p data-line="23" class="code-line">Initially, I will keep it as a collection of related notes.
+                    Therefore, it will be a miscellaneous set of memos with varying levels of detail.<br>
+                    It would be ideal if I can eventually structure it once a certain amount of information is gathered.
+                </p>
+                <h2 id="prerequisite-knowledge-for-using-gbp" data-line="26" class="code-line">
+                    <a class="header-anchor-link" href="#prerequisite-knowledge-for-using-gbp" aria-hidden="true"></a>
+                    Prerequisite knowledge for using gbp</h2>
+                <p data-line="28" class="code-line"><br>
+                    Before using <code>gbp</code>, as prerequisite knowledge for Debian packages, there is the
+                    philosophy regarding Debian source code and two problems that package maintainers should be aware
+                    of.<br>
+                </p>
+                <p data-line="32" class="code-line">In the Debian Project, Debian Packages are created by turning
+                    existing software into Deb packages.<br>
+                    Basically, a tarball of the software suite released by the upstream is often used.</p>
+                <p data-line="35" class="code-line">In a Debian Package, when packaging, the content released by the
+                    upstream is strictly separated from the set of patches that modify the upstream source code to
+                    create the Debian package. This is to audit the patches and separate the responsibilities of the
+                    upstream and the package maintainer.</p>
+                <p data-line="37" class="code-line">The patch management system for this is <code>quilt</code>. You can
+                    see that "debian/source/format" looks like the following when you examine a Debian package.</p>
+                <div class="code-block-container">
+                    <div class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__codeBlockWrapper"><pre
+                            class="shiki github-dark" style="background-color:#151e2c;color:#e1e4e8"
+                            data-has-button="true"><code class="code-line" data-line="38"><span class="line"><span>cat debian/source/format </span></span>
+<span class="line"><span>3.0 (quilt)</span></span>
+<span class="line"><span></span></span></code></pre>
+                        <button class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyButton"
+                                data-tooltip-position="top-left" aria-label="クリップボードにコピー"><img
+                                src="https://static.zenn.studio/images/copy-icon.svg"
+                                class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyIcon"></button>
+                        <button class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__wrapButton"
+                                data-tooltip-position="top-left" aria-label="右端で折り返す"><img
+                                src="https://static.zenn.studio/images/wrap-icon.svg"
+                                class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyIcon"></button>
+                    </div>
+                </div>
+                <p data-line="43" class="code-line">Regarding individual patches, there is a guideline called <a
+                        href="https://dep-team.pages.debian.net/deps/dep3/" target="_blank"
+                        rel="nofollow noopener noreferrer">DEP-3: Patch Tagging Guidelines</a>. I was mindful of this
+                    when creating patches with <code>quilt</code> or <code>dpkg-source --commit</code>.</p>
+                <p data-line="45" class="code-line">When you run <code>gbp pq import</code> and create commits in the
+                    <code>patch-queue/working-branch</code>, the program does not automatically add this information, so
+                    you will likely want to record similar information yourself.</p>
+                <p data-line="48" class="code-line">However, if you use <code>gbp</code>, using raw <code>quilt</code>,
+                    <code>dquilt</code>, or <code>dpkg-source --commit</code> is fine only for those who can fix things
+                    even if they shoot themselves in the foot; basically, "mixing them is dangerous."<br>
+                    The reason I struggled with <code>xfireworks</code> this time was that I used <code>dpkg-source
+                        --commit</code> without understanding <code>gbp pq</code>.</p>
+                <h3 id="branches-you-should-know-in-gbp" data-line="51" class="code-line">
+                    <a class="header-anchor-link" href="#branches-you-should-know-in-gbp" aria-hidden="true"></a>
+                    Branches you should know in gbp</h3>
+                <ul data-line="53" class="code-line">
+                    <li data-line="53" class="code-line">pristine-tar branch</li>
+                    <li data-line="54" class="code-line">upstream branch</li>
+                    <li data-line="55" class="code-line">Working branch for package creation.
+                        <ul data-line="56" class="code-line">
+                            <li data-line="56" class="code-line">If working only on the development version of Debian,
+                                specify <code>main</code> or <code>master</code>.
+                            </li>
+                            <li data-line="57" class="code-line">When providing packages for multiple distributions or
+                                for <code>backports</code> in addition to the development version of Debian, use
+                                different branches.
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+                <p data-line="59" class="code-line">In addition to these three branches, you need to be aware of a total
+                    of four branches, including the "patch-queue/working-branch," which is created by <code>gbp pq
+                        import</code> and eventually deleted by <code>gbp pq export</code>.</p>
+                <p data-line="61" class="code-line">A concrete example is shown below. In this state, the <code>gbp pq
+                    import</code> command has not yet created a patch-queue branch.</p>
+                <ul data-line="63" class="code-line">
+                    <li data-line="63" class="code-line">Working branch is the <code>master</code> branch.</li>
+                    <li data-line="64" class="code-line">The <code>upstream</code> branch holds the source code
+                        extracted from the upstream tarball.
+                    </li>
+                </ul>
+                <p data-line="66" class="code-line">The <code>pristine-tar</code> branch is where the information for
+                    the upstream tarball is kept as differential management called "delta" every time a new release is
+                    made. You also need to remember the delta management in <code>pristine-tar</code> when updating
+                    packages.</p>
+                <div class="code-block-container">
+                    <div class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__codeBlockWrapper"><pre
+                            class="shiki github-dark" style="background-color:#151e2c;color:#e1e4e8"
+                            data-has-button="true"><code class="code-line" data-line="67"><span class="line"><span>git branch -a</span></span>
+<span class="line"><span>* master                                             pristine-tar</span></span>
+<span class="line"><span>remotes/origin/HEAD -&gt; origin/master                 remotes/origin/pristine-tar</span></span>
+<span class="line"><span>remotes/origin/master                                upstream</span></span>
+<span class="line"><span>remotes/origin/upstream</span></span>
+<span class="line"><span></span></span></code></pre>
+                        <button class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyButton"
+                                data-tooltip-position="top-left" aria-label="クリップボードにコピー"><img
+                                src="https://static.zenn.studio/images/copy-icon.svg"
+                                class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyIcon"></button>
+                        <button class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__wrapButton"
+                                data-tooltip-position="top-left" aria-label="右端で折り返す"><img
+                                src="https://static.zenn.studio/images/wrap-icon.svg"
+                                class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyIcon"></button>
+                    </div>
+                </div>
+                <div class="code-block-container">
+                    <div class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__codeBlockWrapper"><pre
+                            class="shiki github-dark" style="background-color:#151e2c;color:#e1e4e8"
+                            data-has-button="true"><code class="code-line" data-line="75"><span class="line"><span>git switch pristine-tar </span></span>
+<span class="line"><span>Switched to branch 'pristine-tar'</span></span>
+<span class="line"><span>Your branch is up to date with 'origin/pristine-tar'.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>ls -la</span></span>
+<span class="line"><span>total 16</span></span>
+<span class="line"><span>drwxrwxr-x 1 yabuki yabuki  130 Sep 18 00:14 .</span></span>
+<span class="line"><span>drwxr-xr-x 1 yabuki yabuki 1934 Sep 15 06:34 ..</span></span>
+<span class="line"><span>drwxrwxr-x 1 yabuki yabuki  220 Sep 18 00:14 .git</span></span>
+<span class="line"><span>-rw-rw-r-- 1 yabuki yabuki 2032 Sep 18 00:14 xfireworks_1.3.orig.tar.gz.delta</span></span>
+<span class="line"><span>-rw-rw-r-- 1 yabuki yabuki   41 Sep 18 00:14 xfireworks_1.3.orig.tar.gz.id</span></span>
+<span class="line"><span></span></span></code></pre>
+                        <button class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyButton"
+                                data-tooltip-position="top-left" aria-label="クリップボードにコピー"><img
+                                src="https://static.zenn.studio/images/copy-icon.svg"
+                                class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyIcon"></button>
+                        <button class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__wrapButton"
+                                data-tooltip-position="top-left" aria-label="右端で折り返す"><img
+                                src="https://static.zenn.studio/images/wrap-icon.svg"
+                                class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyIcon"></button>
+                    </div>
+                </div>
+                <div class="code-block-container">
+                    <div class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__codeBlockWrapper"><pre
+                            class="shiki github-dark" style="background-color:#151e2c;color:#e1e4e8"
+                            data-has-button="true"><code class="code-line" data-line="89"><span class="line"><span>git switch upstream </span></span>
+<span class="line"><span>Switched to branch 'upstream'</span></span>
+<span class="line"><span>Your branch is up to date with 'origin/upstream'.</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>ls</span></span>
+<span class="line"><span>AUTHORS        COPYRIGHT      ColorGC.c   DispP.h   OMAKE.jpn  Piece.h   StreamP.h      arguments.h  mkconf.c</span></span>
+<span class="line"><span>AfterImage.c   Calculator.c   ColorGC.h   HISTORY   Obj.c      PieceP.h  XFireworks.c   configure.h  xfireworks.1</span></span>
+<span class="line"><span>AfterImage.h   Calculator.h   ColorGCP.h  INSTALL   Obj.h      README    XFireworks.h   etc.c        xfireworks.conf</span></span>
+<span class="line"><span>AfterImageP.h  CalculatorP.h  Disp.c      Makefile  ObjP.h     Stream.c  XFireworksP.h  etc.h</span></span>
+<span class="line"><span>COPYING        ChangeLog      Disp.h      NEWS      Piece.c    Stream.h  arguments.c    main.c</span></span>
+<span class="line"><span></span></span></code></pre>
+                        <button class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyButton"
+                                data-tooltip-position="top-left" aria-label="クリップボードにコピー"><img
+                                src="https://static.zenn.studio/images/copy-icon.svg"
+                                class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyIcon"></button>
+                        <button class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__wrapButton"
+                                data-tooltip-position="top-left" aria-label="右端で折り返す"><img
+                                src="https://static.zenn.studio/images/wrap-icon.svg"
+                                class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyIcon"></button>
+                    </div>
+                </div>
+                <h3 id="what-exactly-is-the-3.0-(quilt)-format%3F" data-line="103" class="code-line">
+                    <a class="header-anchor-link" href="#what-exactly-is-the-3.0-(quilt)-format%3F"
+                       aria-hidden="true"></a> What exactly is the 3.0 (quilt) format?</h3>
+                <p data-line="105" class="code-line"><code>gbp</code> operates on the <code>patches/</code> directory
+                    under the <code>debian</code> directory without using <code>quilt</code>. The contents look like the
+                    following:</p>
+                <div class="code-block-container">
+                    <div class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__codeBlockWrapper"><pre
+                            class="shiki github-dark" style="background-color:#151e2c;color:#e1e4e8"
+                            data-has-button="true"><code class="code-line" data-line="106"><span class="line"><span>ls -la debian/patches/</span></span>
+<span class="line"><span>total 40</span></span>
+<span class="line"><span>drwxrwxr-x 1 yabuki yabuki  424 Sep 16 23:04 .</span></span>
+<span class="line"><span>drwxrwxr-x 1 yabuki yabuki  212 Sep 16 23:04 ..</span></span>
+<span class="line"><span>-rw-rw-r-- 1 yabuki yabuki 6270 Sep 16 23:04 0007-Fix-1114447-FTBFS.patch</span></span>
+<span class="line"><span>-rw-rw-r-- 1 yabuki yabuki  622 Sep 16 23:04 0008-Update-FSF-address.patch</span></span>
+<span class="line"><span>-rw-rw-r-- 1 yabuki yabuki  954 Sep 16 23:04 0008-blhc-tells-me-need-more-hardening.patch</span></span>
+<span class="line"><span>-rw-rw-r-- 1 yabuki yabuki  607 Sep 16 23:04 Fix-FBTFS-for-mkconf</span></span>
+<span class="line"><span>-rw-rw-r-- 1 yabuki yabuki  933 Sep 16 23:04 Fix-FBTFS-for-time_t-transition</span></span>
+<span class="line"><span>-rw-rw-r-- 1 yabuki yabuki 1064 Sep 16 23:04 cross-build-dh_auto_build</span></span>
+<span class="line"><span>-rw-rw-r-- 1 yabuki yabuki 2368 Sep 16 23:04 debian-changes-1.3-7</span></span>
+<span class="line"><span>-rw-rw-r-- 1 yabuki yabuki 2558 Sep 16 23:04 hardening</span></span>
+<span class="line"><span>-rw-rw-r-- 1 yabuki yabuki  214 Sep 16 23:04 series</span></span>
+<span class="line"><span></span></span></code></pre>
+                        <button class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyButton"
+                                data-tooltip-position="top-left" aria-label="クリップボードにコピー"><img
+                                src="https://static.zenn.studio/images/copy-icon.svg"
+                                class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyIcon"></button>
+                        <button class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__wrapButton"
+                                data-tooltip-position="top-left" aria-label="右端で折り返す"><img
+                                src="https://static.zenn.studio/images/wrap-icon.svg"
+                                class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyIcon"></button>
+                    </div>
+                </div>
+                <p data-line="121" class="code-line">Since <code>xfireworks</code> was migrated to <code>gbp</code>
+                    midway through, there is a mix of patches without sequence numbers and those with them. When using
+                    <code>gbp</code>, these are commits worked on in a patch queue such as
+                    <code>patch-queue/master</code>, and they are initially prefixed with sequence numbers. The file
+                    that manages these patch queue files is called "series."</p>
+                <div class="code-block-container">
+                    <div class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__codeBlockWrapper"><pre
+                            class="shiki github-dark" style="background-color:#151e2c;color:#e1e4e8"
+                            data-has-button="true"><code class="code-line" data-line="122"><span class="line"><span>cat debian/patches/series </span></span>
+<span class="line"><span>debian-changes-1.3-7</span></span>
+<span class="line"><span>hardening</span></span>
+<span class="line"><span>cross-build-dh_auto_build</span></span>
+<span class="line"><span>Fix-FBTFS-for-time_t-transition</span></span>
+<span class="line"><span>Fix-FBTFS-for-mkconf</span></span>
+<span class="line"><span>0008-Update-FSF-address.patch</span></span>
+<span class="line"><span>0007-Fix-1114447-FTBFS.patch</span></span>
+<span class="line"><span>0008-blhc-tells-me-need-more-hardening.patch</span></span>
+<span class="line"><span></span></span></code></pre>
+                        <button class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyButton"
+                                data-tooltip-position="top-left" aria-label="クリップボードにコピー"><img
+                                src="https://static.zenn.studio/images/copy-icon.svg"
+                                class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyIcon"></button>
+                        <button class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__wrapButton"
+                                data-tooltip-position="top-left" aria-label="右端で折り返す"><img
+                                src="https://static.zenn.studio/images/wrap-icon.svg"
+                                class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyIcon"></button>
+                    </div>
+                </div>
+                <p data-line="133" class="code-line">This is how the patches are managed.</p>
+                <h3 id="what-does-gbp-pq-do%3F" data-line="135" class="code-line">
+                    <a class="header-anchor-link" href="#what-does-gbp-pq-do%3F" aria-hidden="true"></a> What does gbp
+                    pq do?</h3>
+                <p data-line="137" class="code-line">To manage a Debian package, you need to create patches in <code>debian/patches/</code>.
+                    <code>gbp pq import</code> creates a "patch-queue" branch, and you modify the upstream source code
+                    in the <code>patch-queue/working-branch</code>. Following Git conventions, write a summary on the
+                    first line, leave the second line blank, and provide details starting from the third line. The
+                    content should follow the <a href="https://dep-team.pages.debian.net/deps/dep3/" target="_blank"
+                                                 rel="nofollow noopener noreferrer">DEP-3: Patch Tagging Guidelines</a>
+                    mentioned above. This information is not automatically generated by the program. The maintainer must
+                    include the necessary information in the commit message.</p>
+                <p data-line="139" class="code-line">With <code>gbp pq export</code>, a quilt-format patch is generated
+                    in <code>debian/patches/</code> for each commit in the patch-queue, using the first line as the
+                    filename. If you don't need to check the contents of the patch-queue (or if you are prone to
+                    forgetting to commit :-)), using <code>gbp pq export --commit</code> might be a good idea.</p>
+                <p data-line="141" class="code-line">Also, if the <code>--drop</code> option is used, the patch-queue
+                    branch will be deleted.</p>
+                <p data-line="143" class="code-line">In this state, running <code>gbp buildpackage</code> will apply the
+                    contents of <code>debian/patches/</code> before the build process starts.</p>
+                <h3 id="commonly-used-gbp-pq-commands" data-line="145" class="code-line">
+                    <a class="header-anchor-link" href="#commonly-used-gbp-pq-commands" aria-hidden="true"></a> Commonly
+                    used gbp pq commands</h3>
+                <p data-line="147" class="code-line">The following section generally applies when you are modifying the
+                    upstream source code. If the upstream has released a new version, please read the section on
+                    handling new upstream versions with gbp.</p>
+                <p data-line="149" class="code-line"><code>gbp pq import --force --time-machine=10</code></p>
+                <p data-line="151" class="code-line">The <code>--force</code> option, as described below, overwrites the
+                    patch-queue branch with the current contents of <code>debian/patches/</code>, even if the branch
+                    already exists.</p>
+                <blockquote data-line="152" class="code-line">
+                    <p data-line="152" class="code-line">In case of import, import even if the patch-queue branch
+                        already exists and overwrite its content with debian/patches.</p>
+                </blockquote>
+                <p data-line="154" class="code-line">The <code>--time-machine=NUM</code> option has the following
+                    meaning:</p>
+                <blockquote data-line="156" class="code-line">
+                    <p data-line="156" class="code-line">--time-machine=NUM<br>
+                        When importing a patch queue fails, go back commit-by-commit on the current branch to check if
+                        the patch-queue applies there.<br>
+                        Do this at most NUM times. This can be useful if the patch-queue doesn't apply to the current
+                        branch HEAD anymore,<br>
+                        e.g. after importing a new upstream version.</p>
+                </blockquote>
+                <p data-line="161" class="code-line">If the patch-queue import fails, it goes back commit-by-commit on
+                    the current branch to check if the patch-queue can be applied. You specify the number of times
+                    (commits) to go back. This is useful when the patch-queue can no longer be applied to the HEAD of
+                    the current branch, such as after importing a new upstream version.</p>
+                <p data-line="163" class="code-line"><code>gbp pq export --drop --commit</code></p>
+                <p data-line="165" class="code-line"><code>--[no-]drop</code></p>
+                <blockquote data-line="166" class="code-line">
+                    <p data-line="166" class="code-line">Whether to automatically drop (delete) the patch queue branch
+                        after a successful export</p>
+                </blockquote>
+                <p data-line="168" class="code-line">When used with <code>gbp pq export</code>, the patch-queue branch
+                    will be deleted after a successful export. If not specified, the patch-queue branch will not be
+                    deleted.</p>
+                <p data-line="170" class="code-line"><code>--commit</code></p>
+                <blockquote data-line="171" class="code-line">
+                    <p data-line="171" class="code-line">In case of export, commit debian/patches the changes to Git
+                        after exporting the patches.</p>
+                </blockquote>
+                <p data-line="173" class="code-line">When specified with <code>gbp pq export</code>, it will <code>git
+                    commit</code> the changes to <code>debian/patches</code> after exporting the patches.</p>
+                <p data-line="175" class="code-line">Normally, you would need to do the following manually:</p>
+                <div class="code-block-container">
+                    <div class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__codeBlockWrapper"><pre
+                            class="shiki github-dark" style="background-color:#151e2c;color:#e1e4e8"
+                            data-has-button="true"><code class="code-line" data-line="176"><span class="line"><span>git add debian/patches</span></span>
+<span class="line"><span>git commit</span></span>
+<span class="line"><span></span></span></code></pre>
+                        <button class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyButton"
+                                data-tooltip-position="top-left" aria-label="クリップボードにコピー"><img
+                                src="https://static.zenn.studio/images/copy-icon.svg"
+                                class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyIcon"></button>
+                        <button class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__wrapButton"
+                                data-tooltip-position="top-left" aria-label="右端で折り返す"><img
+                                src="https://static.zenn.studio/images/wrap-icon.svg"
+                                class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyIcon"></button>
+                    </div>
+                </div>
+                <p data-line="180" class="code-line">This option eliminates the need for the above and makes the
+                    operation easier.</p>
+                <h2 id="gbp-dch---release" data-line="182" class="code-line">
+                    <a class="header-anchor-link" href="#gbp-dch---release" aria-hidden="true"></a> gbp dch --release
+                </h2>
+                <p data-line="184" class="code-line">If you are properly creating commits in the patch-queue, you can
+                    easily create the changelog by transferring the summary from the first line to <code>debian/changelog</code>.
+                </p>
+                <h2 id="handling-new-upstream-versions-with-gbp" data-line="186" class="code-line">
+                    <a class="header-anchor-link" href="#handling-new-upstream-versions-with-gbp"
+                       aria-hidden="true"></a> Handling New Upstream Versions with gbp</h2>
+                <ul data-line="188" class="code-line">
+                    <li data-line="188" class="code-line">If <code>debian/watch</code> is set, obtain the new release
+                        (such as a tarball) using <code>uscan</code>.
+                    </li>
+                    <li data-line="189" class="code-line">Import the obtained tarball with <code>gbp import</code>. If
+                        you make a mistake here, the <code>pristine-tar</code> delta management may fail, leading to a
+                        problematic situation where the content doesn't match the original tarball. It's best to
+                        research starting with <code>gbp import-orig --uscan</code> before proceeding.
+                    </li>
+                    <li data-line="190" class="code-line">Once the import is successful, verify whether existing patches
+                        (those in <code>debian/patches/</code>) are still needed for the new release and if they can be
+                        applied correctly.
+                    </li>
+                    <li data-line="191" class="code-line">This is where <code>gbp pq rebase</code> comes into play.</li>
+                    <li data-line="192" class="code-line">Use <code>gbp pq drop</code> for unnecessary patches, keep the
+                        necessary ones, and if necessary, rewrite and commit to organize the patches to be exported to
+                        <code>debian/patches/</code>.
+                    </li>
+                    <li data-line="193" class="code-line">Once the work is complete, run <code>gbp pq export</code> to
+                        generate patches from the commits.
+                    </li>
+                    <li data-line="194" class="code-line">If files under the <code>debian</code> directory need
+                        modification, work and commit on the branch specified by <code>--debian-branch=</code>.
+                        Regarding <code>debian/changelog</code>, the <code>gbp dch --release</code> command can generate
+                        a changelog template from the commits.
+                    </li>
+                    <li data-line="195" class="code-line">Assuming you have passed local builds and tests, push to the
+                        salsa.debian.org repository and run it through the CI provided by the salsa.debian.org CI team.
+                    </li>
+                    <li data-line="196" class="code-line">If the results are satisfactory, perform a source-only upload
+                        using <code>dput</code> or a similar tool.
+                    </li>
+                </ul>
+                <h3 id="overview-of-gbp-pq-rebase" data-line="198" class="code-line">
+                    <a class="header-anchor-link" href="#overview-of-gbp-pq-rebase" aria-hidden="true"></a> Overview of
+                    <code>gbp pq rebase</code>
+                </h3>
+                <ol data-line="200" class="code-line">
+                    <li data-line="200" class="code-line">Handling new upstream versions<br>
+                        When a new version of the upstream is released, and you need to reapply the existing Debian
+                        patch set to the new base.
+                    </li>
+                </ol>
+                <p data-line="203" class="code-line">Example: Applying patches created for libfoo 1.2.0 to libfoo
+                    1.3.0.</p>
+                <ol start="2" data-line="205" class="code-line">
+                    <li data-line="205" class="code-line">Resolving patch conflicts<br>
+                        Resolving conflicts that occur between upstream changes and Debian patches.
+                    </li>
+                </ol>
+                <p data-line="208" class="code-line">Reapplying patches while manually resolving conflicts.</p>
+                <ol start="3" data-line="210" class="code-line">
+                    <li data-line="210" class="code-line">Organizing patch sets<br>
+                        When reordering or merging patches is necessary.
+                    </li>
+                </ol>
+                <p data-line="213" class="code-line">Deleting unnecessary patches or adjusting dependencies between
+                    patches.</p>
+                <p data-line="215" class="code-line">Example</p>
+                <div class="code-block-container">
+                    <div class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__codeBlockWrapper"><pre
+                            class="shiki github-dark" style="background-color:#151e2c;color:#e1e4e8"
+                            data-has-button="true"><code class="code-line" data-line="216"><span class="line"><span
+                            style="color:#B392F0">gbp</span><span style="color:#9ECBFF"> pq</span><span
+                            style="color:#9ECBFF"> rebase</span></span>
+<span class="line"><span style="color:#B392F0">gbp:info:</span><span style="color:#9ECBFF"> No</span><span
+        style="color:#9ECBFF"> pq</span><span style="color:#9ECBFF"> branch</span><span
+        style="color:#9ECBFF"> found,</span><span style="color:#9ECBFF"> importing</span><span style="color:#9ECBFF"> patches</span></span>
+<span class="line"><span style="color:#B392F0">gbp:info:</span><span style="color:#9ECBFF"> Trying</span><span
+        style="color:#9ECBFF"> to</span><span style="color:#9ECBFF"> apply</span><span
+        style="color:#9ECBFF"> patches</span><span style="color:#9ECBFF"> at</span><span style="color:#9ECBFF"> '9e1b621a05637b260c349b766cc935ac53889bce'</span></span>
+<span class="line"><span style="color:#B392F0">gbp:info:</span><span style="color:#79B8FF"> 8</span><span
+        style="color:#9ECBFF"> patches</span><span style="color:#9ECBFF"> listed</span><span
+        style="color:#9ECBFF"> in</span><span style="color:#9ECBFF"> 'debian/patches/series'</span><span
+        style="color:#9ECBFF"> imported</span><span style="color:#9ECBFF"> on</span><span style="color:#9ECBFF"> 'patch-queue/master'</span></span>
+<span class="line"><span style="color:#B392F0">gbp:info:</span><span style="color:#9ECBFF"> Switching</span><span
+        style="color:#9ECBFF"> to</span><span style="color:#9ECBFF"> 'patch-queue/master'</span></span>
+<span class="line"><span style="color:#B392F0">Current</span><span style="color:#9ECBFF"> branch</span><span
+        style="color:#9ECBFF"> patch-queue/master</span><span style="color:#9ECBFF"> is</span><span
+        style="color:#9ECBFF"> up</span><span style="color:#9ECBFF"> to</span><span style="color:#9ECBFF"> date.</span></span>
+<span class="line"></span></code></pre>
+                        <button class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyButton"
+                                data-tooltip-position="top-left" aria-label="クリップボードにコピー"><img
+                                src="https://static.zenn.studio/images/copy-icon.svg"
+                                class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyIcon"></button>
+                        <button class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__wrapButton"
+                                data-tooltip-position="top-left" aria-label="右端で折り返す"><img
+                                src="https://static.zenn.studio/images/wrap-icon.svg"
+                                class="useInsertButtonToCodeBlock-module-scss-module__Xc6sqa__copyIcon"></button>
+                    </div>
+                </div>
+                <p data-line="225" class="code-line">When you run the <code>gbp pq rebase</code> command, you are moved
+                    to the <code>patch-queue/working-branch</code>. Here, you can use Git commands or an editor to
+                    create or drop intended patches.<br>
+                    If necessary, you can also use the <code>gbp pq export</code> command to write the patches out to
+                    <code>debian/patches/</code>. If you are not writing them out, you can move between branches using
+                    <code>gbp pq switch</code>.</p>
+                <p data-line="228" class="code-line">At this moment, I don't fully understand the advantage of <code>gbp
+                    pq switch</code> over <code>git switch</code>, so I will add more information once I do. Is there
+                    anything other than unifying the interface?</p>
+                <p data-line="230" class="code-line"><code>gbp pq rebase</code> is similar to <code>git rebase</code> in
+                    that it stops at the point of failure, allowing you to rewrite the code or settings, create a
+                    commit, and then proceed to the next patch, thereby keeping the scope of the problem small.<br>
+                    Its options are also the same as Git, such as <code>--continue</code>, <code>--abort</code>, and
+                    <code>--skip</code>, making it easy to understand. If a problem occurs and you create a commit that
+                    fixes it, use <code>--continue</code>; if you determine it's an unnecessary patch, use
+                    <code>--skip</code>; and if you want to abort and investigate elsewhere before returning, specify
+                    <code>--abort</code>.</p>
+                <p data-line="233" class="code-line">Use this when you want to keep the patch order and content healthy
+                    in response to upstream changes.</p>
+                <h4 id="comparison-with-alternatives" data-line="235" class="code-line">
+                    <a class="header-anchor-link" href="#comparison-with-alternatives" aria-hidden="true"></a>
+                    Comparison with Alternatives</h4>
+                <ul data-line="237" class="code-line">
+                    <li data-line="237" class="code-line">
+                        <code>gbp pq apply</code>: Simply applies patches only.
+                    </li>
+                    <li data-line="238" class="code-line">
+                        <code>gbp pq rebase</code>: Used when conflict resolution or patch reorganization is required.
+                    </li>
+                </ul>
+                <h2 id="references" data-line="240" class="code-line">
+                    <a class="header-anchor-link" href="#references" aria-hidden="true"></a> References</h2>
+                <h3 id="debian" data-line="242" class="code-line">
+                    <a class="header-anchor-link" href="#debian" aria-hidden="true"></a> Debian</h3>
+                <ol data-line="244" class="code-line">
+                    <li data-line="244" class="code-line"><a href="https://wiki.debian.org/Projects/DebSrc3.0"
+                                                             target="_blank" rel="nofollow noopener noreferrer">Projects/DebSrc3.0
+                        - Debian Wiki</a></li>
+                </ol>
+                <h3 id="gbp-pq" data-line="246" class="code-line">
+                    <a class="header-anchor-link" href="#gbp-pq" aria-hidden="true"></a> gbp pq</h3>
+                <ol data-line="248" class="code-line">
+                    <li data-line="248" class="code-line"><a
+                            href="https://manpages.debian.org/trixie/git-buildpackage/gbp-pq.1.en.html" target="_blank"
+                            rel="nofollow noopener noreferrer">gbp-pq(1) — git-buildpackage — Debian trixie — Debian
+                        Manpages</a></li>
+                    <li data-line="249" class="code-line"><a
+                            href="https://honk.sigxcpu.org/projects/git-buildpackage/manual-html/gbp.patches.html"
+                            target="_blank" rel="nofollow noopener noreferrer">Working with Patches: Building Debian
+                        Packages with git-buildpackage</a></li>
+                </ol>
+                <h3 id="resources-available-in-japanese" data-line="251" class="code-line">
+                    <a class="header-anchor-link" href="#resources-available-in-japanese" aria-hidden="true"></a>
+                    Resources Available in Japanese</h3>
+                <ul data-line="253" class="code-line">
+                    <li data-line="253" class="code-line">
+                        <p data-line="253" class="code-line"><a
+                                href="https://tokyodebian-team.pages.debian.net/pdf2015/debianmeetingresume201509-presentation.pdf"
+                                target="_blank" rel="nofollow noopener noreferrer">Tokyo Area Debian Study Group Debian
+                            Packaging Dojo 130th Session September 2015</a></p>
+                        <ul data-line="254" class="code-line">
+                            <li data-line="254" class="code-line">This is a PDF.</li>
+                        </ul>
+                    </li>
+                    <li data-line="255" class="code-line">
+                        <p data-line="255" class="code-line"><a href="https://blog.cybozu.io/entry/2019/04/11/110000"
+                                                                target="_blank" rel="nofollow noopener noreferrer">2019-04-11
+                            Introduction to deb Package Management Using git-buildpackage</a></p>
+                    </li>
+                    <li data-line="257" class="code-line">
+                        <p data-line="257" class="code-line">quilt</p>
+                        <ul data-line="258" class="code-line">
+                            <li data-line="258" class="code-line"><a
+                                    href="https://qiita.com/htano/items/9440073e5a08c43d66ba" target="_blank"
+                                    rel="nofollow noopener noreferrer">How to use quilt #Linux - Qiita</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>

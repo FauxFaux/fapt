@@ -1,0 +1,359 @@
+[[Category:Package development]]
+[[es:PKGBUILD]]
+[[fr:PKGBUILD]]
+[[hu:PKGBUILD]]
+[[ja:PKGBUILD]]
+[[pt:PKGBUILD]]
+[[ru:PKGBUILD]]
+[[zh-hans:PKGBUILD]]
+{{Related articles start}}
+{{Related|Arch build system}}
+{{Related|Arch package guidelines}}
+{{Related|Arch User Repository}}
+{{Related|.SRCINFO}}
+{{Related articles end}}
+
+This article discusses variables definable by the maintainer in a {{ic|PKGBUILD}}. For information on the {{ic|PKGBUILD}} functions and creating packages in general, refer to [[Creating packages]]. Also read {{man|5|PKGBUILD}}.
+
+A {{ic|PKGBUILD}} is a [[Bash]] script containing the build information required by [[Arch Linux]] packages.
+
+Packages in Arch Linux are built using the [[makepkg]] utility. When ''makepkg'' is run, it searches for a {{ic|PKGBUILD}} file in the current directory and follows the instructions therein to either compile or otherwise acquire the files to build a package archive—{{ic|''pkgname''.pkg.tar.zst}}. The resulting package contains binary files and installation instructions, readily installable with [[pacman]].
+
+Mandatory variables are {{ic|pkgname}}, {{ic|pkgver}}, {{ic|pkgrel}}, and {{ic|arch}}. {{ic|license}} is not strictly necessary to build a package, but is recommended for any {{ic|PKGBUILD}} shared with others, as ''makepkg'' will produce a warning if not present.
+
+It is a common practice to define the variables in the {{ic|PKGBUILD}} in the same order as given here. However, it is not mandatory.
+
+{{Tip|
+* Use [[namcap]] to check {{ic|PKGBUILD}}s for common packaging mistakes.
+* Use {{man|1|shellcheck}} to check {{ic|PKGBUILD}}s for common scripting mistakes. See also [https://www.shellcheck.net/wiki/SC2034 SC2034], [https://www.shellcheck.net/wiki/SC2154 SC2154] and [https://www.shellcheck.net/wiki/SC2164 SC2164]:
+: {{ic|shellcheck --shell{{=}}bash --exclude{{=}}SC2034,SC2154,SC2164 PKGBUILD}}
+* {{AUR|termux-language-server}} provides a [[Language Server Protocol|language server]] for {{ic|PKGBUILD}}, {{ic|makepkg.conf}}, etc.
+}}
+
+See the ''.proto'' [https://gitlab.archlinux.org/pacman/pacman/-/tree/master/proto files] in the {{ic|/usr/share/pacman/}} directory as examples.
+
+== Package name ==
+
+=== pkgbase ===
+
+When building regular packages, this variable should not be explicitly declared in the {{ic|PKGBUILD}}: its value defaults to that of [[#pkgname]].
+
+When building a [https://man.archlinux.org/man/PKGBUILD.5#PACKAGE_SPLITTING split package], this variable can be used to explicitly specify the name to be used to refer to the group of packages in the output of ''makepkg'' and in the naming of source-only tarballs. The value is not allowed to begin with a hyphen. If not specified, the value will default to the first element in the {{ic|pkgname}} array.
+
+All options and directives for split packages default to the global values given in the {{ic|PKGBUILD}}. Nevertheless, the following ones can be overridden within each split package’s packaging function: [[#pkgdesc]], [[#arch]], [[#url]], [[#license]], [[#groups]], [[#depends]], [[#optdepends]], [[#provides]], [[#conflicts]], [[#replaces]], [[#backup]], [[#options]], [[#install]], and [[#changelog]].
+
+=== pkgname ===
+
+Either the name of the package, e.g. {{ic|1=pkgname=foo}}, or, for split packages, an array of names, e.g. {{ic|1=pkgname=(foo bar)}}. Package names should only consist of lowercase alphanumerics and the following characters: {{ic|@._+-}} (at symbol, dot, underscore, plus, hyphen). Names are not allowed to start with hyphens or dots. For the sake of consistency, {{ic|pkgname}} should match the name of the source tarball of the software: for instance, if the software is in {{ic|foobar-2.5.tar.gz}}, use {{ic|1=pkgname=foobar}}.
+
+== Version ==
+
+=== pkgver ===
+
+The version of the package.
+
+This should be the same as the version published by the author of the upstream software. It can contain letters, numbers, periods and underscores, but '''not''' a hyphen ({{ic|-}}). If the author of the software uses one, replace it with an underscore ({{ic|_}}). If the {{ic|pkgver}} variable is used later in the {{ic|PKGBUILD}}, then the underscore can easily be substituted for a hyphen, e.g. {{ic|1=source=("${pkgname}-${pkgver//_/-}.tar.gz")}}.
+
+{{Note|If upstream uses a timestamp versioning such as {{ic|30102014}}, ensure to use the reversed date, i.e. {{ic|20141030}} ([[Wikipedia:ISO 8601|ISO 8601]] format). Otherwise it will not appear as a newer version.}}
+
+{{Tip|
+* The ordering of uncommon values can be tested with {{man|8|vercmp}}, which is provided by the [[pacman]] package.
+* [[makepkg]] can automatically [http://allanmcrae.com/2013/04/pacman-4-1-released/ update] this variable by defining a {{ic|pkgver()}} function in the {{ic|PKGBUILD}}. See [[VCS package guidelines#The pkgver() function]] for details.
+}}
+
+See also [[Arch package guidelines#Package versioning]].
+
+=== pkgrel ===
+
+The release number. This is usually a positive integer number that allows to differentiate between consecutive builds of the same version of a package. As fixes and additional features are added to the {{ic|PKGBUILD}} that influence the resulting package, the {{ic|pkgrel}} should be incremented by 1. When a new version of the software is released, this value must be reset to 1. In exceptional cases other formats can be found in use, such as ''major.minor''.
+
+See also [[Arch package guidelines#Package versioning]].
+
+=== epoch ===
+
+Used to force the package to be seen as newer than any previous version with a lower epoch. This value is required to be a non-negative integer; the default is 0. It is used when the version numbering scheme of a package changes (or is alphanumeric), breaking normal version comparison logic. For example:
+
+{{hc|1=
+pkgver=5.13
+pkgrel=2
+epoch=1
+|2=
+1:5.13-2
+}}
+
+See {{man|8|pacman}} for more information on version comparisons.
+
+{{Warning|{{ic|epoch}} should only be used when absolutely required to do so.}}
+
+== Generic ==
+
+=== pkgdesc ===
+
+The description of the package. This is recommended to be 80 characters or less and should not include the package name in a self-referencing way, unless the application name differs from the package name. For example, use {{ic|1=pkgdesc='Text editor for X11'}} instead of {{ic|1=pkgdesc='Nedit is a text editor for X11'}}.
+
+Also it is important to use keywords wisely to increase the chances of appearing in relevant search queries.
+
+=== arch ===
+
+An array of architectures that the {{ic|PKGBUILD}} is intended to build and work on. Arch officially supports only {{ic|x86_64}}, but other projects may support other architectures. For example, [https://archlinux32.org/ Arch Linux 32] provides support for {{ic|i686}} and {{ic|pentium4}}, and [https://archlinuxarm.org/ Arch Linux ARM] provides support for {{ic|armv7h}} (armv7 hardfloat) and {{ic|aarch64}} (armv8 64-bit).
+
+There are two types of values the array can use:
+
+* {{ic|1=arch=(any)}} indicates the package can be built on any architecture, and once built, is architecture-independent in its compiled state (usually shell scripts, fonts, themes, many types of extensions, [[Java]] programs, etc.).
+* {{ic|1=arch=(...)}} with one or more architectures (but not {{ic|any}}) indicates the package can be compiled for any of the specified architectures, but is architecture-specific once compiled. For these packages, specify all architectures that the {{ic|PKGBUILD}} officially supports. For official repository and [[AUR]] packages, this means {{ic|1=arch=('x86_64')}}. Optionally, AUR packages may choose to additionally support other known working architectures.
+
+The target architecture can be accessed with the variable {{ic|CARCH}} during a build.
+
+=== url ===
+
+The URL of the official site of the software being packaged.
+
+=== license ===
+
+{{Merge|Arch package guidelines#licenses|The PKGBUILD format does not enforce a packaging policy.}}
+
+{{Expansion|Add more details from [https://lists.archlinux.org/hyperkitty/list/arch-dev-public@lists.archlinux.org/thread/NFSB7734U2VVDULPRY65ECXDE3XGNZXM/].}}
+
+The license under which the software is distributed. Arch Linux uses [[Wikipedia:Software_Package_Data_Exchange#License_syntax|SPDX license identifiers]]. Each license must have a corresponding entry in {{ic|/usr/share/licenses/}}.
+
+For common licenses (like {{ic|GPL-3.0-or-later}}), package {{pkg|licenses}} delivers all the corresponding files. The package is installed by default, as it is a dependency of {{pkg|base}} [[meta package]], and the files may be found in {{ic|/usr/share/licenses/spdx/}}. Simply refer to the license using its SPDX license identifier from the [https://spdx.org/licenses/ list of SPDX identifiers].
+
+License families like BSD or MIT are, strictly speaking, not a single license and each instance requires a separate license file. In {{ic|license}} variable refer to them using a common SPDX identifier (e.g. {{ic|BSD-3-Clause}} or {{ic|MIT}}), but then provide the corresponding file as if it was a custom license.
+
+For custom licenses the identifier should be either {{ic|LicenseRef-''license-name''}} or {{ic|custom:''license-name''}}, if they are not covered by the common families mentioned above. The corresponding license text must be placed in directory {{ic|/usr/share/licenses/''pkgname''}}. To install the file a following code snippet may be used in {{ic|package()}} section:
+
+ install -Dm644 ''LICENSE'' -t "${pkgdir}/usr/share/licenses/${pkgname}/"
+
+{{Note|{{ic|pkgdir}} variable is defined by ''makepkg'', see {{man|5|PKGBUILD|PACKAGING FUNCTIONS}} for more information.}}
+
+Combining multiple licenses or adding exceptions should follow the [https://spdx.github.io/spdx-spec/v3.0/annexes/SPDX-license-expressions/ SPDX syntax]. For example a package released under ''either'' GNU/GPL 2.0 or GNU/LGPL 2.1 could use {{ic|'GPL-2.0-or-later OR LGPL-2.1-or-later'}}, a package released under Apache 2.0 with LLVM exception would use {{ic|'Apache-2.0 WITH LLVM-exception'}} and a package released with part under the BSD 3 clause, others under GNU/LGPL 2.1 and some under GNU/GPL 2.0 would use {{ic|'BSD-3-Clause AND LGPL-2.1-or-later AND GPL-2.0-or-later'}}[https://gitlab.archlinux.org/archlinux/packaging/packages/musepack/-/blob/f9642f78a1a7c61e6b8d181b138ee3f7e8717054/PKGBUILD#L16]. Note that this must be a single string, so the entire expression has to be enclosed in quotes. As for November 2023 [https://spdx.org/licenses/preview/exceptions-index.html SPDX list of exceptions] is limited, so usually the custom license route must be used.
+
+If issues are encountered with SPDX identifiers, during the transitional period using old identifiers —names of the directories in {{ic|/usr/share/licenses/common}}— is acceptable.
+
+See also [[Nonfree applications package guidelines]].
+
+Additional information and perspectives on free and open source software licenses may be found on the following pages:
+
+* [[Wikipedia:Free software license]]
+* [[Wikipedia:Comparison of free and open-source software licenses]]
+* [https://www.softwarefreedom.org/resources/2008/foss-primer.html A Legal Issues Primer for Open Source and Free Software Projects]
+* [https://www.gnu.org/licenses/license-list.html GNU Project - Various Licenses and Comments about Them]
+* [https://www.debian.org/legal/licenses/ Debian - License information]
+* [https://www.opensource.org/licenses/alphabetical Open Source Initiative - Licenses by Name]
+
+=== groups ===
+
+The [[Package group|group]] the package belongs in. For instance, when installing {{Grp|plasma}}, it installs all packages belonging in that group.
+
+== Dependencies ==
+
+{{Note|Additional architecture-specific arrays can be added by appending an underscore and the architecture name, e.g. {{ic|1=optdepends_x86_64=()}}.}}
+
+=== depends ===
+
+An array of packages that must be installed for the software to build '''and''' run. Dependencies defined inside the {{ic|package()}} function are only required to run the software.
+
+Version restrictions can be specified with comparison operators, e.g. {{ic|1=depends=('foobar>=1.8.0')}}; if multiple restrictions are needed, the dependency can be repeated for each, e.g. {{ic|1=depends=('foobar>=1.8.0' 'foobar<2.0.0')}}.
+
+{{Merge|Arch package guidelines|The PKGBUILD format does not enforce a packaging policy.}}
+
+The {{ic|depends}} array should list all direct first level dependencies even when some are already declared transitively. For instance, if a package ''foo'' depends on both ''bar'' and ''baz'', and the ''bar'' package depends in turn on ''baz'' too, it will ultimately lead to undesired behavior if ''bar'' stops pulling in ''baz''. Pacman will not enforce the installation of ''baz'' on systems which newly install the ''foo'' package, or have cleaned up orphans, and ''foo'' will crash at runtime or otherwise misbehave.
+
+In some cases this is not necessary and may or may not be listed, for example {{Pkg|glibc}} cannot be uninstalled as every system needs some C library, or {{Pkg|python}} for a package that already depends on another ''python-'' module, as the second module must per definition depend on ''python'' and cannot ever stop pulling it in as a dependency.
+
+Dependencies should normally include the requirements for building all optional features of a package. Alternatively, any feature whose dependencies are not included should be explicitly disabled via a configure option. Failure to do this can lead to packages with "[[Gentoo:Project:Quality Assurance/Automagic dependencies|automagic dependencies]]" build-time optional features that are unpredictably enabled due to transitive dependencies or unrelated software installed on the build machine, but which are not reflected in the package dependencies.
+
+If the dependency name appears to be a library, e.g. {{ic|1=depends=(libfoobar.so)}}, ''makepkg'' will try to find a binary that depends on the library in the built package and append the [[Wikipedia:soname|soname]] version needed by the binary. Manually appending the version disables automatic detection, e.g. {{ic|1=depends=('libfoobar.so=2')}}.
+
+=== makedepends ===
+
+An array of packages that are '''only''' required to build the package. The minimum dependency version can be specified in the same format as in the {{ic|depends}} array. The packages in the {{ic|depends}} array are implicitly required to build the package, they should not be duplicated here.
+
+{{Note|
+* The package {{Pkg|base-devel}} is assumed to be already installed when building with ''makepkg''. Dependencies of this package '''should not''' be included in {{ic|makedepends}} array.
+* If using [[VCS package guidelines#VCS sources|VCS sources]], do not forget to include the appropriate VCS tool ({{Pkg|git}}, {{Pkg|subversion}}, {{Pkg|cvs}}, ...).
+}}
+
+{{Tip|Use {{ic|pactree -rsud1 ''package'' {{!}} grep base-devel}} to check whether a particular package is a direct dependency of {{Pkg|base-devel}} (requires {{Pkg|pacman-contrib}}).}}
+
+=== checkdepends ===
+
+An array of packages that the software depends on to run its test suite, but are not needed at runtime. Packages in this list follow the same format as {{ic|depends}}. These dependencies are only considered when the [[Creating packages#check()|check()]] function is present and is to be run by ''makepkg''.
+
+{{Note|The package {{Pkg|base-devel}} is assumed to be already installed when building with ''makepkg''. Dependencies of this package '''should not''' be included in {{ic|checkdepends}} array.}}
+
+=== optdepends ===
+
+An array of packages that are not needed for the software to function, but provide additional features. This may imply that not all executables provided by a package will function without the respective optdepends.[https://lists.archlinux.org/archives/list/arch-general@lists.archlinux.org/message/ZFBCD2NFFBSOZBI22AYZYHH2PDRCLJWF/] If the software works on multiple alternative dependencies, all of them can be listed here, instead of the {{ic|depends}} array.
+
+A short description of the extra functionality each optdepend provides should also be noted:
+
+ optdepends=('cups: printing support'
+             'sane: scanners support'
+             'libgphoto2: digital cameras support'
+             'alsa-lib: sound support'
+             'giflib: GIF images support'
+             'libjpeg: JPEG images support'
+             'libpng: PNG images support')
+
+== Package relations ==
+
+{{Note|Additional architecture-specific arrays can be added by appending an underscore and the architecture name, e.g. {{ic|1=conflicts_x86_64=()}}.}}
+
+=== provides ===
+
+An array of additional packages that the software provides the features of, including [[Pacman#Virtual packages|virtual packages]] such as ''cron'' or ''sh'' and [[Arch package guidelines#Package relations|all external shared libraries]]. Packages providing the same item can be installed side-by-side, unless at least one of them uses a {{ic|conflicts}} array.
+
+{{Note|
+* The version that the package provides should be mentioned ({{ic|pkgver}} and potentially the {{ic|pkgrel}}), in case packages referencing the software require one. For instance, a modified ''qt'' package version 3.3.8, named ''qt-foobar'', should use {{ic|1=provides=('qt=3.3.8')}}; omitting the version number would cause the dependencies that require a specific version of ''qt'' to fail.
+* Do not add {{ic|pkgname}} to the {{ic|provides}} array, as it is done automatically.
+}}
+
+=== conflicts ===
+
+An array of packages that conflict with, or cause problems with the package, if installed. All these packages and packages providing this item will need to be removed. The version properties of the conflicting packages can also be specified in the same format as the {{ic|depends}} array.
+
+Note that conflicts are checked against {{ic|pkgname}} as well as names specified in the {{ic|provides}} array. Hence, if your package {{ic|provides}} a {{ic|''foo''}} feature, specifying {{ic|''foo''}} in the {{ic|conflicts}} array will cause a conflict between your package and all other packages that contain {{ic|''foo''}} in their {{ic|provides}} array (i.e., there is no need to specify all those conflicting package names in your {{ic|conflicts}} array). Let us take a concrete example:
+
+* {{Pkg|netbeans}} implicitly provides {{ic|netbeans}} as the {{ic|pkgname}} itself
+* A hypothetical ''netbeans-cpp'' package would provide {{ic|netbeans}} and conflicts with {{ic|netbeans}}
+* A hypothetical ''netbeans-php'' package would provide {{ic|netbeans}} and conflicts with {{ic|netbeans}}, but does not need to explicitly conflict with ''netbeans-cpp'' since packages providing the same feature are implicitly in conflict.
+
+When packages provide the same feature via the {{ic|provides}} array, there is a difference between explicitly adding the alternative package to the {{ic|conflicts}} array and not adding it. If the {{ic|conflicts}} array is explicitly declared the two packages providing the same feature will be considered as ''alternative''; if the {{ic|conflicts}} array is missing the two packages providing the same feature will be considered as ''possibly cohabiting''. Packagers should always ignore the content of the {{ic|provides}} variable in deciding whether to declare a {{ic|conflicts}} variable or not.
+
+=== replaces ===
+
+An array of obsolete packages that are replaced by the package, e.g. {{Pkg|wireshark-qt}} uses {{ic|1=replaces=('wireshark')}}. When syncing, ''pacman'' will immediately replace an installed package upon encountering another package with the matching {{ic|replaces}} in the repositories. If providing an alternate version of an already existing package or uploading to the AUR, use the {{ic|conflicts}} and {{ic|provides}} arrays, which are only evaluated when actually installing the conflicting package.
+
+== Others ==
+
+=== backup ===
+
+An array of files that can contain user-made changes and should be preserved during upgrade or removal of a package, primarily intended for configuration files in {{ic|/etc}}. If these files are unchanged from how they ship with the package, they will be removed or replaced as normal files during upgrade or removal.
+
+Files in this array should use '''relative''' paths without the leading slash ({{ic|/}}) (e.g. {{ic|etc/pacman.conf}}, instead of {{ic|/etc/pacman.conf}}). The {{ic|backup}} array [https://bbs.archlinux.org/viewtopic.php?pid=2187778 does not support empty directories or wildcards such as "*"].
+
+When updating, new versions may be saved as {{ic|''file''.pacnew}} to avoid overwriting a file which already exists and was previously modified by the user. Similarly, when the package is removed, user-modified files will be preserved as {{ic|''file''.pacsave}} unless the package was removed with the {{ic|pacman -Rn}} command.
+
+See also [[Pacnew and Pacsave files]].
+
+=== options ===
+
+This array allows overriding some of the default behavior of ''makepkg'', defined in {{ic|/etc/makepkg.conf}}. To set an option, include the name in the array. To disable an option, place an '''{{ic|!}}''' before it.
+
+The full list of the available options can be found in {{man|5|PKGBUILD|OPTIONS AND DIRECTIVES}}.
+
+=== install ===
+
+The name of the ''.install'' script to be included in the package.
+
+''pacman'' has the ability to store and execute a package-specific script when it installs, removes or upgrades a package. The script contains the following functions which run at different times:
+
+* {{ic|pre_install}} — The script is run right before files are extracted. One argument is passed: new package version.
+* {{ic|post_install}} — The script is run right after files are extracted. Any additional notes that should be printed after the package is installed should be located here. One argument is passed: new package version.
+* {{ic|pre_upgrade}} — The script is run right before files are extracted. Two arguments are passed in the following order: new package version, old package version.
+* {{ic|post_upgrade}} — The script is run right after files are extracted. Two arguments are passed in the following order: new package version, old package version.
+* {{ic|pre_remove}} — The script is run right before files are removed. One argument is passed: old package version.
+* {{ic|post_remove}} — The script is run right after files are removed. One argument is passed: old package version.
+
+Each function is run [[chroot]]ed inside the ''pacman'' install directory. See [https://bbs.archlinux.org/viewtopic.php?pid=913891 this thread].
+
+{{Tip|
+* A prototype ''.install'' is provided at [https://gitlab.archlinux.org/pacman/pacman/raw/master/proto/proto.install /usr/share/pacman/proto.install].
+* [[pacman#Hooks]] provide similar functionality.
+}}
+
+{{Note|Do not end the script with {{ic|exit}}. This would prevent the contained functions from executing.}}
+
+=== changelog ===
+
+The name of the package changelog. To view changelogs for installed packages (that have this file):
+
+ $ pacman -Qc ''pkgname''
+
+== Sources ==
+
+=== source ===
+
+An array of files needed to build the package. It must contain the location of the software source, which in most cases is a full HTTP or FTP URL. The previously set variables {{ic|pkgname}} and {{ic|pkgver}} can be used effectively here; e.g. {{ic|<nowiki>source=("https://example.com/${pkgname}-${pkgver}.tar.gz")</nowiki>}}.
+
+Files can also be supplied in the same directory where the {{ic|PKGBUILD}} is located, and their names added to this array. Before the actual build process starts, all the files referenced in this array will be downloaded or checked for existence, and ''makepkg'' will not proceed if any is missing.
+
+''.install'' files are recognized automatically by ''makepkg'' and should not be included in the {{ic|source}} array. Files in the {{ic|source}} array with extensions ''.sig'', ''.sign'', or ''.asc'' are recognized by ''makepkg'' as PGP signatures and will be automatically used to verify the integrity of the corresponding source file.
+
+{{Warning|The downloaded source filename must be unique because the [[makepkg#Package output|SRCDEST]] directory can be the same for all packages. For instance, using the version number of the project as a filename potentially conflicts with other projects with the same version number. In this case, the alternative unique filename to be used is provided with the syntax {{ic|1=source=('<nowiki/>''unique_package_name'''''::'''''file_uri''<nowiki/>')}}; e.g. {{ic|<nowiki>source=("${pkgname}-${pkgver}.tar.gz::https://github.com/coder/program/archive/v${pkgver}.tar.gz")</nowiki>}}.
+}}
+
+{{Tip|
+* Additional architecture-specific arrays can be added by appending an underscore and the architecture name, e.g. {{ic|1=source_x86_64=()}}. There must be a corresponding integrity array with checksums, e.g. {{ic|1=sha256sums_x86_64=()}}.
+* Some servers restrict download by filtering the ''User-Agent'' string of the client or other types of restrictions, which can be circumvented with [[Nonfree applications package guidelines#Custom DLAGENTS|DLAGENTS]].
+* Use {{ic|file://}} URL to point to a directory or a file in your computer filesystem. For example, a local Git repository can be specified as {{ic|"${pkgname}::git+file://''/path/to/repository''"}}.
+* Magnet link support can be added using {{AUR|transmission-dlagent}} as {{ic|DLAGENT}} and using the {{ic|<nowiki>magnet://</nowiki>}} URI prefix instead of the canonical {{ic|magnet:?}}.
+* See {{man|5|PKGBUILD|USING VCS SOURCES}} and [[VCS package guidelines#VCS sources]] for details on VCS specific options, such as targeting a specific Git branch or commit.
+}}
+
+=== noextract ===
+
+An array of files listed under {{ic|source}}, which should not be extracted from their archive format by [[makepkg]]. This can be used with archives that cannot be handled by {{ic|/usr/bin/bsdtar}} or those that need to be installed as-is. If an alternative unarchiving tool is used (e.g. {{Pkg|lrzip}}), it should be added in the {{ic|makedepends}} array and the first line of the [[Creating packages#prepare()|prepare()]] function should extract the source archive manually; for example:
+
+ prepare() {
+   lrzip -d ''source''.tar.lrz
+ }
+
+Note that while the {{ic|source}} array accepts URLs, {{ic|noextract}} is '''just''' the file name portion:
+
+ <nowiki>source=("http://foo.org/bar/foobar.tar.xz")</nowiki>
+ noextract=('foobar.tar.xz')
+
+To extract '''nothing''', consider the following:
+
+* If {{ic|source}} contains only plain URLs without custom file names, strip the {{ic|source}} array before the last slash:
+: {{bc|1=noextract=("${source[@]##*/}")}}
+* If {{ic|source}} contains only entries with custom file names, strip the {{ic|source}} array after the {{ic|::}} separator (taken from a previous version of [https://gitlab.archlinux.org/archlinux/packaging/packages/firefox-i18n/-/blob/46492498ef720353cbb84de5096102de694faf90/PKGBUILD#L132 firefox-i18n's PKGBUILD]):
+: {{bc|1=noextract=("${source[@]%%::*}")}}
+
+{{Note|If an archive has many top-level files, there is a risk of unwanted overwriting files extracted from other source archives. If that is the case, consider adding it to {{ic|noextract}} and extracting it manually into a subdirectory.}}
+
+=== validpgpkeys ===
+
+An array of PGP fingerprints. If used, ''makepkg'' will only accept signatures from the keys listed here and will ignore the trust values from the keyring. If the source file was signed with a subkey, ''makepkg'' will still use the primary key for comparison.
+
+Only full fingerprints are accepted. They must be uppercase and must not contain whitespace characters.
+
+{{Note|Use {{ic|gpg --list-keys --fingerprint ''KEYID''}} to find out the fingerprint of the appropriate key.}}
+
+Please read [[makepkg#Signature checking]] for more information.
+
+== Integrity ==
+
+These variables are arrays whose items are checksum strings that will be used to verify the integrity of the respective files in the [[#source|source]] array. Insert {{ic|SKIP}} for a particular file, and its checksum will not be tested.
+
+The checksum type and values should always be those provided by upstream, such as in release announcements. When multiple types are provided by upstream, the strongest checksum is to be preferred (in order from most to least preferred): {{ic|b2}}, {{ic|sha512}}, {{ic|sha384}}, {{ic|sha256}}, {{ic|sha224}}, {{ic|sha1}}, {{ic|md5}}, {{ic|ck}}. This best ensures the integrity of the downloaded files, from upstream announcement to package building.
+
+{{Note|Additionally, when upstream makes [[Wikipedia:Digital signature|digital signatures]] available, the signature files should be added to the [[#source|source]] array and the PGP key fingerprint to the [[#validpgpkeys|validpgpkeys]] array. This allows authentication of the files at build time.}}
+
+The values for these variables can be auto-generated by [[makepkg]]'s {{ic|-g}}/{{ic|--geninteg}} option, then commonly appended with {{ic|makepkg -g >> PKGBUILD}}. The {{man|8|updpkgsums}} command from {{Pkg|pacman-contrib}} is able to update the variables wherever they are in the {{ic|PKGBUILD}}. Both tools will use the variable that is already set in the {{ic|PKGBUILD}}, or fall back to {{ic|sha256sums}} if none is set.
+
+The file integrity checks to use can be set up with the {{ic|INTEGRITY_CHECK}} option in {{ic|/etc/makepkg.conf}}. See {{man|5|makepkg.conf}}.
+
+{{Note|Additional architecture-specific arrays can be added by appending an underscore and the architecture name, e.g. {{ic|1=sha256sums_x86_64=()}}.}}
+
+=== b2sums ===
+
+An array of [[Wikipedia:BLAKE (hash function)#BLAKE2|BLAKE2b]] checksums with digest size of 512 bits.
+
+=== sha512sums, sha384sums, sha256sums, sha224sums ===
+
+An array of [[Wikipedia:SHA-2|SHA-2]] checksums with digest sizes 512, 384, 256 and 224 bits, respectively. {{ic|sha256sums}} is the most common of them.
+
+=== sha1sums ===
+
+An array of 160-bit [[Wikipedia:SHA-1|SHA-1]] checksums of the files listed in the {{ic|source}} array.
+
+=== md5sums ===
+
+An array of 128-bit [[Wikipedia:MD5|MD5]] checksums of the files listed in the {{ic|source}} array.
+
+=== cksums ===
+
+An array [[Wikipedia:Cyclic redundancy check|CRC32]] checksums (from UNIX-standard [[Wikipedia:cksum|cksum]]) of the files listed in the {{ic|source}} array.
