@@ -15,6 +15,38 @@ pub struct Entry {
     pub suite_codename: String,
     pub components: Vec<String>,
     pub arch: Option<String>,
+    pub untrusted: bool,
+}
+
+#[derive(Default)]
+struct ParsedOpts {
+    arch: Option<String>,
+    untrusted: Option<bool>,
+}
+
+fn parse_opts(opts: Option<&str>) -> Result<ParsedOpts, Error> {
+    let mut ret = ParsedOpts::default();
+    if let Some(opts) = opts {
+        if opts.contains(" ") {
+            bail!("only one option per line supported")
+        }
+        let parts: Vec<_> = opts
+            .strip_prefix("[")
+            .expect("opening [")
+            .strip_suffix("]")
+            .expect("closing ]")
+            .split("=")
+            .collect();
+        match parts.len() {
+            2 => match parts[0] {
+                "arch" => ret.arch = Some(parts[1].to_string()),
+                "untrusted" => ret.untrusted = Some(parts[1] == "yes"),
+                other => bail!("unknown option: {}", other),
+            },
+            _ => bail!("multiple = in option"),
+        }
+    };
+    Ok(ret)
 }
 
 fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
@@ -33,7 +65,7 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
     let src = parts
         .next()
         .ok_or_else(|| anyhow!("deb{{,s,-src}} section required"))?;
-    let arch = match parts.peek() {
+    let opts = match parts.peek() {
         Some(&val) if val.starts_with("[") => {
             parts.next();
             Some(val)
@@ -60,6 +92,7 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
 
     let mut ret = Vec::with_capacity(srcs.len());
 
+    let parsed_opts = parse_opts(opts)?;
     for src in srcs {
         ret.push(Entry {
             src: *src,
@@ -70,7 +103,8 @@ fn read_single_line(line: &str) -> Result<Vec<Entry>, Error> {
             },
             suite_codename: suite.to_string(),
             components: components.iter().map(|x| x.to_string()).collect(),
-            arch: arch.map(|arch| arch.to_string()),
+            arch: parsed_opts.arch.clone(),
+            untrusted: parsed_opts.untrusted.unwrap_or(false),
         });
     }
 
@@ -113,6 +147,7 @@ mod tests {
                     url: "http://foo/".to_string(),
                     suite_codename: "bar".to_string(),
                     components: vec!["baz".to_string(), "quux".to_string()],
+                    untrusted: false,
                 },
                 Entry {
                     src: true,
@@ -120,12 +155,73 @@ mod tests {
                     url: "http://foo/".to_string(),
                     suite_codename: "bar".to_string(),
                     components: vec!["baz".to_string(), "quux".to_string()],
+                    untrusted: false,
                 },
             ],
             read(io::Cursor::new(
                 r"
 deb     http://foo  bar  baz quux
 deb-src http://foo  bar  baz quux
+",
+            ))
+            .unwrap()
+        );
+    }
+
+    #[test]
+    fn arch() {
+        assert_eq!(
+            vec![Entry {
+                src: false,
+                arch: Some("amd64".to_string()),
+                url: "http://foo/".to_string(),
+                suite_codename: "bar".to_string(),
+                components: vec!["baz".to_string(), "quux".to_string()],
+                untrusted: false,
+            },],
+            read(io::Cursor::new(
+                r"
+deb [arch=amd64] http://foo  bar  baz quux
+",
+            ))
+            .unwrap()
+        );
+    }
+
+    #[test]
+    fn untrusted() {
+        assert_eq!(
+            vec![Entry {
+                src: false,
+                arch: None,
+                url: "http://foo/".to_string(),
+                suite_codename: "bar".to_string(),
+                components: vec!["baz".to_string(), "quux".to_string()],
+                untrusted: true,
+            },],
+            read(io::Cursor::new(
+                r"
+deb [untrusted=yes] http://foo  bar  baz quux
+",
+            ))
+            .unwrap()
+        );
+    }
+
+    #[test]
+    fn untrusted_not_yes() {
+        assert_eq!(
+            vec![Entry {
+                src: false,
+                arch: None,
+                url: "http://foo/".to_string(),
+                suite_codename: "bar".to_string(),
+                components: vec!["baz".to_string(), "quux".to_string()],
+                untrusted: false,
+            },],
+            read(io::Cursor::new(
+                r"
+deb [untrusted=yeppers] http://foo  bar  baz quux
 ",
             ))
             .unwrap()

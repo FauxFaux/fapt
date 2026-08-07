@@ -17,10 +17,11 @@ impl<'k> GpgClient<'k> {
         GpgClient { keyring }
     }
 
-    pub fn verify_clearsigned<P: AsRef<Path>, Q: AsRef<Path>>(
+    pub fn read_clearsigned<P: AsRef<Path>, Q: AsRef<Path>>(
         &self,
         file: P,
         dest: Q,
+        verify: bool,
     ) -> Result<(), Error> {
         let from = fs::File::open(file).with_context(|| anyhow!("opening input file"))?;
         let to = PersistableTempFile::new_in(
@@ -30,7 +31,12 @@ impl<'k> GpgClient<'k> {
         )
         .with_context(|| anyhow!("creating temporary file"))?;
 
-        gpgrv::verify_message(io::BufReader::new(from), &to, &self.keyring)?;
+        let reader = io::BufReader::new(from);
+        if verify {
+            gpgrv::verify_message(reader, &to, &self.keyring)?;
+        } else {
+            gpgrv::read_doc(reader, &to)?;
+        }
 
         to.persist_by_rename(dest)
             .map_err(|e| e.error)
